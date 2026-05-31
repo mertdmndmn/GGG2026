@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GGG — Dünya Kupası 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--red:#E8281E;--cream:#FDF6EC;--dark:#111111;--mid:#333333;--muted:#777777;--border:rgba(0,0,0,0.1);--card:#ffffff;--surface:#F5EFE6;--green:#1a7a3c;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--dark);min-height:100vh;max-width:480px;margin:0 auto;}
+.header{background:var(--dark);position:sticky;top:0;z-index:100;}
+.header-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--red);letter-spacing:2px;line-height:1;}
+.logo span{color:#fff;font-size:12px;font-family:'IBM Plex Sans',sans-serif;font-weight:500;display:block;margin-top:2px;}
+.header-badge{background:var(--red);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;}
+.nav{display:flex;border-top:1px solid rgba(255,255,255,0.08);}
+.nav-btn{flex:1;background:transparent;border:none;color:rgba(255,255,255,0.45);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;padding:11px 4px;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;}
+.nav-btn.active{color:#fff;border-bottom-color:var(--red);}
+.main{padding:16px;}
+.section{display:none;}.section.active{display:block;}
+.score-bar{background:var(--dark);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.score-bar-left{color:rgba(255,255,255,0.5);font-size:12px;}
+.score-bar-left strong{color:#fff;font-size:22px;font-weight:600;display:block;margin-top:2px;}
+.score-bar-right{text-align:right;color:rgba(255,255,255,0.5);font-size:12px;}
+.score-bar-right strong{color:var(--red);font-size:22px;font-weight:600;display:block;margin-top:2px;}
+.section-label{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:20px;}
+.section-label:first-child{margin-top:0;}
+.filter-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none;}
+.filter-bar::-webkit-scrollbar{display:none;}
+.filter-btn{flex-shrink:0;padding:6px 12px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;border:1px solid var(--border);border-radius:20px;background:var(--card);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+.filter-btn.active{background:var(--dark);color:#fff;border-color:var(--dark);}
+.match-card{background:var(--card);border-radius:14px;margin-bottom:10px;overflow:hidden;border:1px solid var(--border);}
+.match-card-header{background:var(--dark);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.match-group{font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;}
+.match-time{font-size:11px;color:rgba(255,255,255,0.5);flex:1;text-align:center;}
+.match-status-open{color:#4ade80;font-size:11px;font-weight:600;}
+.match-status-closed{color:#f87171;font-size:11px;font-weight:600;}
+.match-teams{padding:14px 14px 10px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;}
+.team{text-align:center;}
+.team-flag{font-size:28px;display:block;margin-bottom:3px;}
+.team-name{font-size:12px;font-weight:600;color:var(--dark);}
+.score-vs{text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--muted);letter-spacing:2px;}
+.score-inputs{display:grid;grid-template-columns:1fr 24px 1fr;align-items:center;gap:6px;padding:0 14px 12px;}
+.score-inp{text-align:center;width:100%;padding:9px 4px;font-size:20px;font-weight:600;font-family:'Bebas Neue',sans-serif;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--dark);outline:none;transition:border-color 0.15s;}
+.score-inp:focus{border-color:var(--red);}
+.score-inp:disabled{opacity:0.5;}
+.score-dash{text-align:center;color:var(--muted);font-size:18px;font-weight:600;}
+.bets-section{border-top:1px solid var(--border);padding:10px 14px 6px;}
+.bets-title{font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.bet-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;}
+.bet-label{font-size:12px;color:var(--mid);flex:1;}
+.bet-options{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;}
+.bet-btn{padding:4px 10px;font-size:11px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;border:1.5px solid var(--border);border-radius:20px;background:transparent;color:var(--mid);cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.bet-btn:disabled{opacity:0.4;cursor:default;}
+.bet-btn.sel-yes{background:var(--green);border-color:var(--green);color:#fff;}
+.bet-btn.sel-no{background:var(--red);border-color:var(--red);color:#fff;}
+.bet-btn.sel-1{background:#1a4fa8;border-color:#1a4fa8;color:#fff;}
+.bet-btn.sel-x{background:#555;border-color:#555;color:#fff;}
+.bet-btn.sel-2{background:#7a1f1f;border-color:#7a1f1f;color:#fff;}
+.bet-btn.sel-alt{background:#6a1fa8;border-color:#6a1fa8;color:#fff;}
+.save-btn{display:block;width:calc(100% - 28px);margin:4px 14px 12px;padding:10px;background:var(--dark);color:#fff;border:none;border-radius:10px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s;}
+.save-btn:active{background:var(--red);}
+.save-btn.saved{background:var(--green);}
+.lb-header{display:grid;grid-template-columns:32px 1fr auto auto;gap:8px;padding:8px 14px;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);}
+.lb-card{background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:12px;}
+.lb-row{display:grid;grid-template-columns:32px 1fr auto auto;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.lb-row:last-child{border-bottom:none;}
+.lb-row.me{background:#fff8f0;}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--muted);text-align:center;}
+.lb-rank.gold{color:#d4a017;}.lb-rank.silver{color:#9e9e9e;}.lb-rank.bronze{color:#b5622a;}
+.lb-name{font-size:14px;font-weight:500;color:var(--dark);}
+.lb-name small{display:block;font-size:11px;color:var(--muted);font-weight:400;}
+.lb-pts{font-size:15px;font-weight:600;color:var(--dark);text-align:right;}
+.lb-trend{font-size:12px;min-width:28px;text-align:right;}
+.up{color:var(--green);}.down{color:var(--red);}.flat{color:var(--muted);}
+.pts-card{background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:12px;}
+.pts-row{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;}
+.pts-row:last-child{border-bottom:none;}
+.pts-row span:last-child{font-weight:600;color:var(--red);}
+.admin-card{background:var(--card);border-radius:14px;border:1px solid var(--border);padding:14px;margin-bottom:10px;}
+.admin-card-title{font-size:13px;font-weight:600;color:var(--dark);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.admin-card-title small{font-size:11px;font-weight:400;color:var(--muted);}
+.result-inputs{display:grid;grid-template-columns:1fr 20px 1fr;gap:6px;align-items:center;margin-bottom:10px;}
+.result-inp{text-align:center;width:100%;padding:9px 4px;font-size:20px;font-weight:600;font-family:'Bebas Neue',sans-serif;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--dark);outline:none;}
+.result-inp:focus{border-color:var(--red);}
+.confirm-btn{width:100%;padding:10px;background:var(--green);color:#fff;border:none;border-radius:10px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;}
+.custom-bet-box{background:var(--surface);border-radius:12px;padding:14px;margin-bottom:12px;}
+.custom-bet-box label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:6px;}
+.custom-bet-box input,.custom-bet-box select{width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--dark);margin-bottom:8px;outline:none;}
+.custom-bet-box input:focus,.custom-bet-box select:focus{border-color:var(--red);}
+.add-bet-btn{width:100%;padding:10px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+.admin-gate{background:var(--card);border-radius:14px;border:1px solid var(--border);padding:20px 16px;text-align:center;margin-bottom:16px;}
+.admin-gate h3{font-size:16px;font-weight:600;margin-bottom:6px;}
+.admin-gate p{font-size:13px;color:var(--muted);margin-bottom:14px;}
+.admin-gate input{width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);font-size:16px;text-align:center;letter-spacing:4px;font-family:'IBM Plex Sans',sans-serif;background:var(--surface);outline:none;margin-bottom:10px;}
+.admin-gate input:focus{border-color:var(--red);}
+.admin-gate button{width:100%;padding:11px;background:var(--dark);color:#fff;border:none;border-radius:10px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;transition:transform 0.3s ease;z-index:999;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.setup-screen{padding:32px 16px;text-align:center;}
+.setup-screen h2{font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--red);letter-spacing:3px;line-height:1;margin-bottom:4px;}
+.setup-screen p{color:var(--muted);font-size:14px;margin-bottom:28px;}
+.setup-input-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);text-align:left;display:block;margin-bottom:6px;}
+.setup-input{width:100%;padding:13px 16px;border-radius:12px;border:1.5px solid var(--border);font-family:'IBM Plex Sans',sans-serif;font-size:16px;background:var(--card);color:var(--dark);outline:none;margin-bottom:12px;}
+.setup-input:focus{border-color:var(--red);}
+.setup-btn{width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:12px;font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:600;cursor:pointer;margin-top:4px;}
+.empty-state{text-align:center;padding:32px 16px;color:var(--muted);font-size:14px;}
+.loading{text-align:center;padding:20px;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+
+<div id="setup-screen" class="setup-screen">
+  <div style="font-size:64px;margin-bottom:16px">⚽</div>
+  <h2>GGG</h2>
+  <p>Dünya Kupası 2026 — Tahmin Ligi</p>
+  <label class="setup-input-label">Adın</label>
+  <input class="setup-input" id="setup-name" placeholder="örn. Ahmet" maxlength="20">
+  <label class="setup-input-label">Grup Şifresi</label>
+  <input class="setup-input" id="setup-pass" type="password" placeholder="••••">
+  <button class="setup-btn" onclick="doSetup()">Giriş Yap</button>
+</div>
+
+<div id="app" style="display:none">
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">GGG <span>Dünya Kupası 2026</span></div>
+      <div class="header-badge" id="user-badge">Sen</div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn active" onclick="showTab('tahmin',this)">Tahmin</button>
+      <button class="nav-btn" onclick="showTab('puan',this)">Puan Tablosu</button>
+      <button class="nav-btn" onclick="showTab('admin',this)">Admin</button>
+    </div>
+  </div>
+  <div class="main">
+    <div id="tab-tahmin" class="section active">
+      <div class="score-bar">
+        <div class="score-bar-left">Toplam Puanım<strong id="my-total-pts">0</strong></div>
+        <div class="score-bar-right">Sıralama<strong id="my-rank">—</strong></div>
+      </div>
+      <div class="filter-bar" id="filter-bar"></div>
+      <div id="matches-container"><div class="loading">Maçlar yükleniyor...</div></div>
+    </div>
+    <div id="tab-puan" class="section">
+      <div class="section-label">Sıralama</div>
+      <div class="lb-header"><span>#</span><span>Oyuncu</span><span>Puan</span><span>+/-</span></div>
+      <div class="lb-card" id="lb-container"><div class="loading">Yükleniyor...</div></div>
+      <div class="section-label" style="margin-top:20px">Puan Sistemi</div>
+      <div class="pts-card">
+        <div class="pts-row"><span>İlk yarı sonucu doğru</span><span>1 puan</span></div>
+        <div class="pts-row"><span>Maç sonucu (1/X/2) doğru</span><span>2 puan</span></div>
+        <div class="pts-row"><span>Tam skor doğru</span><span>3 puan</span></div>
+        <div class="pts-row"><span>KG var/yok doğru</span><span>1 puan</span></div>
+        <div class="pts-row"><span>2.5 gol alt/üst doğru</span><span>1 puan</span></div>
+        <div class="pts-row"><span>Kırmızı kart var/yok doğru</span><span>1 puan</span></div>
+        <div class="pts-row"><span>Özel bahis doğru</span><span>1 puan</span></div>
+      </div>
+    </div>
+    <div id="tab-admin" class="section">
+      <div id="admin-gate-box">
+        <div class="admin-gate">
+          <h3>Admin Girişi</h3>
+          <p>Admin şifresini gir</p>
+          <input type="password" id="admin-pass-input" placeholder="••••" maxlength="10">
+          <button onclick="checkAdmin()">Giriş</button>
+        </div>
+      </div>
+      <div id="admin-panel" style="display:none">
+        <div class="section-label">Sonuç Gir</div>
+        <div id="admin-matches-container"><div class="loading">Yükleniyor...</div></div>
+        <div class="section-label" style="margin-top:20px">Maça Özel Bahis Ekle</div>
+        <div class="custom-bet-box">
+          <label>Maç Seç</label>
+          <select id="custom-bet-match"></select>
+          <label>Bahis Sorusu</label>
+          <input type="text" id="custom-bet-q" placeholder="örn. İlk golü kim atar?">
+          <label>Seçenek Tipi</label>
+          <select id="custom-bet-type" onchange="toggleCustomOpts()">
+            <option value="yesno">Var / Yok</option>
+            <option value="1x2">1 / X / 2</option>
+            <option value="custom">Özel seçenekler</option>
+          </select>
+          <div id="custom-options-box" style="display:none">
+            <label>Seçenekler (virgülle ayır)</label>
+            <input type="text" id="custom-options-text" placeholder="örn. Ev Sahibi, Deplasman">
+          </div>
+          <button class="add-bet-btn" onclick="addCustomBet()">+ Bahis Ekle</button>
+        </div>
+        <div class="section-label" style="margin-top:20px">Maç Düzenle (Takım İsmini Güncelle)</div>
+        <div class="custom-bet-box">
+          <label>Maç Seç</label>
+          <select id="edit-match-select" onchange="loadEditMatch()"></select>
+          <label>Ev Sahibi (bayrak + isim)</label>
+          <input type="text" id="edit-home" placeholder="örn. 🇧🇷 Brezilya">
+          <label>Deplasman (bayrak + isim)</label>
+          <input type="text" id="edit-away" placeholder="örn. 🇩🇪 Almanya">
+          <label>Tarih &amp; Saat (TR saati)</label>
+          <input type="text" id="edit-time" placeholder="örn. 29 Haz · 22:00">
+          <button class="add-bet-btn" style="background:#1a7a3c" onclick="saveEditMatch()">✓ Maçı Güncelle</button>
+        </div>
+        <div class="section-label">Yeni Maç Ekle</div>
+        <div class="custom-bet-box">
+          <label>Ev Sahibi (bayrak + isim)</label>
+          <input type="text" id="new-home" placeholder="örn. 🇹🇷 Türkiye">
+          <label>Deplasman (bayrak + isim)</label>
+          <input type="text" id="new-away" placeholder="örn. 🇩🇪 Almanya">
+          <label>Grup / Aşama</label>
+          <input type="text" id="new-group" placeholder="örn. Grup A">
+          <label>Tarih & Saat (TR saati)</label>
+          <input type="text" id="new-time" placeholder="örn. 12 Haz · 21:00">
+          <button class="add-bet-btn" onclick="addMatch()">+ Maç Ekle</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://blaesgnkyjjkcsrjpwfy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_faNSQmoTR_LStLViGyM1-A_ItMgoDX3';
+const GROUP_PASS = 'ggg2026';
+const ADMIN_PASS = 'admin123';
+
+const HEADERS = {
+  'Content-Type': 'application/json',
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`
+};
+
+async function sbGet(table, params='') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {headers: HEADERS});
+  return r.json();
+}
+async function sbPost(table, body) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method:'POST', headers:{...HEADERS,'Prefer':'return=representation'}, body:JSON.stringify(body)
+  });
+  return r.json();
+}
+async function sbUpsert(table, body, onConflict) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+    method:'POST', headers:{...HEADERS,'Prefer':'resolution=merge-duplicates,return=representation'}, body:JSON.stringify(body)
+  });
+  return r.json();
+}
+async function sbPatch(table, params, body) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    method:'PATCH', headers:{...HEADERS,'Prefer':'return=representation'}, body:JSON.stringify(body)
+  });
+  return r.json();
+}
+
+const ALL_MATCHES = [
+  {id:1,group:'Grup A',time:'11 Haz · 22:00',home:'🇲🇽 Meksika',away:'🇿🇦 G.Afrika'},
+  {id:2,group:'Grup A',time:'12 Haz · 05:00',home:'🇰🇷 G.Kore',away:'🇨🇿 Çekya'},
+  {id:3,group:'Grup B',time:'12 Haz · 22:00',home:'🇨🇦 Kanada',away:'🇧🇦 Bosna Hersek'},
+  {id:4,group:'Grup D',time:'13 Haz · 04:00',home:'🇺🇸 ABD',away:'🇵🇾 Paraguay'},
+  {id:5,group:'Grup B',time:'13 Haz · 22:00',home:'🇶🇦 Katar',away:'🇨🇭 İsviçre'},
+  {id:6,group:'Grup C',time:'14 Haz · 01:00',home:'🇧🇷 Brezilya',away:'🇲🇦 Fas'},
+  {id:7,group:'Grup C',time:'14 Haz · 04:00',home:'🇭🇹 Haiti',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya'},
+  {id:8,group:'Grup D',time:'14 Haz · 07:00',home:'🇦🇺 Avustralya',away:'🇹🇷 Türkiye'},
+  {id:9,group:'Grup E',time:'14 Haz · 20:00',home:'🇩🇪 Almanya',away:'🇨🇼 Curaçao'},
+  {id:10,group:'Grup F',time:'14 Haz · 23:00',home:'🇳🇱 Hollanda',away:'🇯🇵 Japonya'},
+  {id:11,group:'Grup E',time:'15 Haz · 02:00',home:'🇨🇮 F.Fildişi',away:'🇪🇨 Ekvador'},
+  {id:12,group:'Grup F',time:'15 Haz · 05:00',home:'🇹🇳 Tunus',away:'🇸🇪 İsveç'},
+  {id:13,group:'Grup H',time:'15 Haz · 19:00',home:'🇪🇸 İspanya',away:'🇨🇻 Yeşilburun'},
+  {id:14,group:'Grup G',time:'15 Haz · 22:00',home:'🇧🇪 Belçika',away:'🇪🇬 Mısır'},
+  {id:15,group:'Grup H',time:'16 Haz · 01:00',home:'🇸🇦 S.Arabistan',away:'🇺🇾 Uruguay'},
+  {id:16,group:'Grup G',time:'16 Haz · 04:00',home:'🇮🇷 İran',away:'🇳🇿 Y.Zelanda'},
+  {id:17,group:'Grup I',time:'16 Haz · 22:00',home:'🇫🇷 Fransa',away:'🇸🇳 Senegal'},
+  {id:18,group:'Grup I',time:'17 Haz · 01:00',home:'🇮🇶 Irak',away:'🇳🇴 Norveç'},
+  {id:19,group:'Grup J',time:'17 Haz · 04:00',home:'🇦🇷 Arjantin',away:'🇩🇿 Cezayir'},
+  {id:20,group:'Grup J',time:'17 Haz · 07:00',home:'🇦🇹 Avusturya',away:'🇯🇴 Ürdün'},
+  {id:21,group:'Grup K',time:'17 Haz · 20:00',home:'🇵🇹 Portekiz',away:'🇨🇩 Kongo DR'},
+  {id:22,group:'Grup L',time:'17 Haz · 23:00',home:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere',away:'🇭🇷 Hırvatistan'},
+  {id:23,group:'Grup L',time:'18 Haz · 02:00',home:'🇬🇭 Gana',away:'🇵🇦 Panama'},
+  {id:24,group:'Grup K',time:'18 Haz · 05:00',home:'🇺🇿 Özbekistan',away:'🇨🇴 Kolombiya'},
+  {id:25,group:'Grup A',time:'18 Haz · 19:00',home:'🇨🇿 Çekya',away:'🇿🇦 G.Afrika'},
+  {id:26,group:'Grup B',time:'18 Haz · 22:00',home:'🇨🇭 İsviçre',away:'🇧🇦 Bosna Hersek'},
+  {id:27,group:'Grup B',time:'19 Haz · 01:00',home:'🇨🇦 Kanada',away:'🇶🇦 Katar'},
+  {id:28,group:'Grup A',time:'19 Haz · 04:00',home:'🇲🇽 Meksika',away:'🇰🇷 G.Kore'},
+  {id:29,group:'Grup D',time:'19 Haz · 22:00',home:'🇺🇸 ABD',away:'🇦🇺 Avustralya'},
+  {id:30,group:'Grup C',time:'19 Haz · 22:00',home:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya',away:'🇲🇦 Fas'},
+  {id:31,group:'Grup C',time:'20 Haz · 04:00',home:'🇧🇷 Brezilya',away:'🇭🇹 Haiti'},
+  {id:32,group:'Grup D',time:'20 Haz · 07:00',home:'🇹🇷 Türkiye',away:'🇵🇾 Paraguay'},
+  {id:33,group:'Grup F',time:'20 Haz · 20:00',home:'🇳🇱 Hollanda',away:'🇸🇪 İsveç'},
+  {id:34,group:'Grup E',time:'20 Haz · 23:00',home:'🇩🇪 Almanya',away:'🇨🇮 F.Fildişi'},
+  {id:35,group:'Grup E',time:'21 Haz · 03:00',home:'🇪🇨 Ekvador',away:'🇨🇼 Curaçao'},
+  {id:36,group:'Grup F',time:'21 Haz · 07:00',home:'🇹🇳 Tunus',away:'🇯🇵 Japonya'},
+  {id:37,group:'Grup H',time:'21 Haz · 19:00',home:'🇪🇸 İspanya',away:'🇸🇦 S.Arabistan'},
+  {id:38,group:'Grup G',time:'21 Haz · 22:00',home:'🇧🇪 Belçika',away:'🇮🇷 İran'},
+  {id:39,group:'Grup H',time:'22 Haz · 01:00',home:'🇺🇾 Uruguay',away:'🇨🇻 Yeşilburun'},
+  {id:40,group:'Grup G',time:'22 Haz · 04:00',home:'🇳🇿 Y.Zelanda',away:'🇪🇬 Mısır'},
+  {id:41,group:'Grup J',time:'22 Haz · 20:00',home:'🇦🇷 Arjantin',away:'🇦🇹 Avusturya'},
+  {id:42,group:'Grup I',time:'23 Haz · 00:00',home:'🇫🇷 Fransa',away:'🇮🇶 Irak'},
+  {id:43,group:'Grup I',time:'23 Haz · 03:00',home:'🇳🇴 Norveç',away:'🇸🇳 Senegal'},
+  {id:44,group:'Grup J',time:'23 Haz · 06:00',home:'🇯🇴 Ürdün',away:'🇩🇿 Cezayir'},
+  {id:45,group:'Grup K',time:'23 Haz · 20:00',home:'🇵🇹 Portekiz',away:'🇺🇿 Özbekistan'},
+  {id:46,group:'Grup L',time:'23 Haz · 23:00',home:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere',away:'🇬🇭 Gana'},
+  {id:47,group:'Grup L',time:'24 Haz · 02:00',home:'🇵🇦 Panama',away:'🇭🇷 Hırvatistan'},
+  {id:48,group:'Grup K',time:'24 Haz · 05:00',home:'🇨🇴 Kolombiya',away:'🇨🇩 Kongo DR'},
+  {id:49,group:'Grup B',time:'24 Haz · 22:00',home:'🇨🇭 İsviçre',away:'🇨🇦 Kanada'},
+  {id:50,group:'Grup B',time:'24 Haz · 22:00',home:'🇧🇦 Bosna Hersek',away:'🇶🇦 Katar'},
+  {id:51,group:'Grup C',time:'25 Haz · 01:00',home:'🇧🇷 Brezilya',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya'},
+  {id:52,group:'Grup C',time:'25 Haz · 01:00',home:'🇲🇦 Fas',away:'🇭🇹 Haiti'},
+  {id:53,group:'Grup A',time:'25 Haz · 04:00',home:'🇲🇽 Meksika',away:'🇨🇿 Çekya'},
+  {id:54,group:'Grup A',time:'25 Haz · 04:00',home:'🇰🇷 G.Kore',away:'🇿🇦 G.Afrika'},
+  {id:55,group:'Grup E',time:'25 Haz · 23:00',home:'🇪🇨 Ekvador',away:'🇩🇪 Almanya'},
+  {id:56,group:'Grup E',time:'25 Haz · 23:00',home:'🇨🇼 Curaçao',away:'🇨🇮 F.Fildişi'},
+  {id:57,group:'Grup F',time:'26 Haz · 02:00',home:'🇹🇳 Tunus',away:'🇳🇱 Hollanda'},
+  {id:58,group:'Grup F',time:'26 Haz · 02:00',home:'🇯🇵 Japonya',away:'🇸🇪 İsveç'},
+  {id:59,group:'Grup D',time:'26 Haz · 05:00',home:'🇺🇸 ABD',away:'🇹🇷 Türkiye'},
+  {id:60,group:'Grup D',time:'26 Haz · 05:00',home:'🇵🇾 Paraguay',away:'🇦🇺 Avustralya'},
+  {id:61,group:'Grup I',time:'26 Haz · 22:00',home:'🇳🇴 Norveç',away:'🇫🇷 Fransa'},
+  {id:62,group:'Grup I',time:'26 Haz · 22:00',home:'🇸🇳 Senegal',away:'🇮🇶 Irak'},
+  {id:63,group:'Grup H',time:'27 Haz · 03:00',home:'🇺🇾 Uruguay',away:'🇪🇸 İspanya'},
+  {id:64,group:'Grup H',time:'27 Haz · 03:00',home:'🇨🇻 Yeşilburun',away:'🇸🇦 S.Arabistan'},
+  {id:65,group:'Grup G',time:'27 Haz · 06:00',home:'🇳🇿 Y.Zelanda',away:'🇧🇪 Belçika'},
+  {id:66,group:'Grup G',time:'27 Haz · 06:00',home:'🇪🇬 Mısır',away:'🇮🇷 İran'},
+  {id:67,group:'Grup L',time:'28 Haz · 00:00',home:'🇵🇦 Panama',away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere'},
+  {id:68,group:'Grup L',time:'28 Haz · 00:00',home:'🇭🇷 Hırvatistan',away:'🇬🇭 Gana'},
+  {id:69,group:'Grup K',time:'28 Haz · 03:00',home:'🇨🇴 Kolombiya',away:'🇵🇹 Portekiz'},
+  {id:70,group:'Grup K',time:'28 Haz · 03:00',home:'🇨🇩 Kongo DR',away:'🇺🇿 Özbekistan'},
+  {id:71,group:'Grup J',time:'28 Haz · 06:00',home:'🇦🇷 Arjantin',away:'🇯🇴 Ürdün'},
+  {id:72,group:'Grup J',time:'28 Haz · 06:00',home:'🇩🇿 Cezayir',away:'🇦🇹 Avusturya'},
+
+  // SON 32 — 28 Haziran - 2 Temmuz
+  {id:73,group:'Son 32',time:'29 Haz · 01:00',home:'🏳 A2. vs B2.',away:'🏳 TBD'},
+  {id:74,group:'Son 32',time:'29 Haz · 04:30',home:'🏳 E1. vs 3.(A/B/C/D/F)',away:'🏳 TBD'},
+  {id:75,group:'Son 32',time:'29 Haz · 04:00',home:'🏳 F1. vs C2.',away:'🏳 TBD'},
+  {id:76,group:'Son 32',time:'29 Haz · 20:00',home:'🏳 C1. vs F2.',away:'🏳 TBD'},
+  {id:77,group:'Son 32',time:'30 Haz · 01:00',home:'🏳 I1. vs 3.(C/D/F/G/H)',away:'🏳 TBD'},
+  {id:78,group:'Son 32',time:'30 Haz · 01:00',home:'🏳 E2. vs I2.',away:'🏳 TBD'},
+  {id:79,group:'Son 32',time:'30 Haz · 04:00',home:'🏳 A1. vs 3.(C/E/F/H/I)',away:'🏳 TBD'},
+  {id:80,group:'Son 32',time:'30 Haz · 17:00',home:'🏳 L1. vs 3.(E/H/I/J/K)',away:'🏳 TBD'},
+  {id:81,group:'Son 32',time:'1 Tem · 01:00',home:'🏳 D1. vs 3.(B/E/F/I/J)',away:'🏳 TBD'},
+  {id:82,group:'Son 32',time:'1 Tem · 01:00',home:'🏳 G1. vs 3.(A/E/H/I/J)',away:'🏳 TBD'},
+  {id:83,group:'Son 32',time:'1 Tem · 07:00',home:'🏳 K2. vs L2.',away:'🏳 TBD'},
+  {id:84,group:'Son 32',time:'1 Tem · 03:00',home:'🏳 H1. vs J2.',away:'🏳 TBD'},
+  {id:85,group:'Son 32',time:'2 Tem · 01:00',home:'🏳 B1. vs 3.(E/F/G/I/J)',away:'🏳 TBD'},
+  {id:86,group:'Son 32',time:'2 Tem · 04:00',home:'🏳 J1. vs H2.',away:'🏳 TBD'},
+  {id:87,group:'Son 32',time:'2 Tem · 07:30',home:'🏳 K1. vs 3.(D/E/I/J/L)',away:'🏳 TBD'},
+  {id:88,group:'Son 32',time:'2 Tem · 00:00',home:'🏳 D2. vs G2.',away:'🏳 TBD'},
+
+  // SON 16 — 4-7 Temmuz
+  {id:89,group:'Son 16',time:'4 Tem · 22:00',home:'🏳 M73 gal. vs M75 gal.',away:'🏳 TBD'},
+  {id:90,group:'Son 16',time:'5 Tem · 01:00',home:'🏳 M74 gal. vs M76 gal.',away:'🏳 TBD'},
+  {id:91,group:'Son 16',time:'5 Tem · 22:00',home:'🏳 M77 gal. vs M79 gal.',away:'🏳 TBD'},
+  {id:92,group:'Son 16',time:'6 Tem · 01:00',home:'🏳 M78 gal. vs M80 gal.',away:'🏳 TBD'},
+  {id:93,group:'Son 16',time:'6 Tem · 22:00',home:'🏳 M81 gal. vs M83 gal.',away:'🏳 TBD'},
+  {id:94,group:'Son 16',time:'7 Tem · 01:00',home:'🏳 M82 gal. vs M84 gal.',away:'🏳 TBD'},
+  {id:95,group:'Son 16',time:'7 Tem · 22:00',home:'🏳 M85 gal. vs M87 gal.',away:'🏳 TBD'},
+  {id:96,group:'Son 16',time:'8 Tem · 01:00',home:'🏳 M86 gal. vs M88 gal.',away:'🏳 TBD'},
+
+  // ÇEYREK FİNAL — 10-12 Temmuz
+  {id:97,group:'Çeyrek Final',time:'10 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD'},
+  {id:98,group:'Çeyrek Final',time:'11 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD'},
+  {id:99,group:'Çeyrek Final',time:'11 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD'},
+  {id:100,group:'Çeyrek Final',time:'12 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD'},
+
+  // YARI FİNAL — 14-15 Temmuz
+  {id:101,group:'Yarı Final',time:'15 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD'},
+  {id:102,group:'Yarı Final',time:'16 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD'},
+
+  // 3. LÜK MAÇI & FİNAL
+  {id:103,group:'3. lük Maçı',time:'18 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD'},
+  {id:104,group:'Final',time:'19 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD'},
+];
+
+let currentUser = null;
+let currentFilter = 'Tümü';
+let isAdmin = false;
+let matches = [];
+let myPredictions = {};
+let players = [];
+let results = {};
+
+async function doSetup() {
+  const name = document.getElementById('setup-name').value.trim();
+  const pass = document.getElementById('setup-pass').value;
+  if (!name) { showToast('İsmini gir!'); return; }
+  if (pass !== GROUP_PASS) { showToast('Hatalı grup şifresi!'); return; }
+  currentUser = name;
+  localStorage.setItem('ggg_user', name);
+  // upsert player
+  await sbUpsert('players', {name, pts:0, trend:0}, 'name');
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('user-badge').textContent = name;
+  await loadAll();
+}
+
+async function loadAll() {
+  await Promise.all([loadMatches(), loadPredictions(), loadPlayers(), loadResults()]);
+  buildFilterBar();
+  renderMatches();
+  renderLeaderboard();
+}
+
+async function loadMatches() {
+  // Use static match list + custom bets from DB
+  const customRows = await sbGet('match_results', 'select=match_id,custom');
+  const customMap = {};
+  if (Array.isArray(customRows)) {
+    customRows.forEach(r => { if (r.custom) customMap[r.match_id] = r.custom; });
+  }
+  matches = ALL_MATCHES.map(m => ({
+    ...m,
+    result: null,
+    customBets: (customMap[m.id] && customMap[m.id].bets) ? customMap[m.id].bets : []
+  }));
+  // overlay results
+  const resRows = await sbGet('match_results', 'select=*');
+  if (Array.isArray(resRows)) {
+    resRows.forEach(r => {
+      const m = matches.find(x => x.id === r.match_id);
+      if (m && r.home_score !== null && r.away_score !== null) {
+        m.result = r;
+        m.customBets = (r.custom && r.custom.bets) ? r.custom.bets : m.customBets;
+      } else if (m && r.custom && r.custom.bets) {
+        m.customBets = r.custom.bets;
+      }
+    });
+  }
+}
+
+async function loadPredictions() {
+  const rows = await sbGet('predictions', `player_name=eq.${encodeURIComponent(currentUser)}`);
+  myPredictions = {};
+  if (Array.isArray(rows)) {
+    rows.forEach(r => { myPredictions[r.match_id] = r; });
+  }
+}
+
+async function loadPlayers() {
+  const rows = await sbGet('players', 'order=pts.desc');
+  players = Array.isArray(rows) ? rows : [];
+}
+
+async function loadResults() {
+  const rows = await sbGet('match_results', 'select=*');
+  results = {};
+  if (Array.isArray(rows)) rows.forEach(r => { results[r.match_id] = r; });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('ggg_user');
+  if (saved) document.getElementById('setup-name').value = saved;
+});
+
+function showTab(tab, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'puan') { loadPlayers().then(renderLeaderboard); }
+  if (tab === 'admin' && isAdmin) renderAdminMatches();
+}
+
+async function checkAdmin() {
+  if (document.getElementById('admin-pass-input').value === ADMIN_PASS) {
+    isAdmin = true;
+    document.getElementById('admin-gate-box').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    await loadMatches();
+    renderAdminMatches();
+    populateCustomBetSelect();
+    populateEditMatchSelect();
+  } else { showToast('Yanlış şifre!'); }
+}
+
+function buildFilterBar() {
+  const groups = ['Tümü', ...new Set(ALL_MATCHES.map(m => m.group))];
+  document.getElementById('filter-bar').innerHTML = groups.map(g =>
+    `<button class="filter-btn ${g === currentFilter ? 'active' : ''}" onclick="setFilter('${g}',this)">${g}</button>`
+  ).join('');
+}
+
+function setFilter(g, btn) {
+  currentFilter = g;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMatches();
+}
+
+function splitTeam(str) { const p = str.split(' '); return {flag: p[0], name: p.slice(1).join(' ')}; }
+
+function renderMatches() {
+  const c = document.getElementById('matches-container');
+  c.innerHTML = '';
+  const filtered = currentFilter === 'Tümü' ? matches : matches.filter(m => m.group === currentFilter);
+  if (!filtered.length) { c.innerHTML = '<div class="empty-state">Bu grupta maç yok.</div>'; return; }
+  filtered.forEach(m => {
+    const pred = myPredictions[m.id] || {};
+    const locked = m.result !== null && m.result.home_score !== null;
+    const home = splitTeam(m.home), away = splitTeam(m.away);
+    const hS = pred.home_score !== undefined && pred.home_score !== null ? pred.home_score : '';
+    const aS = pred.away_score !== undefined && pred.away_score !== null ? pred.away_score : '';
+    const custom = pred.custom || {};
+
+    const customHtml = (m.customBets || []).map((cb, ci) => {
+      const v = custom['c'+ci] || '';
+      let opts = '';
+      if (cb.type === 'yesno') {
+        opts = `<button class="bet-btn ${v==='Var'?'sel-yes':''}" onclick="setBet(${m.id},'c${ci}','Var',this)" ${locked?'disabled':''}>Var</button>
+                <button class="bet-btn ${v==='Yok'?'sel-no':''}" onclick="setBet(${m.id},'c${ci}','Yok',this)" ${locked?'disabled':''}>Yok</button>`;
+      } else if (cb.type === '1x2') {
+        opts = `<button class="bet-btn ${v==='1'?'sel-1':''}" onclick="setBet(${m.id},'c${ci}','1',this)" ${locked?'disabled':''}>1</button>
+                <button class="bet-btn ${v==='X'?'sel-x':''}" onclick="setBet(${m.id},'c${ci}','X',this)" ${locked?'disabled':''}>X</button>
+                <button class="bet-btn ${v==='2'?'sel-2':''}" onclick="setBet(${m.id},'c${ci}','2',this)" ${locked?'disabled':''}>2</button>`;
+      } else {
+        (cb.options||[]).forEach(o => { opts += `<button class="bet-btn ${v===o?'sel-alt':''}" onclick="setBet(${m.id},'c${ci}','${o}',this)" ${locked?'disabled':''}>${o}</button>`; });
+      }
+      return `<div class="bet-row"><span class="bet-label">${cb.question}</span><div class="bet-options">${opts}</div></div>`;
+    }).join('');
+
+    c.innerHTML += `
+    <div class="match-card">
+      <div class="match-card-header">
+        <span class="match-group">${m.group}</span>
+        <span class="match-time">${m.time}</span>
+        <span class="${locked?'match-status-closed':'match-status-open'}">${locked?'KAPALI':'AÇIK'}</span>
+      </div>
+      <div class="match-teams">
+        <div class="team"><span class="team-flag">${home.flag}</span><span class="team-name">${home.name}</span></div>
+        <div class="score-vs">VS</div>
+        <div class="team"><span class="team-flag">${away.flag}</span><span class="team-name">${away.name}</span></div>
+      </div>
+      <div class="score-inputs">
+        <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'home_score',this.value)">
+        <span class="score-dash">—</span>
+        <input class="score-inp" type="number" min="0" max="20" value="${aS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'away_score',this.value)">
+      </div>
+      <div class="bets-section">
+        <div class="bets-title">Bahisler</div>
+        <div class="bet-row"><span class="bet-label">İlk yarı sonucu</span><div class="bet-options">
+          <button class="bet-btn ${pred.hy==='1'?'sel-1':''}" onclick="setBet(${m.id},'hy','1',this)" ${locked?'disabled':''}>1</button>
+          <button class="bet-btn ${pred.hy==='X'?'sel-x':''}" onclick="setBet(${m.id},'hy','X',this)" ${locked?'disabled':''}>X</button>
+          <button class="bet-btn ${pred.hy==='2'?'sel-2':''}" onclick="setBet(${m.id},'hy','2',this)" ${locked?'disabled':''}>2</button>
+        </div></div>
+        <div class="bet-row"><span class="bet-label">Maç sonucu</span><div class="bet-options">
+          <button class="bet-btn ${pred.ms==='1'?'sel-1':''}" onclick="setBet(${m.id},'ms','1',this)" ${locked?'disabled':''}>1</button>
+          <button class="bet-btn ${pred.ms==='X'?'sel-x':''}" onclick="setBet(${m.id},'ms','X',this)" ${locked?'disabled':''}>X</button>
+          <button class="bet-btn ${pred.ms==='2'?'sel-2':''}" onclick="setBet(${m.id},'ms','2',this)" ${locked?'disabled':''}>2</button>
+        </div></div>
+        <div class="bet-row"><span class="bet-label">KG (Karşılıklı Gol)</span><div class="bet-options">
+          <button class="bet-btn ${pred.kg==='Var'?'sel-yes':''}" onclick="setBet(${m.id},'kg','Var',this)" ${locked?'disabled':''}>Var</button>
+          <button class="bet-btn ${pred.kg==='Yok'?'sel-no':''}" onclick="setBet(${m.id},'kg','Yok',this)" ${locked?'disabled':''}>Yok</button>
+        </div></div>
+        <div class="bet-row"><span class="bet-label">2.5 Gol</span><div class="bet-options">
+          <button class="bet-btn ${pred.gol==='Üst'?'sel-yes':''}" onclick="setBet(${m.id},'gol','Üst',this)" ${locked?'disabled':''}>Üst</button>
+          <button class="bet-btn ${pred.gol==='Alt'?'sel-no':''}" onclick="setBet(${m.id},'gol','Alt',this)" ${locked?'disabled':''}>Alt</button>
+        </div></div>
+        <div class="bet-row"><span class="bet-label">Kırmızı Kart</span><div class="bet-options">
+          <button class="bet-btn ${pred.kk==='Var'?'sel-yes':''}" onclick="setBet(${m.id},'kk','Var',this)" ${locked?'disabled':''}>Var</button>
+          <button class="bet-btn ${pred.kk==='Yok'?'sel-no':''}" onclick="setBet(${m.id},'kk','Yok',this)" ${locked?'disabled':''}>Yok</button>
+        </div></div>
+        ${customHtml}
+      </div>
+      ${locked ? '' : `<button class="save-btn" id="sb-${m.id}" onclick="savePred(${m.id})">Tahmini Kaydet</button>`}
+    </div>`;
+  });
+}
+
+const pendingPreds = {};
+function setPred(mid, key, val) {
+  if (!pendingPreds[mid]) pendingPreds[mid] = {};
+  pendingPreds[mid][key] = val;
+}
+
+function setBet(mid, key, val, btn) {
+  if (!pendingPreds[mid]) pendingPreds[mid] = {};
+  if (key.startsWith('c')) {
+    if (!pendingPreds[mid].custom) pendingPreds[mid].custom = {};
+    pendingPreds[mid].custom[key] = val;
+  } else {
+    pendingPreds[mid][key] = val;
+  }
+  btn.parentElement.querySelectorAll('.bet-btn').forEach(b =>
+    b.classList.remove('sel-yes','sel-no','sel-1','sel-x','sel-2','sel-alt'));
+  if (val==='Var'||val==='Üst') btn.classList.add('sel-yes');
+  else if (val==='Yok'||val==='Alt') btn.classList.add('sel-no');
+  else if (val==='1') btn.classList.add('sel-1');
+  else if (val==='X') btn.classList.add('sel-x');
+  else if (val==='2') btn.classList.add('sel-2');
+  else btn.classList.add('sel-alt');
+}
+
+async function savePred(mid) {
+  const p = pendingPreds[mid] || {};
+  const existing = myPredictions[mid] || {};
+  const payload = {
+    player_name: currentUser,
+    match_id: mid,
+    home_score: p.home_score !== undefined ? parseInt(p.home_score) : existing.home_score,
+    away_score: p.away_score !== undefined ? parseInt(p.away_score) : existing.away_score,
+    hy: p.hy || existing.hy || null,
+    ms: p.ms || existing.ms || null,
+    kg: p.kg || existing.kg || null,
+    gol: p.gol || existing.gol || null,
+    kk: p.kk || existing.kk || null,
+    custom: {...(existing.custom||{}), ...(p.custom||{})}
+  };
+  await sbUpsert('predictions', payload, 'player_name,match_id');
+  myPredictions[mid] = payload;
+  const btn = document.getElementById('sb-'+mid);
+  if (btn) { btn.textContent='✓ Kaydedildi!'; btn.classList.add('saved'); setTimeout(()=>{btn.textContent='Tahmini Kaydet';btn.classList.remove('saved');},2000); }
+  showToast('Tahmin kaydedildi!');
+}
+
+function renderLeaderboard() {
+  const lb = document.getElementById('lb-container');
+  if (!players.length) { lb.innerHTML = '<div class="empty-state" style="padding:20px">Henüz oyuncu yok.</div>'; return; }
+  const sorted = [...players].sort((a,b) => b.pts - a.pts);
+  lb.innerHTML = sorted.map((p,i) => {
+    const rc = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    const tr = p.trend>0?`<span class="lb-trend up">+${p.trend}</span>`:p.trend<0?`<span class="lb-trend down">${p.trend}</span>`:`<span class="lb-trend flat">—</span>`;
+    const isMe = p.name === currentUser;
+    return `<div class="lb-row ${isMe?'me':''}">
+      <span class="lb-rank ${rc}">${i+1}</span>
+      <span class="lb-name">${p.name}${isMe?' <small>sen</small>':''}</span>
+      <span class="lb-pts">${p.pts}</span>${tr}</div>`;
+  }).join('');
+  const me = sorted.find(p => p.name === currentUser);
+  const myRank = sorted.findIndex(p => p.name === currentUser) + 1;
+  document.getElementById('my-total-pts').textContent = me ? me.pts : 0;
+  document.getElementById('my-rank').textContent = '#' + (myRank || '—');
+}
+
+function renderAdminMatches() {
+  const c = document.getElementById('admin-matches-container');
+  if (!c) return;
+  c.innerHTML = '';
+  matches.forEach(m => {
+    const res = results[m.id] || {};
+    const home = splitTeam(m.home), away = splitTeam(m.away);
+    const cH = (m.customBets||[]).map((cb,ci) => {
+      const cur = (res.custom && res.custom['c'+ci]) || '';
+      let opts = '';
+      if (cb.type==='yesno') {
+        opts=`<button class="bet-btn ${cur==='Var'?'sel-yes':''}" onclick="setAdminBet(${m.id},'c${ci}','Var',this)">Var</button>
+              <button class="bet-btn ${cur==='Yok'?'sel-no':''}" onclick="setAdminBet(${m.id},'c${ci}','Yok',this)">Yok</button>`;
+      } else if (cb.type==='1x2') {
+        opts=`<button class="bet-btn ${cur==='1'?'sel-1':''}" onclick="setAdminBet(${m.id},'c${ci}','1',this)">1</button>
+              <button class="bet-btn ${cur==='X'?'sel-x':''}" onclick="setAdminBet(${m.id},'c${ci}','X',this)">X</button>
+              <button class="bet-btn ${cur==='2'?'sel-2':''}" onclick="setAdminBet(${m.id},'c${ci}','2',this)">2</button>`;
+      } else {
+        (cb.options||[]).forEach(o => { opts+=`<button class="bet-btn ${cur===o?'sel-alt':''}" onclick="setAdminBet(${m.id},'c${ci}','${o}',this)">${o}</button>`; });
+      }
+      return `<div class="bet-row"><span class="bet-label">${cb.question}</span><div class="bet-options">${opts}</div></div>`;
+    }).join('');
+    c.innerHTML += `<div class="admin-card">
+      <div class="admin-card-title">${home.flag} ${home.name} — ${away.flag} ${away.name}<small>${m.group} · ${m.time}</small></div>
+      <div class="result-inputs">
+        <input class="result-inp" type="number" min="0" id="rh-${m.id}" value="${res.home_score!==undefined&&res.home_score!==null?res.home_score:''}" placeholder="0">
+        <span class="score-dash">—</span>
+        <input class="result-inp" type="number" min="0" id="ra-${m.id}" value="${res.away_score!==undefined&&res.away_score!==null?res.away_score:''}" placeholder="0">
+      </div>
+      <div class="bets-section" style="padding:0 0 6px">
+        <div class="bet-row"><span class="bet-label">İlk yarı</span><div class="bet-options">
+          <button class="bet-btn ${res.hy==='1'?'sel-1':''}" onclick="setAdminBet(${m.id},'hy','1',this)">1</button>
+          <button class="bet-btn ${res.hy==='X'?'sel-x':''}" onclick="setAdminBet(${m.id},'hy','X',this)">X</button>
+          <button class="bet-btn ${res.hy==='2'?'sel-2':''}" onclick="setAdminBet(${m.id},'hy','2',this)">2</button>
+        </div></div>
+        <div class="bet-row"><span class="bet-label">KG</span><div class="bet-options">
+          <button class="bet-btn ${res.kg==='Var'?'sel-yes':''}" onclick="setAdminBet(${m.id},'kg','Var',this)">Var</button>
+          <button class="bet-btn ${res.kg==='Yok'?'sel-no':''}" onclick="setAdminBet(${m.id},'kg','Yok',this)">Yok</button>
+        </div></div>
+        <div class="bet-row"><span class="bet-label">2.5 Gol</span><div class="bet-options">
+          <button class="bet-btn ${res.gol==='Üst'?'sel-yes':''}" onclick="setAdminBet(${m.id},'gol','Üst',this)">Üst</button>
+          <button class="bet-btn ${res.gol==='Alt'?'sel-no':''}" onclick="setAdminBet(${m.id},'gol','Alt',this)">Alt</button>
+        </div></div>
+        <div class="bet-row"><span class="bet-label">Kırmızı Kart</span><div class="bet-options">
+          <button class="bet-btn ${res.kk==='Var'?'sel-yes':''}" onclick="setAdminBet(${m.id},'kk','Var',this)">Var</button>
+          <button class="bet-btn ${res.kk==='Yok'?'sel-no':''}" onclick="setAdminBet(${m.id},'kk','Yok',this)">Yok</button>
+        </div></div>
+        ${cH}
+      </div>
+      <button class="confirm-btn" onclick="confirmResult(${m.id})">✓ Sonucu Onayla & Puanları Güncelle</button>
+    </div>`;
+  });
+}
+
+const adminPending = {};
+function setAdminBet(mid, key, val, btn) {
+  if (!adminPending[mid]) adminPending[mid] = {custom:{}};
+  if (key.startsWith('c')) adminPending[mid].custom[key] = val;
+  else adminPending[mid][key] = val;
+  btn.parentElement.querySelectorAll('.bet-btn').forEach(b =>
+    b.classList.remove('sel-yes','sel-no','sel-1','sel-x','sel-2','sel-alt'));
+  if (val==='Var'||val==='Üst') btn.classList.add('sel-yes');
+  else if (val==='Yok'||val==='Alt') btn.classList.add('sel-no');
+  else if (val==='1') btn.classList.add('sel-1');
+  else if (val==='X') btn.classList.add('sel-x');
+  else if (val==='2') btn.classList.add('sel-2');
+  else btn.classList.add('sel-alt');
+}
+
+async function confirmResult(mid) {
+  const h = parseInt(document.getElementById('rh-'+mid).value);
+  const a = parseInt(document.getElementById('ra-'+mid).value);
+  if (isNaN(h)||isNaN(a)) { showToast('Skoru gir!'); return; }
+  const ap = adminPending[mid] || {};
+  const existingRes = results[mid] || {};
+  const ms = h>a?'1':h===a?'X':'2';
+  const existingCustom = existingRes.custom || {};
+  const newCustom = {...existingCustom, ...(ap.custom||{})};
+
+  // get custom bets for this match
+  const m = matches.find(x => x.id === mid);
+  if (m) newCustom.bets = m.customBets;
+
+  const resultPayload = {
+    match_id: mid,
+    home_score: h, away_score: a, ms,
+    hy: ap.hy || existingRes.hy || null,
+    kg: ap.kg || existingRes.kg || null,
+    gol: ap.gol || existingRes.gol || null,
+    kk: ap.kk || existingRes.kk || null,
+    custom: newCustom
+  };
+  await sbUpsert('match_results', resultPayload, 'match_id');
+  results[mid] = resultPayload;
+
+  // calculate & update points for all players
+  const allPreds = await sbGet('predictions', `match_id=eq.${mid}`);
+  if (Array.isArray(allPreds)) {
+    for (const pred of allPreds) {
+      let pts = 0;
+      if (pred.hy && pred.hy === resultPayload.hy) pts += 1;
+      if (pred.ms && pred.ms === ms) pts += 2;
+      if (pred.home_score !== null && pred.away_score !== null &&
+          pred.home_score === h && pred.away_score === a) pts += 3;
+      if (pred.kg && pred.kg === resultPayload.kg) pts += 1;
+      if (pred.gol && pred.gol === resultPayload.gol) pts += 1;
+      if (pred.kk && pred.kk === resultPayload.kk) pts += 1;
+      const pCustom = pred.custom || {};
+      const rCustom = resultPayload.custom || {};
+      Object.keys(pCustom).forEach(k => {
+        if (k.startsWith('c') && pCustom[k] && rCustom[k] && pCustom[k] === rCustom[k]) pts += 1;
+      });
+      if (pts > 0) {
+        await sbPatch('players', `name=eq.${encodeURIComponent(pred.player_name)}`,
+          {pts: (players.find(p=>p.name===pred.player_name)?.pts||0) + pts, trend: pts});
+      }
+    }
+  }
+  await loadAll();
+  renderAdminMatches();
+  showToast('Sonuç onaylandı, puanlar güncellendi!');
+}
+
+function populateCustomBetSelect() {
+  const sel = document.getElementById('custom-bet-match');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Maç seç —</option>' +
+    matches.map(m => `<option value="${m.id}">${m.home} — ${m.away} (${m.time})</option>`).join('');
+}
+
+function populateEditMatchSelect() {
+  const sel = document.getElementById("edit-match-select");
+  if (!sel) return;
+  sel.innerHTML = "<option value="">— Maç seç —</option>" +
+    matches.map(m => `<option value="${m.id}">${m.group}: ${m.home} vs ${m.away}</option>`).join("");
+}
+
+function loadEditMatch() {
+  const mid = parseInt(document.getElementById("edit-match-select").value);
+  const m = matches.find(x => x.id === mid);
+  if (!m) return;
+  document.getElementById("edit-home").value = m.home;
+  document.getElementById("edit-away").value = m.away;
+  document.getElementById("edit-time").value = m.time;
+}
+
+function saveEditMatch() {
+  const mid = parseInt(document.getElementById("edit-match-select").value);
+  const home = document.getElementById("edit-home").value.trim();
+  const away = document.getElementById("edit-away").value.trim();
+  const time = document.getElementById("edit-time").value.trim();
+  if (!mid || !home || !away) { showToast("Maç ve takım isimlerini gir!"); return; }
+  const m = matches.find(x => x.id === mid);
+  if (!m) return;
+  m.home = home;
+  m.away = away;
+  if (time) m.time = time;
+  renderMatches();
+  renderAdminMatches();
+  populateCustomBetSelect();
+  populateEditMatchSelect();
+  showToast("Maç güncellendi!");
+}
+
+function toggleCustomOpts() {
+  document.getElementById('custom-options-box').style.display =
+    document.getElementById('custom-bet-type').value === 'custom' ? 'block' : 'none';
+}
+
+async function addCustomBet() {
+  const mid = parseInt(document.getElementById('custom-bet-match').value);
+  const q = document.getElementById('custom-bet-q').value.trim();
+  const type = document.getElementById('custom-bet-type').value;
+  if (!mid||!q) { showToast('Maç ve soru gir!'); return; }
+  const m = matches.find(x => x.id === mid);
+  if (!m) return;
+  const bet = {question:q, type};
+  if (type === 'custom') {
+    bet.options = document.getElementById('custom-options-text').value.split(',').map(o=>o.trim()).filter(Boolean);
+    if (bet.options.length < 2) { showToast('En az 2 seçenek gir!'); return; }
+  }
+  m.customBets = m.customBets || [];
+  m.customBets.push(bet);
+  // save bets to DB via match_results custom field
+  const existing = results[mid] || {};
+  const customData = {...(existing.custom||{}), bets: m.customBets};
+  await sbUpsert('match_results', {match_id: mid, custom: customData}, 'match_id');
+  results[mid] = {...existing, custom: customData};
+  renderMatches();
+  renderAdminMatches();
+  document.getElementById('custom-bet-q').value = '';
+  document.getElementById('custom-options-text').value = '';
+  showToast('Bahis eklendi!');
+}
+
+async function addMatch() {
+  const home = document.getElementById('new-home').value.trim();
+  const away = document.getElementById('new-away').value.trim();
+  const group = document.getElementById('new-group').value.trim();
+  const time = document.getElementById('new-time').value.trim();
+  if (!home||!away) { showToast('Takım isimlerini gir!'); return; }
+  const newId = Math.max(0, ...matches.map(m=>m.id)) + 1;
+  matches.push({id:newId, group:group||'Özel', time:time||'—', home, away, result:null, customBets:[]});
+  buildFilterBar(); renderMatches(); renderAdminMatches(); populateCustomBetSelect();
+  ['new-home','new-away','new-group','new-time'].forEach(id => document.getElementById(id).value='');
+  showToast('Maç eklendi!');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
