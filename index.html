@@ -763,8 +763,8 @@ function populateCustomBetSelect() {
 function populateEditMatchSelect() {
   const sel = document.getElementById("edit-match-select");
   if (!sel) return;
-  sel.innerHTML = "<option value="">— Maç seç —</option>" +
-    matches.map(m => `<option value="${m.id}">${m.group}: ${m.home} vs ${m.away}</option>`).join("");
+  sel.innerHTML = '<option value="">— Maç seç —</option>' +
+    matches.map(m => '<option value="' + m.id + '">' + m.group + ': ' + m.home + ' vs ' + m.away + '</option>').join('');
 }
 
 function loadEditMatch() {
