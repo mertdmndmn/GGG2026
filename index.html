@@ -580,6 +580,7 @@ function showTab(tab, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
   btn.classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
   if (tab === 'puan') { loadPlayers().then(async () => { renderLeaderboard(); const wk = await renderWeeklyBest(); const c = document.getElementById('lb-container'); if (wk && c) c.insertAdjacentHTML('beforebegin', wk); }); }
   if (tab === 'admin' && isAdmin) renderAdminMatches();
   if (tab === 'profil') { loadPlayers().then(() => renderProfilTab()); }
