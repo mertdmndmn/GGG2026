@@ -424,7 +424,7 @@ async function doLogin() {
   }
   const player = rows[0];
   if (player.pin !== pin) { showToast('Hatalı şifre!'); return; }
-  enterApp(name);
+  enterApp(name, pin);
 }
 
 async function doRegister() {
@@ -441,12 +441,13 @@ async function doRegister() {
     showToast('Bu isim zaten alınmış!'); return;
   }
   await sbPost('players', {name, pts:0, trend:0, pin});
-  enterApp(name);
+  enterApp(name, pin);
 }
 
-async function enterApp(name) {
+async function enterApp(name, pin) {
   currentUser = name;
   localStorage.setItem('ggg_user', name);
+  if (pin) localStorage.setItem('ggg_pin', pin);
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('user-badge').textContent = name;
@@ -506,11 +507,19 @@ async function loadResults() {
   if (Array.isArray(rows)) rows.forEach(r => { results[r.match_id] = r; });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   const saved = localStorage.getItem('ggg_user');
+  const savedPin = localStorage.getItem('ggg_pin');
   if (saved) {
     document.getElementById('login-name').value = saved;
     document.getElementById('reg-name').value = saved;
+  }
+  if (saved && savedPin) {
+    // Auto-login
+    const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(saved));
+    if (Array.isArray(rows) && rows.length > 0 && rows[0].pin === savedPin) {
+      enterApp(saved, savedPin);
+    }
   }
 });
 
