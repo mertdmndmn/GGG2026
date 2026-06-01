@@ -107,6 +107,11 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .setup-btn{width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:12px;font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:600;cursor:pointer;margin-top:4px;}
 .empty-state{text-align:center;padding:32px 16px;color:var(--muted);font-size:14px;}
 .loading{text-align:center;padding:20px;color:var(--muted);font-size:13px;}
+.setup-tab-btn{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;}
+.setup-tab-btn.active{background:var(--dark);color:#fff;border-color:var(--dark);}
+.admin-jump-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.jump-btn{padding:6px 12px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;border:1px solid var(--border);border-radius:20px;background:var(--card);color:var(--muted);cursor:pointer;white-space:nowrap;}
+.jump-btn:hover{background:var(--dark);color:#fff;border-color:var(--dark);}
 </style>
 </head>
 <body>
@@ -115,11 +120,28 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
   <div style="font-size:64px;margin-bottom:16px">⚽</div>
   <h2>GGG</h2>
   <p>Dünya Kupası 2026 — Tahmin Ligi</p>
-  <label class="setup-input-label">Adın</label>
-  <input class="setup-input" id="setup-name" placeholder="örn. Ahmet" maxlength="20">
-  <label class="setup-input-label">Grup Şifresi</label>
-  <input class="setup-input" id="setup-pass" type="password" placeholder="••••">
-  <button class="setup-btn" onclick="doSetup()">Giriş Yap</button>
+  <div id="setup-tabs" style="display:flex;gap:8px;margin-bottom:24px;">
+    <button id="tab-giris" class="setup-tab-btn active" onclick="switchSetupTab('giris')">Giriş Yap</button>
+    <button id="tab-kayit" class="setup-tab-btn" onclick="switchSetupTab('kayit')">Yeni Kayıt</button>
+  </div>
+  <div id="form-giris">
+    <label class="setup-input-label">Adın</label>
+    <input class="setup-input" id="login-name" placeholder="örn. Ahmet" maxlength="20">
+    <label class="setup-input-label">Kişisel Şifren</label>
+    <input class="setup-input" id="login-pin" type="password" placeholder="••••" maxlength="20">
+    <button class="setup-btn" onclick="doLogin()">Giriş Yap</button>
+  </div>
+  <div id="form-kayit" style="display:none">
+    <label class="setup-input-label">Adın</label>
+    <input class="setup-input" id="reg-name" placeholder="örn. Ahmet" maxlength="20">
+    <label class="setup-input-label">Grup Şifresi</label>
+    <input class="setup-input" id="reg-group-pass" type="password" placeholder="Grup şifresi">
+    <label class="setup-input-label">Kişisel Şifren (kendin belirle)</label>
+    <input class="setup-input" id="reg-pin" type="password" placeholder="En az 4 karakter" maxlength="20">
+    <label class="setup-input-label">Şifre Tekrar</label>
+    <input class="setup-input" id="reg-pin2" type="password" placeholder="Tekrar gir" maxlength="20">
+    <button class="setup-btn" onclick="doRegister()">Kayıt Ol</button>
+  </div>
 </div>
 
 <div id="app" style="display:none">
@@ -168,9 +190,15 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         </div>
       </div>
       <div id="admin-panel" style="display:none">
-        <div class="section-label">Sonuç Gir</div>
+        <div class="admin-jump-bar">
+          <button class="jump-btn" onclick="document.getElementById('sec-sonuc').scrollIntoView({behavior:'smooth'})">⚽ Sonuç Gir</button>
+          <button class="jump-btn" onclick="document.getElementById('sec-ozel').scrollIntoView({behavior:'smooth'})">➕ Özel Bahis</button>
+          <button class="jump-btn" onclick="document.getElementById('sec-duzenle').scrollIntoView({behavior:'smooth'})">✏️ Maç Düzenle</button>
+          <button class="jump-btn" onclick="document.getElementById('sec-ekle').scrollIntoView({behavior:'smooth'})">🆕 Maç Ekle</button>
+        </div>
+        <div class="section-label" id="sec-sonuc">Sonuç Gir</div>
         <div id="admin-matches-container"><div class="loading">Yükleniyor...</div></div>
-        <div class="section-label" style="margin-top:20px">Maça Özel Bahis Ekle</div>
+        <div class="section-label" id="sec-ozel" style="margin-top:20px">Maça Özel Bahis Ekle</div>
         <div class="custom-bet-box">
           <label>Maç Seç</label>
           <select id="custom-bet-match"></select>
@@ -188,7 +216,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           </div>
           <button class="add-bet-btn" onclick="addCustomBet()">+ Bahis Ekle</button>
         </div>
-        <div class="section-label" style="margin-top:20px">Maç Düzenle (Takım İsmini Güncelle)</div>
+        <div class="section-label" id="sec-duzenle" style="margin-top:20px">Maç Düzenle (Takım İsmini Güncelle)</div>
         <div class="custom-bet-box">
           <label>Maç Seç</label>
           <select id="edit-match-select" onchange="loadEditMatch()"></select>
@@ -200,7 +228,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           <input type="text" id="edit-time" placeholder="örn. 29 Haz · 22:00">
           <button class="add-bet-btn" style="background:#1a7a3c" onclick="saveEditMatch()">✓ Maçı Güncelle</button>
         </div>
-        <div class="section-label">Yeni Maç Ekle</div>
+        <div class="section-label" id="sec-ekle">Yeni Maç Ekle</div>
         <div class="custom-bet-box">
           <label>Ev Sahibi (bayrak + isim)</label>
           <input type="text" id="new-home" placeholder="örn. 🇹🇷 Türkiye">
@@ -254,120 +282,120 @@ async function sbPatch(table, params, body) {
 }
 
 const ALL_MATCHES = [
-  {id:1,group:'Grup A',time:'11 Haz · 22:00',home:'🇲🇽 Meksika',away:'🇿🇦 G.Afrika'},
-  {id:2,group:'Grup A',time:'12 Haz · 05:00',home:'🇰🇷 G.Kore',away:'🇨🇿 Çekya'},
-  {id:3,group:'Grup B',time:'12 Haz · 22:00',home:'🇨🇦 Kanada',away:'🇧🇦 Bosna Hersek'},
-  {id:4,group:'Grup D',time:'13 Haz · 04:00',home:'🇺🇸 ABD',away:'🇵🇾 Paraguay'},
-  {id:5,group:'Grup B',time:'13 Haz · 22:00',home:'🇶🇦 Katar',away:'🇨🇭 İsviçre'},
-  {id:6,group:'Grup C',time:'14 Haz · 01:00',home:'🇧🇷 Brezilya',away:'🇲🇦 Fas'},
-  {id:7,group:'Grup C',time:'14 Haz · 04:00',home:'🇭🇹 Haiti',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya'},
-  {id:8,group:'Grup D',time:'14 Haz · 07:00',home:'🇦🇺 Avustralya',away:'🇹🇷 Türkiye'},
-  {id:9,group:'Grup E',time:'14 Haz · 20:00',home:'🇩🇪 Almanya',away:'🇨🇼 Curaçao'},
-  {id:10,group:'Grup F',time:'14 Haz · 23:00',home:'🇳🇱 Hollanda',away:'🇯🇵 Japonya'},
-  {id:11,group:'Grup E',time:'15 Haz · 02:00',home:'🇨🇮 F.Fildişi',away:'🇪🇨 Ekvador'},
-  {id:12,group:'Grup F',time:'15 Haz · 05:00',home:'🇹🇳 Tunus',away:'🇸🇪 İsveç'},
-  {id:13,group:'Grup H',time:'15 Haz · 19:00',home:'🇪🇸 İspanya',away:'🇨🇻 Yeşilburun'},
-  {id:14,group:'Grup G',time:'15 Haz · 22:00',home:'🇧🇪 Belçika',away:'🇪🇬 Mısır'},
-  {id:15,group:'Grup H',time:'16 Haz · 01:00',home:'🇸🇦 S.Arabistan',away:'🇺🇾 Uruguay'},
-  {id:16,group:'Grup G',time:'16 Haz · 04:00',home:'🇮🇷 İran',away:'🇳🇿 Y.Zelanda'},
-  {id:17,group:'Grup I',time:'16 Haz · 22:00',home:'🇫🇷 Fransa',away:'🇸🇳 Senegal'},
-  {id:18,group:'Grup I',time:'17 Haz · 01:00',home:'🇮🇶 Irak',away:'🇳🇴 Norveç'},
-  {id:19,group:'Grup J',time:'17 Haz · 04:00',home:'🇦🇷 Arjantin',away:'🇩🇿 Cezayir'},
-  {id:20,group:'Grup J',time:'17 Haz · 07:00',home:'🇦🇹 Avusturya',away:'🇯🇴 Ürdün'},
-  {id:21,group:'Grup K',time:'17 Haz · 20:00',home:'🇵🇹 Portekiz',away:'🇨🇩 Kongo DR'},
-  {id:22,group:'Grup L',time:'17 Haz · 23:00',home:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere',away:'🇭🇷 Hırvatistan'},
-  {id:23,group:'Grup L',time:'18 Haz · 02:00',home:'🇬🇭 Gana',away:'🇵🇦 Panama'},
-  {id:24,group:'Grup K',time:'18 Haz · 05:00',home:'🇺🇿 Özbekistan',away:'🇨🇴 Kolombiya'},
-  {id:25,group:'Grup A',time:'18 Haz · 19:00',home:'🇨🇿 Çekya',away:'🇿🇦 G.Afrika'},
-  {id:26,group:'Grup B',time:'18 Haz · 22:00',home:'🇨🇭 İsviçre',away:'🇧🇦 Bosna Hersek'},
-  {id:27,group:'Grup B',time:'19 Haz · 01:00',home:'🇨🇦 Kanada',away:'🇶🇦 Katar'},
-  {id:28,group:'Grup A',time:'19 Haz · 04:00',home:'🇲🇽 Meksika',away:'🇰🇷 G.Kore'},
-  {id:29,group:'Grup D',time:'19 Haz · 22:00',home:'🇺🇸 ABD',away:'🇦🇺 Avustralya'},
-  {id:30,group:'Grup C',time:'19 Haz · 22:00',home:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya',away:'🇲🇦 Fas'},
-  {id:31,group:'Grup C',time:'20 Haz · 04:00',home:'🇧🇷 Brezilya',away:'🇭🇹 Haiti'},
-  {id:32,group:'Grup D',time:'20 Haz · 07:00',home:'🇹🇷 Türkiye',away:'🇵🇾 Paraguay'},
-  {id:33,group:'Grup F',time:'20 Haz · 20:00',home:'🇳🇱 Hollanda',away:'🇸🇪 İsveç'},
-  {id:34,group:'Grup E',time:'20 Haz · 23:00',home:'🇩🇪 Almanya',away:'🇨🇮 F.Fildişi'},
-  {id:35,group:'Grup E',time:'21 Haz · 03:00',home:'🇪🇨 Ekvador',away:'🇨🇼 Curaçao'},
-  {id:36,group:'Grup F',time:'21 Haz · 07:00',home:'🇹🇳 Tunus',away:'🇯🇵 Japonya'},
-  {id:37,group:'Grup H',time:'21 Haz · 19:00',home:'🇪🇸 İspanya',away:'🇸🇦 S.Arabistan'},
-  {id:38,group:'Grup G',time:'21 Haz · 22:00',home:'🇧🇪 Belçika',away:'🇮🇷 İran'},
-  {id:39,group:'Grup H',time:'22 Haz · 01:00',home:'🇺🇾 Uruguay',away:'🇨🇻 Yeşilburun'},
-  {id:40,group:'Grup G',time:'22 Haz · 04:00',home:'🇳🇿 Y.Zelanda',away:'🇪🇬 Mısır'},
-  {id:41,group:'Grup J',time:'22 Haz · 20:00',home:'🇦🇷 Arjantin',away:'🇦🇹 Avusturya'},
-  {id:42,group:'Grup I',time:'23 Haz · 00:00',home:'🇫🇷 Fransa',away:'🇮🇶 Irak'},
-  {id:43,group:'Grup I',time:'23 Haz · 03:00',home:'🇳🇴 Norveç',away:'🇸🇳 Senegal'},
-  {id:44,group:'Grup J',time:'23 Haz · 06:00',home:'🇯🇴 Ürdün',away:'🇩🇿 Cezayir'},
-  {id:45,group:'Grup K',time:'23 Haz · 20:00',home:'🇵🇹 Portekiz',away:'🇺🇿 Özbekistan'},
-  {id:46,group:'Grup L',time:'23 Haz · 23:00',home:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere',away:'🇬🇭 Gana'},
-  {id:47,group:'Grup L',time:'24 Haz · 02:00',home:'🇵🇦 Panama',away:'🇭🇷 Hırvatistan'},
-  {id:48,group:'Grup K',time:'24 Haz · 05:00',home:'🇨🇴 Kolombiya',away:'🇨🇩 Kongo DR'},
-  {id:49,group:'Grup B',time:'24 Haz · 22:00',home:'🇨🇭 İsviçre',away:'🇨🇦 Kanada'},
-  {id:50,group:'Grup B',time:'24 Haz · 22:00',home:'🇧🇦 Bosna Hersek',away:'🇶🇦 Katar'},
-  {id:51,group:'Grup C',time:'25 Haz · 01:00',home:'🇧🇷 Brezilya',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya'},
-  {id:52,group:'Grup C',time:'25 Haz · 01:00',home:'🇲🇦 Fas',away:'🇭🇹 Haiti'},
-  {id:53,group:'Grup A',time:'25 Haz · 04:00',home:'🇲🇽 Meksika',away:'🇨🇿 Çekya'},
-  {id:54,group:'Grup A',time:'25 Haz · 04:00',home:'🇰🇷 G.Kore',away:'🇿🇦 G.Afrika'},
-  {id:55,group:'Grup E',time:'25 Haz · 23:00',home:'🇪🇨 Ekvador',away:'🇩🇪 Almanya'},
-  {id:56,group:'Grup E',time:'25 Haz · 23:00',home:'🇨🇼 Curaçao',away:'🇨🇮 F.Fildişi'},
-  {id:57,group:'Grup F',time:'26 Haz · 02:00',home:'🇹🇳 Tunus',away:'🇳🇱 Hollanda'},
-  {id:58,group:'Grup F',time:'26 Haz · 02:00',home:'🇯🇵 Japonya',away:'🇸🇪 İsveç'},
-  {id:59,group:'Grup D',time:'26 Haz · 05:00',home:'🇺🇸 ABD',away:'🇹🇷 Türkiye'},
-  {id:60,group:'Grup D',time:'26 Haz · 05:00',home:'🇵🇾 Paraguay',away:'🇦🇺 Avustralya'},
-  {id:61,group:'Grup I',time:'26 Haz · 22:00',home:'🇳🇴 Norveç',away:'🇫🇷 Fransa'},
-  {id:62,group:'Grup I',time:'26 Haz · 22:00',home:'🇸🇳 Senegal',away:'🇮🇶 Irak'},
-  {id:63,group:'Grup H',time:'27 Haz · 03:00',home:'🇺🇾 Uruguay',away:'🇪🇸 İspanya'},
-  {id:64,group:'Grup H',time:'27 Haz · 03:00',home:'🇨🇻 Yeşilburun',away:'🇸🇦 S.Arabistan'},
-  {id:65,group:'Grup G',time:'27 Haz · 06:00',home:'🇳🇿 Y.Zelanda',away:'🇧🇪 Belçika'},
-  {id:66,group:'Grup G',time:'27 Haz · 06:00',home:'🇪🇬 Mısır',away:'🇮🇷 İran'},
-  {id:67,group:'Grup L',time:'28 Haz · 00:00',home:'🇵🇦 Panama',away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere'},
-  {id:68,group:'Grup L',time:'28 Haz · 00:00',home:'🇭🇷 Hırvatistan',away:'🇬🇭 Gana'},
-  {id:69,group:'Grup K',time:'28 Haz · 03:00',home:'🇨🇴 Kolombiya',away:'🇵🇹 Portekiz'},
-  {id:70,group:'Grup K',time:'28 Haz · 03:00',home:'🇨🇩 Kongo DR',away:'🇺🇿 Özbekistan'},
-  {id:71,group:'Grup J',time:'28 Haz · 06:00',home:'🇦🇷 Arjantin',away:'🇯🇴 Ürdün'},
-  {id:72,group:'Grup J',time:'28 Haz · 06:00',home:'🇩🇿 Cezayir',away:'🇦🇹 Avusturya'},
+  {id:1,group:'Grup A',time:'11 Haz · 22:00',home:'🇲🇽 Meksika',away:'🇿🇦 G.Afrika',lock:'2026-06-11T19:00:00Z'},
+  {id:2,group:'Grup A',time:'12 Haz · 05:00',home:'🇰🇷 G.Kore',away:'🇨🇿 Çekya',lock:'2026-06-12T02:00:00Z'},
+  {id:3,group:'Grup B',time:'12 Haz · 22:00',home:'🇨🇦 Kanada',away:'🇧🇦 Bosna Hersek',lock:'2026-06-12T19:00:00Z'},
+  {id:4,group:'Grup D',time:'13 Haz · 04:00',home:'🇺🇸 ABD',away:'🇵🇾 Paraguay',lock:'2026-06-13T01:00:00Z'},
+  {id:5,group:'Grup B',time:'13 Haz · 22:00',home:'🇶🇦 Katar',away:'🇨🇭 İsviçre',lock:'2026-06-13T19:00:00Z'},
+  {id:6,group:'Grup C',time:'14 Haz · 01:00',home:'🇧🇷 Brezilya',away:'🇲🇦 Fas',lock:'2026-06-13T22:00:00Z'},
+  {id:7,group:'Grup C',time:'14 Haz · 04:00',home:'🇭🇹 Haiti',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya',lock:'2026-06-14T01:00:00Z'},
+  {id:8,group:'Grup D',time:'14 Haz · 07:00',home:'🇦🇺 Avustralya',away:'🇹🇷 Türkiye',lock:'2026-06-14T04:00:00Z'},
+  {id:9,group:'Grup E',time:'14 Haz · 20:00',home:'🇩🇪 Almanya',away:'🇨🇼 Curaçao',lock:'2026-06-14T17:00:00Z'},
+  {id:10,group:'Grup F',time:'14 Haz · 23:00',home:'🇳🇱 Hollanda',away:'🇯🇵 Japonya',lock:'2026-06-14T20:00:00Z'},
+  {id:11,group:'Grup E',time:'15 Haz · 02:00',home:'🇨🇮 F.Fildişi',away:'🇪🇨 Ekvador',lock:'2026-06-14T23:00:00Z'},
+  {id:12,group:'Grup F',time:'15 Haz · 05:00',home:'🇹🇳 Tunus',away:'🇸🇪 İsveç',lock:'2026-06-15T02:00:00Z'},
+  {id:13,group:'Grup H',time:'15 Haz · 19:00',home:'🇪🇸 İspanya',away:'🇨🇻 Yeşilburun',lock:'2026-06-15T16:00:00Z'},
+  {id:14,group:'Grup G',time:'15 Haz · 22:00',home:'🇧🇪 Belçika',away:'🇪🇬 Mısır',lock:'2026-06-15T19:00:00Z'},
+  {id:15,group:'Grup H',time:'16 Haz · 01:00',home:'🇸🇦 S.Arabistan',away:'🇺🇾 Uruguay',lock:'2026-06-15T22:00:00Z'},
+  {id:16,group:'Grup G',time:'16 Haz · 04:00',home:'🇮🇷 İran',away:'🇳🇿 Y.Zelanda',lock:'2026-06-16T01:00:00Z'},
+  {id:17,group:'Grup I',time:'16 Haz · 22:00',home:'🇫🇷 Fransa',away:'🇸🇳 Senegal',lock:'2026-06-16T19:00:00Z'},
+  {id:18,group:'Grup I',time:'17 Haz · 01:00',home:'🇮🇶 Irak',away:'🇳🇴 Norveç',lock:'2026-06-16T22:00:00Z'},
+  {id:19,group:'Grup J',time:'17 Haz · 04:00',home:'🇦🇷 Arjantin',away:'🇩🇿 Cezayir',lock:'2026-06-17T01:00:00Z'},
+  {id:20,group:'Grup J',time:'17 Haz · 07:00',home:'🇦🇹 Avusturya',away:'🇯🇴 Ürdün',lock:'2026-06-17T04:00:00Z'},
+  {id:21,group:'Grup K',time:'17 Haz · 20:00',home:'🇵🇹 Portekiz',away:'🇨🇩 Kongo DR',lock:'2026-06-17T17:00:00Z'},
+  {id:22,group:'Grup L',time:'17 Haz · 23:00',home:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere',away:'🇭🇷 Hırvatistan',lock:'2026-06-17T20:00:00Z'},
+  {id:23,group:'Grup L',time:'18 Haz · 02:00',home:'🇬🇭 Gana',away:'🇵🇦 Panama',lock:'2026-06-17T23:00:00Z'},
+  {id:24,group:'Grup K',time:'18 Haz · 05:00',home:'🇺🇿 Özbekistan',away:'🇨🇴 Kolombiya',lock:'2026-06-18T02:00:00Z'},
+  {id:25,group:'Grup A',time:'18 Haz · 19:00',home:'🇨🇿 Çekya',away:'🇿🇦 G.Afrika',lock:'2026-06-18T16:00:00Z'},
+  {id:26,group:'Grup B',time:'18 Haz · 22:00',home:'🇨🇭 İsviçre',away:'🇧🇦 Bosna Hersek',lock:'2026-06-18T19:00:00Z'},
+  {id:27,group:'Grup B',time:'19 Haz · 01:00',home:'🇨🇦 Kanada',away:'🇶🇦 Katar',lock:'2026-06-18T22:00:00Z'},
+  {id:28,group:'Grup A',time:'19 Haz · 04:00',home:'🇲🇽 Meksika',away:'🇰🇷 G.Kore',lock:'2026-06-19T01:00:00Z'},
+  {id:29,group:'Grup D',time:'19 Haz · 22:00',home:'🇺🇸 ABD',away:'🇦🇺 Avustralya',lock:'2026-06-19T19:00:00Z'},
+  {id:30,group:'Grup C',time:'19 Haz · 22:00',home:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya',away:'🇲🇦 Fas',lock:'2026-06-19T19:00:00Z'},
+  {id:31,group:'Grup C',time:'20 Haz · 04:00',home:'🇧🇷 Brezilya',away:'🇭🇹 Haiti',lock:'2026-06-20T01:00:00Z'},
+  {id:32,group:'Grup D',time:'20 Haz · 07:00',home:'🇹🇷 Türkiye',away:'🇵🇾 Paraguay',lock:'2026-06-20T04:00:00Z'},
+  {id:33,group:'Grup F',time:'20 Haz · 20:00',home:'🇳🇱 Hollanda',away:'🇸🇪 İsveç',lock:'2026-06-20T17:00:00Z'},
+  {id:34,group:'Grup E',time:'20 Haz · 23:00',home:'🇩🇪 Almanya',away:'🇨🇮 F.Fildişi',lock:'2026-06-20T20:00:00Z'},
+  {id:35,group:'Grup E',time:'21 Haz · 03:00',home:'🇪🇨 Ekvador',away:'🇨🇼 Curaçao',lock:'2026-06-21T00:00:00Z'},
+  {id:36,group:'Grup F',time:'21 Haz · 07:00',home:'🇹🇳 Tunus',away:'🇯🇵 Japonya',lock:'2026-06-21T04:00:00Z'},
+  {id:37,group:'Grup H',time:'21 Haz · 19:00',home:'🇪🇸 İspanya',away:'🇸🇦 S.Arabistan',lock:'2026-06-21T16:00:00Z'},
+  {id:38,group:'Grup G',time:'21 Haz · 22:00',home:'🇧🇪 Belçika',away:'🇮🇷 İran',lock:'2026-06-21T19:00:00Z'},
+  {id:39,group:'Grup H',time:'22 Haz · 01:00',home:'🇺🇾 Uruguay',away:'🇨🇻 Yeşilburun',lock:'2026-06-21T22:00:00Z'},
+  {id:40,group:'Grup G',time:'22 Haz · 04:00',home:'🇳🇿 Y.Zelanda',away:'🇪🇬 Mısır',lock:'2026-06-22T01:00:00Z'},
+  {id:41,group:'Grup J',time:'22 Haz · 20:00',home:'🇦🇷 Arjantin',away:'🇦🇹 Avusturya',lock:'2026-06-22T17:00:00Z'},
+  {id:42,group:'Grup I',time:'23 Haz · 00:00',home:'🇫🇷 Fransa',away:'🇮🇶 Irak',lock:'2026-06-22T21:00:00Z'},
+  {id:43,group:'Grup I',time:'23 Haz · 03:00',home:'🇳🇴 Norveç',away:'🇸🇳 Senegal',lock:'2026-06-23T00:00:00Z'},
+  {id:44,group:'Grup J',time:'23 Haz · 06:00',home:'🇯🇴 Ürdün',away:'🇩🇿 Cezayir',lock:'2026-06-23T03:00:00Z'},
+  {id:45,group:'Grup K',time:'23 Haz · 20:00',home:'🇵🇹 Portekiz',away:'🇺🇿 Özbekistan',lock:'2026-06-23T17:00:00Z'},
+  {id:46,group:'Grup L',time:'23 Haz · 23:00',home:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere',away:'🇬🇭 Gana',lock:'2026-06-23T20:00:00Z'},
+  {id:47,group:'Grup L',time:'24 Haz · 02:00',home:'🇵🇦 Panama',away:'🇭🇷 Hırvatistan',lock:'2026-06-23T23:00:00Z'},
+  {id:48,group:'Grup K',time:'24 Haz · 05:00',home:'🇨🇴 Kolombiya',away:'🇨🇩 Kongo DR',lock:'2026-06-24T02:00:00Z'},
+  {id:49,group:'Grup B',time:'24 Haz · 22:00',home:'🇨🇭 İsviçre',away:'🇨🇦 Kanada',lock:'2026-06-24T19:00:00Z'},
+  {id:50,group:'Grup B',time:'24 Haz · 22:00',home:'🇧🇦 Bosna Hersek',away:'🇶🇦 Katar',lock:'2026-06-24T19:00:00Z'},
+  {id:51,group:'Grup C',time:'25 Haz · 01:00',home:'🇧🇷 Brezilya',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya',lock:'2026-06-24T22:00:00Z'},
+  {id:52,group:'Grup C',time:'25 Haz · 01:00',home:'🇲🇦 Fas',away:'🇭🇹 Haiti',lock:'2026-06-24T22:00:00Z'},
+  {id:53,group:'Grup A',time:'25 Haz · 04:00',home:'🇲🇽 Meksika',away:'🇨🇿 Çekya',lock:'2026-06-25T01:00:00Z'},
+  {id:54,group:'Grup A',time:'25 Haz · 04:00',home:'🇰🇷 G.Kore',away:'🇿🇦 G.Afrika',lock:'2026-06-25T01:00:00Z'},
+  {id:55,group:'Grup E',time:'25 Haz · 23:00',home:'🇪🇨 Ekvador',away:'🇩🇪 Almanya',lock:'2026-06-25T20:00:00Z'},
+  {id:56,group:'Grup E',time:'25 Haz · 23:00',home:'🇨🇼 Curaçao',away:'🇨🇮 F.Fildişi',lock:'2026-06-25T20:00:00Z'},
+  {id:57,group:'Grup F',time:'26 Haz · 02:00',home:'🇹🇳 Tunus',away:'🇳🇱 Hollanda',lock:'2026-06-25T23:00:00Z'},
+  {id:58,group:'Grup F',time:'26 Haz · 02:00',home:'🇯🇵 Japonya',away:'🇸🇪 İsveç',lock:'2026-06-25T23:00:00Z'},
+  {id:59,group:'Grup D',time:'26 Haz · 05:00',home:'🇺🇸 ABD',away:'🇹🇷 Türkiye',lock:'2026-06-26T02:00:00Z'},
+  {id:60,group:'Grup D',time:'26 Haz · 05:00',home:'🇵🇾 Paraguay',away:'🇦🇺 Avustralya',lock:'2026-06-26T02:00:00Z'},
+  {id:61,group:'Grup I',time:'26 Haz · 22:00',home:'🇳🇴 Norveç',away:'🇫🇷 Fransa',lock:'2026-06-26T19:00:00Z'},
+  {id:62,group:'Grup I',time:'26 Haz · 22:00',home:'🇸🇳 Senegal',away:'🇮🇶 Irak',lock:'2026-06-26T19:00:00Z'},
+  {id:63,group:'Grup H',time:'27 Haz · 03:00',home:'🇺🇾 Uruguay',away:'🇪🇸 İspanya',lock:'2026-06-27T00:00:00Z'},
+  {id:64,group:'Grup H',time:'27 Haz · 03:00',home:'🇨🇻 Yeşilburun',away:'🇸🇦 S.Arabistan',lock:'2026-06-27T00:00:00Z'},
+  {id:65,group:'Grup G',time:'27 Haz · 06:00',home:'🇳🇿 Y.Zelanda',away:'🇧🇪 Belçika',lock:'2026-06-27T03:00:00Z'},
+  {id:66,group:'Grup G',time:'27 Haz · 06:00',home:'🇪🇬 Mısır',away:'🇮🇷 İran',lock:'2026-06-27T03:00:00Z'},
+  {id:67,group:'Grup L',time:'28 Haz · 00:00',home:'🇵🇦 Panama',away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere',lock:'2026-06-27T21:00:00Z'},
+  {id:68,group:'Grup L',time:'28 Haz · 00:00',home:'🇭🇷 Hırvatistan',away:'🇬🇭 Gana',lock:'2026-06-27T21:00:00Z'},
+  {id:69,group:'Grup K',time:'28 Haz · 03:00',home:'🇨🇴 Kolombiya',away:'🇵🇹 Portekiz',lock:'2026-06-28T00:00:00Z'},
+  {id:70,group:'Grup K',time:'28 Haz · 03:00',home:'🇨🇩 Kongo DR',away:'🇺🇿 Özbekistan',lock:'2026-06-28T00:00:00Z'},
+  {id:71,group:'Grup J',time:'28 Haz · 06:00',home:'🇦🇷 Arjantin',away:'🇯🇴 Ürdün',lock:'2026-06-28T03:00:00Z'},
+  {id:72,group:'Grup J',time:'28 Haz · 06:00',home:'🇩🇿 Cezayir',away:'🇦🇹 Avusturya',lock:'2026-06-28T03:00:00Z'},
 
   // SON 32 — 28 Haziran - 2 Temmuz
-  {id:73,group:'Son 32',time:'29 Haz · 01:00',home:'🏳 A2. vs B2.',away:'🏳 TBD'},
-  {id:74,group:'Son 32',time:'29 Haz · 04:30',home:'🏳 E1. vs 3.(A/B/C/D/F)',away:'🏳 TBD'},
-  {id:75,group:'Son 32',time:'29 Haz · 04:00',home:'🏳 F1. vs C2.',away:'🏳 TBD'},
-  {id:76,group:'Son 32',time:'29 Haz · 20:00',home:'🏳 C1. vs F2.',away:'🏳 TBD'},
-  {id:77,group:'Son 32',time:'30 Haz · 01:00',home:'🏳 I1. vs 3.(C/D/F/G/H)',away:'🏳 TBD'},
-  {id:78,group:'Son 32',time:'30 Haz · 01:00',home:'🏳 E2. vs I2.',away:'🏳 TBD'},
-  {id:79,group:'Son 32',time:'30 Haz · 04:00',home:'🏳 A1. vs 3.(C/E/F/H/I)',away:'🏳 TBD'},
-  {id:80,group:'Son 32',time:'30 Haz · 17:00',home:'🏳 L1. vs 3.(E/H/I/J/K)',away:'🏳 TBD'},
-  {id:81,group:'Son 32',time:'1 Tem · 01:00',home:'🏳 D1. vs 3.(B/E/F/I/J)',away:'🏳 TBD'},
-  {id:82,group:'Son 32',time:'1 Tem · 01:00',home:'🏳 G1. vs 3.(A/E/H/I/J)',away:'🏳 TBD'},
-  {id:83,group:'Son 32',time:'1 Tem · 07:00',home:'🏳 K2. vs L2.',away:'🏳 TBD'},
-  {id:84,group:'Son 32',time:'1 Tem · 03:00',home:'🏳 H1. vs J2.',away:'🏳 TBD'},
-  {id:85,group:'Son 32',time:'2 Tem · 01:00',home:'🏳 B1. vs 3.(E/F/G/I/J)',away:'🏳 TBD'},
-  {id:86,group:'Son 32',time:'2 Tem · 04:00',home:'🏳 J1. vs H2.',away:'🏳 TBD'},
-  {id:87,group:'Son 32',time:'2 Tem · 07:30',home:'🏳 K1. vs 3.(D/E/I/J/L)',away:'🏳 TBD'},
-  {id:88,group:'Son 32',time:'2 Tem · 00:00',home:'🏳 D2. vs G2.',away:'🏳 TBD'},
+  {id:73,group:'Son 32',time:'29 Haz · 01:00',home:'🏳 A2. vs B2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:74,group:'Son 32',time:'29 Haz · 04:30',home:'🏳 E1. vs 3.(A/B/C/D/F)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:75,group:'Son 32',time:'29 Haz · 04:00',home:'🏳 F1. vs C2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:76,group:'Son 32',time:'29 Haz · 20:00',home:'🏳 C1. vs F2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:77,group:'Son 32',time:'30 Haz · 01:00',home:'🏳 I1. vs 3.(C/D/F/G/H)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:78,group:'Son 32',time:'30 Haz · 01:00',home:'🏳 E2. vs I2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:79,group:'Son 32',time:'30 Haz · 04:00',home:'🏳 A1. vs 3.(C/E/F/H/I)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:80,group:'Son 32',time:'30 Haz · 17:00',home:'🏳 L1. vs 3.(E/H/I/J/K)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:81,group:'Son 32',time:'1 Tem · 01:00',home:'🏳 D1. vs 3.(B/E/F/I/J)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:82,group:'Son 32',time:'1 Tem · 01:00',home:'🏳 G1. vs 3.(A/E/H/I/J)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:83,group:'Son 32',time:'1 Tem · 07:00',home:'🏳 K2. vs L2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:84,group:'Son 32',time:'1 Tem · 03:00',home:'🏳 H1. vs J2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:85,group:'Son 32',time:'2 Tem · 01:00',home:'🏳 B1. vs 3.(E/F/G/I/J)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:86,group:'Son 32',time:'2 Tem · 04:00',home:'🏳 J1. vs H2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:87,group:'Son 32',time:'2 Tem · 07:30',home:'🏳 K1. vs 3.(D/E/I/J/L)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:88,group:'Son 32',time:'2 Tem · 00:00',home:'🏳 D2. vs G2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
 
   // SON 16 — 4-7 Temmuz
-  {id:89,group:'Son 16',time:'4 Tem · 22:00',home:'🏳 M73 gal. vs M75 gal.',away:'🏳 TBD'},
-  {id:90,group:'Son 16',time:'5 Tem · 01:00',home:'🏳 M74 gal. vs M76 gal.',away:'🏳 TBD'},
-  {id:91,group:'Son 16',time:'5 Tem · 22:00',home:'🏳 M77 gal. vs M79 gal.',away:'🏳 TBD'},
-  {id:92,group:'Son 16',time:'6 Tem · 01:00',home:'🏳 M78 gal. vs M80 gal.',away:'🏳 TBD'},
-  {id:93,group:'Son 16',time:'6 Tem · 22:00',home:'🏳 M81 gal. vs M83 gal.',away:'🏳 TBD'},
-  {id:94,group:'Son 16',time:'7 Tem · 01:00',home:'🏳 M82 gal. vs M84 gal.',away:'🏳 TBD'},
-  {id:95,group:'Son 16',time:'7 Tem · 22:00',home:'🏳 M85 gal. vs M87 gal.',away:'🏳 TBD'},
-  {id:96,group:'Son 16',time:'8 Tem · 01:00',home:'🏳 M86 gal. vs M88 gal.',away:'🏳 TBD'},
+  {id:89,group:'Son 16',time:'4 Tem · 22:00',home:'🏳 M73 gal. vs M75 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:90,group:'Son 16',time:'5 Tem · 01:00',home:'🏳 M74 gal. vs M76 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:91,group:'Son 16',time:'5 Tem · 22:00',home:'🏳 M77 gal. vs M79 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:92,group:'Son 16',time:'6 Tem · 01:00',home:'🏳 M78 gal. vs M80 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:93,group:'Son 16',time:'6 Tem · 22:00',home:'🏳 M81 gal. vs M83 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:94,group:'Son 16',time:'7 Tem · 01:00',home:'🏳 M82 gal. vs M84 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:95,group:'Son 16',time:'7 Tem · 22:00',home:'🏳 M85 gal. vs M87 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:96,group:'Son 16',time:'8 Tem · 01:00',home:'🏳 M86 gal. vs M88 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
 
   // ÇEYREK FİNAL — 10-12 Temmuz
-  {id:97,group:'Çeyrek Final',time:'10 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD'},
-  {id:98,group:'Çeyrek Final',time:'11 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD'},
-  {id:99,group:'Çeyrek Final',time:'11 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD'},
-  {id:100,group:'Çeyrek Final',time:'12 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD'},
+  {id:97,group:'Çeyrek Final',time:'10 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:98,group:'Çeyrek Final',time:'11 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:99,group:'Çeyrek Final',time:'11 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:100,group:'Çeyrek Final',time:'12 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
 
   // YARI FİNAL — 14-15 Temmuz
-  {id:101,group:'Yarı Final',time:'15 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD'},
-  {id:102,group:'Yarı Final',time:'16 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD'},
+  {id:101,group:'Yarı Final',time:'15 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:102,group:'Yarı Final',time:'16 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
 
   // 3. LÜK MAÇI & FİNAL
-  {id:103,group:'3. lük Maçı',time:'18 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD'},
-  {id:104,group:'Final',time:'19 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD'},
+  {id:103,group:'3. lük Maçı',time:'18 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:104,group:'Final',time:'19 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
 ];
 
 let currentUser = null;
@@ -378,15 +406,47 @@ let myPredictions = {};
 let players = [];
 let results = {};
 
-async function doSetup() {
-  const name = document.getElementById('setup-name').value.trim();
-  const pass = document.getElementById('setup-pass').value;
+function switchSetupTab(tab) {
+  document.getElementById('form-giris').style.display = tab === 'giris' ? 'block' : 'none';
+  document.getElementById('form-kayit').style.display = tab === 'kayit' ? 'block' : 'none';
+  document.getElementById('tab-giris').classList.toggle('active', tab === 'giris');
+  document.getElementById('tab-kayit').classList.toggle('active', tab === 'kayit');
+}
+
+async function doLogin() {
+  const name = document.getElementById('login-name').value.trim();
+  const pin = document.getElementById('login-pin').value;
   if (!name) { showToast('İsmini gir!'); return; }
-  if (pass !== GROUP_PASS) { showToast('Hatalı grup şifresi!'); return; }
+  if (!pin) { showToast('Şifreni gir!'); return; }
+  const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(name));
+  if (!Array.isArray(rows) || rows.length === 0) {
+    showToast('Bu isim kayıtlı değil! Yeni kayıt ol.'); return;
+  }
+  const player = rows[0];
+  if (player.pin !== pin) { showToast('Hatalı şifre!'); return; }
+  enterApp(name);
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const groupPass = document.getElementById('reg-group-pass').value;
+  const pin = document.getElementById('reg-pin').value;
+  const pin2 = document.getElementById('reg-pin2').value;
+  if (!name) { showToast('İsmini gir!'); return; }
+  if (groupPass !== GROUP_PASS) { showToast('Hatalı grup şifresi!'); return; }
+  if (pin.length < 4) { showToast('Şifre en az 4 karakter olmalı!'); return; }
+  if (pin !== pin2) { showToast('Şifreler eşleşmiyor!'); return; }
+  const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(name));
+  if (Array.isArray(rows) && rows.length > 0) {
+    showToast('Bu isim zaten alınmış!'); return;
+  }
+  await sbPost('players', {name, pts:0, trend:0, pin});
+  enterApp(name);
+}
+
+async function enterApp(name) {
   currentUser = name;
   localStorage.setItem('ggg_user', name);
-  // upsert player
-  await sbUpsert('players', {name, pts:0, trend:0}, 'name');
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('user-badge').textContent = name;
@@ -448,7 +508,10 @@ async function loadResults() {
 
 window.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('ggg_user');
-  if (saved) document.getElementById('setup-name').value = saved;
+  if (saved) {
+    document.getElementById('login-name').value = saved;
+    document.getElementById('reg-name').value = saved;
+  }
 });
 
 function showTab(tab, btn) {
@@ -495,7 +558,7 @@ function renderMatches() {
   if (!filtered.length) { c.innerHTML = '<div class="empty-state">Bu grupta maç yok.</div>'; return; }
   filtered.forEach(m => {
     const pred = myPredictions[m.id] || {};
-    const locked = m.result !== null && m.result.home_score !== null;
+    const locked = (m.result !== null && m.result.home_score !== null) || (m.lock && new Date() >= new Date(m.lock));
     const home = splitTeam(m.home), away = splitTeam(m.away);
     const hS = pred.home_score !== undefined && pred.home_score !== null ? pred.home_score : '';
     const aS = pred.away_score !== undefined && pred.away_score !== null ? pred.away_score : '';
