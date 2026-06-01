@@ -130,6 +130,11 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .samp-locked{background:var(--surface);border-radius:10px;padding:12px;text-align:center;font-size:13px;color:var(--muted);margin-top:10px;}
 .samp-result{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);}
 .samp-result:last-child{border-bottom:none;}
+.autocomplete-wrap{position:relative;margin-bottom:10px;}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--border);border-radius:10px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 4px 16px rgba(0,0,0,0.12);}
+.autocomplete-item{padding:10px 14px;font-size:14px;cursor:pointer;border-bottom:0.5px solid var(--border);}
+.autocomplete-item:last-child{border-bottom:none;}
+.autocomplete-item:hover{background:var(--surface);}
 .match-result-badge{background:var(--dark);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:16px;padding:4px 10px;border-radius:8px;letter-spacing:1px;}
 .correct-badge{background:#e8f5ee;color:var(--green);font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}
 .wrong-badge{background:#fef2f2;color:var(--red);font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}
@@ -959,6 +964,62 @@ async function addMatch() {
 }
 
 
+
+// ============ TEAM AUTOCOMPLETE ============
+const TEAMS_2026 = [
+  '🇺🇸 ABD', '🇦🇷 Arjantin', '🇦🇺 Avustralya', '🇦🇹 Avusturya',
+  '🇧🇪 Belçika', '🇧🇦 Bosna Hersek', '🇧🇷 Brezilya', '🇨🇦 Kanada',
+  '🇨🇿 Çekya', '🇩🇿 Cezayir', '🇨🇩 Kongo DR', '🇨🇼 Curaçao',
+  '🇪🇨 Ekvador', '🇪🇬 Mısır', '🇫🇷 Fransa', '🇨🇮 Fildişi Sahilleri',
+  '🇬🇭 Gana', '🏴󠁧󠁢󠁳󠁣󠁴󠁿 İskoçya', '🇪🇸 İspanya', '🇨🇭 İsviçre',
+  '🇸🇪 İsveç', '🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere', '🇮🇷 İran', '🇮🇶 Irak',
+  '🇯🇵 Japonya', '🇯🇴 Ürdün', '🇶🇦 Katar', '🇨🇴 Kolombiya',
+  '🇰🇷 G.Kore', '🇭🇷 Hırvatistan', '🇲🇦 Fas', '🇲🇽 Meksika',
+  '🇳🇱 Hollanda', '🇳🇿 Y.Zelanda', '🇳🇴 Norveç', '🇵🇦 Panama',
+  '🇵🇾 Paraguay', '🇵🇹 Portekiz', '🇸🇦 S.Arabistan', '🇸🇳 Senegal',
+  '🇿🇦 G.Afrika', '🇹🇳 Tunus', '🇹🇷 Türkiye', '🇺🇾 Uruguay',
+  '🇺🇿 Özbekistan', '🇭🇹 Haiti', '🇨🇻 Yeşilburun', '🇩🇪 Almanya',
+];
+
+// Normalize Turkish chars for search
+function normalizeTR(str) {
+  return str.toLowerCase()
+    .replace(/ı/g,'i').replace(/İ/g,'i')
+    .replace(/ş/g,'s').replace(/Ş/g,'s')
+    .replace(/ğ/g,'g').replace(/Ğ/g,'g')
+    .replace(/ü/g,'u').replace(/Ü/g,'u')
+    .replace(/ö/g,'o').replace(/Ö/g,'o')
+    .replace(/ç/g,'c').replace(/Ç/g,'c');
+}
+
+function filterTeams(query) {
+  const list = document.getElementById('samp-autocomplete');
+  if (!list) return;
+  if (!query || query.length < 2) { list.style.display = 'none'; return; }
+  const q = normalizeTR(query);
+  const matches = TEAMS_2026.filter(t => normalizeTR(t).includes(q));
+  if (!matches.length) { list.style.display = 'none'; return; }
+  list.innerHTML = matches.map(t =>
+    '<div class="autocomplete-item" onclick="selectTeam('' + t.replace(/'/g, "\'") + '')">' + t + '</div>'
+  ).join('');
+  list.style.display = 'block';
+}
+
+function selectTeam(team) {
+  const inp = document.getElementById('samp-input');
+  if (inp) inp.value = team;
+  const list = document.getElementById('samp-autocomplete');
+  if (list) list.style.display = 'none';
+}
+
+// Close autocomplete when clicking outside
+document.addEventListener('click', function(e) {
+  const list = document.getElementById('samp-autocomplete');
+  if (list && !list.contains(e.target) && e.target.id !== 'samp-input') {
+    list.style.display = 'none';
+  }
+});
+
 // ============ STATUS FILTER ============
 let statusFilter = 'upcoming';
 function setStatusFilter(s, btn) {
@@ -993,9 +1054,12 @@ async function renderSampionTab() {
 
   if (!tournamentStarted) {
     // Allow picking
-    html += '<label class="setup-input-label">Takım adı yaz</label>';
-    html += '<input type="text" class="setup-input" id="samp-input" placeholder="örn. 🇧🇷 Brezilya" value="' + (mySampion || '') + '" style="margin-bottom:10px">';
-    html += '<button class="confirm-btn" onclick="saveSampion()">✓ Tahminimi Kaydet</button>';
+    html += '<label class="setup-input-label">Takım seç veya yaz</label>';
+    html += '<div class="autocomplete-wrap">';
+    html += '<input type="text" class="setup-input" id="samp-input" placeholder="örn. isp, brez, alm..." value="' + (mySampion || '') + '" oninput="filterTeams(this.value)" autocomplete="off" style="margin-bottom:0">';
+    html += '<div class="autocomplete-list" id="samp-autocomplete" style="display:none"></div>';
+    html += '</div>';
+    html += '<button class="confirm-btn" onclick="saveSampion()" style="margin-top:10px">✓ Tahminimi Kaydet</button>';
     if (mySampion) {
       html += '<div style="margin-top:8px;font-size:12px;color:var(--green);text-align:center">Mevcut tahminin: <strong>' + mySampion + '</strong></div>';
     }
@@ -1021,7 +1085,7 @@ async function renderSampionTab() {
     });
     html += '</div>';
   } else if (!tournamentStarted) {
-    // Show who has picked (but not what)
+    // Show who has picked but not what (hidden until tournament starts)
     html += '<div class="section-label">Tahmin Durumu</div>';
     html += '<div class="lb-card">';
     if (Array.isArray(rows)) {
@@ -1034,6 +1098,7 @@ async function renderSampionTab() {
       });
     }
     html += '</div>';
+    html += '<div style="margin-top:8px;text-align:center;font-size:12px;color:var(--muted)">🔒 Turnuva başlayınca herkesin seçimi görünür</div>';
   }
 
   c.innerHTML = html;
