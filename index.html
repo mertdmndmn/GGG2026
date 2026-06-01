@@ -997,11 +997,16 @@ function filterTeams(query) {
   if (!list) return;
   if (!query || query.length < 2) { list.style.display = 'none'; return; }
   const q = normalizeTR(query);
-  const matches = TEAMS_2026.filter(t => normalizeTR(t).includes(q));
-  if (!matches.length) { list.style.display = 'none'; return; }
-  list.innerHTML = matches.map(t =>
-    '<div class="autocomplete-item" onclick="selectTeam('' + t.replace(/'/g, "\'") + '')">' + t + '</div>'
-  ).join('');
+  const found = TEAMS_2026.filter(t => normalizeTR(t).includes(q));
+  if (!found.length) { list.style.display = 'none'; return; }
+  list.innerHTML = '';
+  found.forEach(function(t) {
+    const div = document.createElement('div');
+    div.className = 'autocomplete-item';
+    div.textContent = t;
+    div.addEventListener('click', function() { selectTeam(t); });
+    list.appendChild(div);
+  });
   list.style.display = 'block';
 }
 
