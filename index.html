@@ -272,8 +272,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           <input type="text" id="edit-home" placeholder="örn. 🇧🇷 Brezilya">
           <label>Deplasman (bayrak + isim)</label>
           <input type="text" id="edit-away" placeholder="örn. 🇩🇪 Almanya">
-          <label>Tarih &amp; Saat (TR saati)</label>
+          <label>Tarih &amp; Saat (TR saati — görünen)</label>
           <input type="text" id="edit-time" placeholder="örn. 29 Haz · 22:00">
+          <label>Kilit Tarihi &amp; Saati (maç başlangıcı)</label>
+          <input type="datetime-local" id="edit-lock" style="font-size:14px">
           <button class="add-bet-btn" style="background:#1a7a3c" onclick="saveEditMatch()">✓ Maçı Güncelle</button>
         </div>
         <div class="section-label" id="sec-ekle">Yeni Maç Ekle</div>
@@ -284,8 +286,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           <input type="text" id="new-away" placeholder="örn. 🇩🇪 Almanya">
           <label>Grup / Aşama</label>
           <input type="text" id="new-group" placeholder="örn. Grup A">
-          <label>Tarih & Saat (TR saati)</label>
+          <label>Tarih & Saat (TR saati — görünen)</label>
           <input type="text" id="new-time" placeholder="örn. 12 Haz · 21:00">
+          <label>Kilit Tarihi & Saati (maç başlangıcı)</label>
+          <input type="datetime-local" id="new-lock" style="font-size:14px">
           <button class="add-bet-btn" onclick="addMatch()">+ Maç Ekle</button>
         </div>
       </div>
@@ -893,30 +897,36 @@ function populateEditMatchSelect() {
 }
 
 function loadEditMatch() {
-  const mid = parseInt(document.getElementById("edit-match-select").value);
+  const mid = parseInt(document.getElementById('edit-match-select').value);
   const m = matches.find(x => x.id === mid);
   if (!m) return;
-  document.getElementById("edit-home").value = m.home;
-  document.getElementById("edit-away").value = m.away;
-  document.getElementById("edit-time").value = m.time;
+  document.getElementById('edit-home').value = m.home;
+  document.getElementById('edit-away').value = m.away;
+  document.getElementById('edit-time').value = m.time;
+  if (m.lock && m.lock !== '2099-12-31T00:00:00Z') {
+    const d = new Date(m.lock);
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    document.getElementById('edit-lock').value = local.toISOString().slice(0,16);
+  } else {
+    document.getElementById('edit-lock').value = '';
+  }
 }
 
 function saveEditMatch() {
-  const mid = parseInt(document.getElementById("edit-match-select").value);
-  const home = document.getElementById("edit-home").value.trim();
-  const away = document.getElementById("edit-away").value.trim();
-  const time = document.getElementById("edit-time").value.trim();
-  if (!mid || !home || !away) { showToast("Maç ve takım isimlerini gir!"); return; }
+  const mid = parseInt(document.getElementById('edit-match-select').value);
+  const home = document.getElementById('edit-home').value.trim();
+  const away = document.getElementById('edit-away').value.trim();
+  const time = document.getElementById('edit-time').value.trim();
+  const lockVal = document.getElementById('edit-lock').value;
+  if (!mid || !home || !away) { showToast('Maç ve takım isimlerini gir!'); return; }
   const m = matches.find(x => x.id === mid);
   if (!m) return;
   m.home = home;
   m.away = away;
   if (time) m.time = time;
-  renderMatches();
-  renderAdminMatches();
-  populateCustomBetSelect();
-  populateEditMatchSelect();
-  showToast("Maç güncellendi!");
+  if (lockVal) m.lock = new Date(lockVal).toISOString();
+  renderMatches(); renderAdminMatches(); populateCustomBetSelect(); populateEditMatchSelect();
+  showToast('Maç güncellendi!');
 }
 
 function toggleCustomOpts() {
@@ -955,11 +965,14 @@ async function addMatch() {
   const away = document.getElementById('new-away').value.trim();
   const group = document.getElementById('new-group').value.trim();
   const time = document.getElementById('new-time').value.trim();
+  const lockVal = document.getElementById('new-lock').value;
   if (!home||!away) { showToast('Takım isimlerini gir!'); return; }
+  const lockISO = lockVal ? new Date(lockVal).toISOString() : '2099-12-31T00:00:00Z';
   const newId = Math.max(0, ...matches.map(m=>m.id)) + 1;
-  matches.push({id:newId, group:group||'Özel', time:time||'—', home, away, result:null, customBets:[]});
-  buildFilterBar(); renderMatches(); renderAdminMatches(); populateCustomBetSelect();
+  matches.push({id:newId, group:group||'Özel', time:time||'—', home, away, result:null, customBets:[], lock:lockISO});
+  buildFilterBar(); renderMatches(); renderAdminMatches(); populateCustomBetSelect(); populateEditMatchSelect();
   ['new-home','new-away','new-group','new-time'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('new-lock').value = '';
   showToast('Maç eklendi!');
 }
 
