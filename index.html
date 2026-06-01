@@ -112,6 +112,27 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .admin-jump-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
 .jump-btn{padding:6px 12px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;border:1px solid var(--border);border-radius:20px;background:var(--card);color:var(--muted);cursor:pointer;white-space:nowrap;}
 .jump-btn:hover{background:var(--dark);color:#fff;border-color:var(--dark);}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--dark);}
+.stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+.hist-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.hist-match{font-size:12px;font-weight:600;color:var(--dark);margin-bottom:6px;}
+.hist-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:3px;}
+.hist-row span:last-child{font-weight:500;}
+.pts-earned{color:var(--green);font-weight:600;font-size:13px;}
+.pts-zero{color:var(--muted);}
+.week-winner{background:linear-gradient(135deg,#1a1a2e,#2d1f3d);border-radius:14px;padding:16px;margin-bottom:12px;text-align:center;}
+.week-winner .crown{font-size:36px;margin-bottom:6px;}
+.week-winner .name{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#f0d060;letter-spacing:2px;}
+.week-winner .sub{font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;}
+.samp-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;}
+.samp-locked{background:var(--surface);border-radius:10px;padding:12px;text-align:center;font-size:13px;color:var(--muted);margin-top:10px;}
+.samp-result{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);}
+.samp-result:last-child{border-bottom:none;}
+.match-result-badge{background:var(--dark);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:16px;padding:4px 10px;border-radius:8px;letter-spacing:1px;}
+.correct-badge{background:#e8f5ee;color:var(--green);font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}
+.wrong-badge{background:#fef2f2;color:var(--red);font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}
 </style>
 </head>
 <body>
@@ -152,7 +173,9 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
     </div>
     <div class="nav">
       <button class="nav-btn active" onclick="showTab('tahmin',this)">Tahmin</button>
-      <button class="nav-btn" onclick="showTab('puan',this)">Puan Tablosu</button>
+      <button class="nav-btn" onclick="showTab('puan',this)">Puan</button>
+      <button class="nav-btn" onclick="showTab('profil',this)">Profil</button>
+      <button class="nav-btn" onclick="showTab('sampion',this)">Şampiyon</button>
       <button class="nav-btn" onclick="showTab('admin',this)">Admin</button>
     </div>
   </div>
@@ -161,6 +184,11 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div class="score-bar">
         <div class="score-bar-left">Toplam Puanım<strong id="my-total-pts">0</strong></div>
         <div class="score-bar-right">Sıralama<strong id="my-rank">—</strong></div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button class="filter-btn active" id="status-btn-upcoming" onclick="setStatusFilter('upcoming',this)">📅 Yaklaşan</button>
+        <button class="filter-btn" id="status-btn-finished" onclick="setStatusFilter('finished',this)">✅ Biten</button>
+        <button class="filter-btn" id="status-btn-all" onclick="setStatusFilter('all',this)">Tümü</button>
       </div>
       <div class="filter-bar" id="filter-bar"></div>
       <div id="matches-container"><div class="loading">Maçlar yükleniyor...</div></div>
@@ -180,6 +208,21 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <div class="pts-row"><span>Özel bahis doğru</span><span>1 puan</span></div>
       </div>
     </div>
+    <div id="tab-profil" class="section">
+      <div class="score-bar" style="margin-bottom:16px">
+        <div class="score-bar-left">Toplam Puanım<strong id="prof-pts">0</strong></div>
+        <div class="score-bar-right">Sıralama<strong id="prof-rank">—</strong></div>
+      </div>
+      <div class="section-label">İstatistiklerim</div>
+      <div class="lb-card" id="prof-stats"></div>
+      <div class="section-label" style="margin-top:20px">Tahmin Geçmişim</div>
+      <div id="prof-history"><div class="loading">Yükleniyor...</div></div>
+    </div>
+
+    <div id="tab-sampion" class="section">
+      <div id="sampion-content"><div class="loading">Yükleniyor...</div></div>
+    </div>
+
     <div id="tab-admin" class="section">
       <div id="admin-gate-box">
         <div class="admin-gate">
@@ -440,7 +483,7 @@ async function doRegister() {
   if (Array.isArray(rows) && rows.length > 0) {
     showToast('Bu isim zaten alınmış!'); return;
   }
-  await sbPost('players', {name, pts:0, trend:0, pin});
+  await sbPost('players', {name, pts:0, trend:0, pin, sampion:null});
   enterApp(name, pin);
 }
 
@@ -528,8 +571,10 @@ function showTab(tab, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
   btn.classList.add('active');
-  if (tab === 'puan') { loadPlayers().then(renderLeaderboard); }
+  if (tab === 'puan') { loadPlayers().then(async () => { renderLeaderboard(); const wk = await renderWeeklyBest(); const c = document.getElementById('lb-container'); if (wk && c) c.insertAdjacentHTML('beforebegin', wk); }); }
   if (tab === 'admin' && isAdmin) renderAdminMatches();
+  if (tab === 'profil') { loadPlayers().then(() => renderProfilTab()); }
+  if (tab === 'sampion') renderSampionTab();
 }
 
 async function checkAdmin() {
@@ -563,7 +608,10 @@ function splitTeam(str) { const p = str.split(' '); return {flag: p[0], name: p.
 function renderMatches() {
   const c = document.getElementById('matches-container');
   c.innerHTML = '';
-  const filtered = currentFilter === 'Tümü' ? matches : matches.filter(m => m.group === currentFilter);
+  const now = new Date();
+  let filtered = currentFilter === 'Tümü' ? matches : matches.filter(m => m.group === currentFilter);
+  if (statusFilter === 'upcoming') filtered = filtered.filter(m => m.result === null || m.result.home_score === null);
+  else if (statusFilter === 'finished') filtered = filtered.filter(m => m.result !== null && m.result.home_score !== null);
   if (!filtered.length) { c.innerHTML = '<div class="empty-state">Bu grupta maç yok.</div>'; return; }
   filtered.forEach(m => {
     const pred = myPredictions[m.id] || {};
@@ -908,6 +956,188 @@ async function addMatch() {
   buildFilterBar(); renderMatches(); renderAdminMatches(); populateCustomBetSelect();
   ['new-home','new-away','new-group','new-time'].forEach(id => document.getElementById(id).value='');
   showToast('Maç eklendi!');
+}
+
+
+// ============ STATUS FILTER ============
+let statusFilter = 'upcoming';
+function setStatusFilter(s, btn) {
+  statusFilter = s;
+  document.querySelectorAll('[id^="status-btn-"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMatches();
+}
+
+// ============ SAMPION TAB ============
+let sampionLocked = false;
+
+async function renderSampionTab() {
+  const c = document.getElementById('sampion-content');
+  if (!c) return;
+
+  // Check if tournament started (first match lock time)
+  const firstMatch = matches[0];
+  const tournamentStarted = firstMatch && firstMatch.lock && new Date() >= new Date(firstMatch.lock);
+
+  // Load all players' champion picks
+  const rows = await sbGet('players', 'select=name,sampion,pts&order=pts.desc');
+  const myRow = Array.isArray(rows) ? rows.find(p => p.name === currentUser) : null;
+  const mySampion = myRow ? myRow.sampion : null;
+
+  let html = '';
+
+  // Header
+  html += '<div class="samp-card">';
+  html += '<div style="font-size:13px;font-weight:600;color:var(--dark);margin-bottom:8px;">🏆 Şampiyon Tahmini</div>';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Turnuva şampiyonunu doğru bilene <strong style="color:var(--red)">10 puan</strong>! Turnuva başlamadan önce değiştirilebilir.</div>';
+
+  if (!tournamentStarted) {
+    // Allow picking
+    html += '<label class="setup-input-label">Takım adı yaz</label>';
+    html += '<input type="text" class="setup-input" id="samp-input" placeholder="örn. 🇧🇷 Brezilya" value="' + (mySampion || '') + '" style="margin-bottom:10px">';
+    html += '<button class="confirm-btn" onclick="saveSampion()">✓ Tahminimi Kaydet</button>';
+    if (mySampion) {
+      html += '<div style="margin-top:8px;font-size:12px;color:var(--green);text-align:center">Mevcut tahminin: <strong>' + mySampion + '</strong></div>';
+    }
+  } else {
+    html += '<div class="samp-locked">🔒 Turnuva başladı — tahminler kilitlendi</div>';
+    if (mySampion) {
+      html += '<div style="margin-top:10px;text-align:center;font-size:14px;font-weight:600">Senin tahminin: ' + mySampion + '</div>';
+    }
+  }
+  html += '</div>';
+
+  // Show everyone's picks (visible after tournament starts)
+  if (tournamentStarted && Array.isArray(rows)) {
+    html += '<div class="section-label">Herkesin Tahmini</div>';
+    html += '<div class="lb-card">';
+    rows.forEach((p, i) => {
+      const rc = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+      html += '<div class="lb-row">';
+      html += '<span class="lb-rank ' + rc + '">' + (i+1) + '</span>';
+      html += '<span class="lb-name">' + p.name + (p.name===currentUser?' <small>sen</small>':'') + '</span>';
+      html += '<span style="font-size:13px;color:var(--muted)">' + (p.sampion || '—') + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  } else if (!tournamentStarted) {
+    // Show who has picked (but not what)
+    html += '<div class="section-label">Tahmin Durumu</div>';
+    html += '<div class="lb-card">';
+    if (Array.isArray(rows)) {
+      rows.forEach(p => {
+        html += '<div class="lb-row">';
+        html += '<span class="lb-rank">—</span>';
+        html += '<span class="lb-name">' + p.name + (p.name===currentUser?' <small>sen</small>':'') + '</span>';
+        html += '<span style="font-size:12px;color:var(--muted)">' + (p.sampion ? '✅ Seçti' : '⏳ Bekliyor') + '</span>';
+        html += '</div>';
+      });
+    }
+    html += '</div>';
+  }
+
+  c.innerHTML = html;
+}
+
+async function saveSampion() {
+  const val = document.getElementById('samp-input').value.trim();
+  if (!val) { showToast('Bir takım yaz!'); return; }
+  await sbPatch('players', 'name=eq.' + encodeURIComponent(currentUser), {sampion: val});
+  showToast('Şampiyon tahminin kaydedildi!');
+  renderSampionTab();
+}
+
+// ============ PROFIL TAB ============
+async function renderProfilTab() {
+  const me = players.find(p => p.name === currentUser);
+  const sorted = [...players].sort((a,b) => b.pts - a.pts);
+  const myRank = sorted.findIndex(p => p.name === currentUser) + 1;
+
+  // Update header
+  document.getElementById('prof-pts').textContent = me ? me.pts : 0;
+  document.getElementById('prof-rank').textContent = '#' + (myRank || '—');
+
+  // Load my predictions
+  const myPreds = await sbGet('predictions', 'player_name=eq.' + encodeURIComponent(currentUser));
+  const allResults = await sbGet('match_results', 'select=*');
+  const resultsMap = {};
+  if (Array.isArray(allResults)) allResults.forEach(r => { resultsMap[r.match_id] = r; });
+
+  // Stats
+  let totalPreds = 0, correctMS = 0, exactScore = 0, correctHY = 0, correctKG = 0, correctGol = 0, correctKK = 0;
+  const finishedPreds = [];
+
+  if (Array.isArray(myPreds)) {
+    myPreds.forEach(pred => {
+      const res = resultsMap[pred.match_id];
+      if (!res || res.home_score === null) return;
+      totalPreds++;
+      let pts = 0;
+      if (pred.hy && pred.hy === res.hy) { correctHY++; pts += 1; }
+      if (pred.ms && pred.ms === res.ms) { correctMS++; pts += 2; }
+      if (pred.home_score !== null && pred.away_score !== null &&
+          pred.home_score === res.home_score && pred.away_score === res.away_score) { exactScore++; pts += 3; }
+      if (pred.kg && pred.kg === res.kg) { correctKG++; pts += 1; }
+      if (pred.gol && pred.gol === res.gol) { correctGol++; pts += 1; }
+      if (pred.kk && pred.kk === res.kk) { correctKK++; pts += 1; }
+      const m = matches.find(x => x.id === pred.match_id);
+      finishedPreds.push({pred, res, m, pts});
+    });
+  }
+
+  // Render stats
+  const statsEl = document.getElementById('prof-stats');
+  statsEl.innerHTML = '<div class="stat-grid">' +
+    '<div class="stat-box"><div class="stat-val">' + totalPreds + '</div><div class="stat-lbl">Tahmin edilen maç</div></div>' +
+    '<div class="stat-box"><div class="stat-val">' + exactScore + '</div><div class="stat-lbl">Tam skor</div></div>' +
+    '<div class="stat-box"><div class="stat-val">' + correctMS + '</div><div class="stat-lbl">Doğru sonuç</div></div>' +
+    '<div class="stat-box"><div class="stat-val">' + (totalPreds > 0 ? Math.round(correctMS/totalPreds*100) : 0) + '%</div><div class="stat-lbl">Sonuç doğruluk</div></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
+    '<div class="stat-box"><div class="stat-val" style="font-size:20px">' + correctHY + '</div><div class="stat-lbl">İlk yarı</div></div>' +
+    '<div class="stat-box"><div class="stat-val" style="font-size:20px">' + correctKG + '</div><div class="stat-lbl">KG</div></div>' +
+    '<div class="stat-box"><div class="stat-val" style="font-size:20px">' + correctKK + '</div><div class="stat-lbl">Kırmızı kart</div></div>' +
+    '</div>';
+
+  // Render history
+  const histEl = document.getElementById('prof-history');
+  if (!finishedPreds.length) {
+    histEl.innerHTML = '<div class="empty-state">Henüz biten maç yok.</div>';
+    return;
+  }
+  histEl.innerHTML = finishedPreds.reverse().map(({pred, res, m, pts}) => {
+    const matchName = m ? (m.home + ' — ' + m.away) : 'Maç #' + pred.match_id;
+    const predScore = (pred.home_score !== null ? pred.home_score : '?') + ' - ' + (pred.away_score !== null ? pred.away_score : '?');
+    const realScore = res.home_score + ' - ' + res.away_score;
+    return '<div class="hist-card">' +
+      '<div class="hist-match">' + matchName + ' <span class="match-result-badge">' + realScore + '</span></div>' +
+      '<div class="hist-row"><span>Tahminin</span><span>' + predScore + '</span></div>' +
+      '<div class="hist-row"><span>İlk yarı</span><span>' + (pred.hy || '—') + ' ' + (pred.hy && pred.hy === res.hy ? '✅' : pred.hy ? '❌' : '') + '</span></div>' +
+      '<div class="hist-row"><span>Maç sonucu</span><span>' + (pred.ms || '—') + ' ' + (pred.ms && pred.ms === res.ms ? '✅' : pred.ms ? '❌' : '') + '</span></div>' +
+      '<div class="hist-row"><span>KG</span><span>' + (pred.kg || '—') + ' ' + (pred.kg && pred.kg === res.kg ? '✅' : pred.kg ? '❌' : '') + '</span></div>' +
+      '<div class="hist-row"><span>2.5 Gol</span><span>' + (pred.gol || '—') + ' ' + (pred.gol && pred.gol === res.gol ? '✅' : pred.gol ? '❌' : '') + '</span></div>' +
+      '<div class="hist-row"><span>Kırmızı kart</span><span>' + (pred.kk || '—') + ' ' + (pred.kk && pred.kk === res.kk ? '✅' : pred.kk ? '❌' : '') + '</span></div>' +
+      '<div style="margin-top:8px;text-align:right"><span class="' + (pts > 0 ? 'pts-earned' : 'pts-zero') + '">+' + pts + ' puan</span></div>' +
+      '</div>';
+  }).join('');
+}
+
+// ============ HAFTALIK EN IYI ============
+async function renderWeeklyBest() {
+  // Get players sorted by trend (points earned in last result entry)
+  const rows = await sbGet('players', 'order=trend.desc&limit=3');
+  const c = document.getElementById('lb-container');
+  if (!c) return;
+
+  let weekHtml = '';
+  if (Array.isArray(rows) && rows.length > 0 && rows[0].trend > 0) {
+    weekHtml = '<div class="week-winner">' +
+      '<div class="crown">👑</div>' +
+      '<div class="name">' + rows[0].name + '</div>' +
+      '<div class="sub">Son turda en iyi · +' + rows[0].trend + ' puan</div>' +
+      '</div>';
+  }
+  return weekHtml;
 }
 
 function showToast(msg) {
