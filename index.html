@@ -931,12 +931,17 @@ function closeModal(e) {
   }
 }
 
+function closeMatchModal() {
+  var el = document.getElementById('match-modal');
+  if (el) el.remove();
+}
+
 // ============ SAMPION SCORING ============
 async function scoreSampionAdmin() {
   const inp = document.getElementById('sampion-winner-input');
   const val = inp ? inp.value.trim() : '';
   if (!val) { showToast('Sampiyonu gir!'); return; }
-  if (!confirm(val + ' sampiyonu onaylıyor musun? Bu islem geri alinamaz!')) return;
+  if (!confirm(val + ' sampiyonu onayli mi? Geri alinamaz!')) return;
   await scoreSampion(val);
 }
 
@@ -1468,7 +1473,7 @@ async function renderSampionTab() {
   }
   html += '</div>';
 
-  // Everyone's picks (visible after tournament starts)
+  // Everyone picks (visible after tournament starts)
   if (tournamentStarted && Array.isArray(rows)) {
     html += '<div class="section-label">Herkesin Tahmini</div>';
     html += '<div class="lb-card">';
