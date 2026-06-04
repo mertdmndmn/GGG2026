@@ -155,6 +155,17 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .pred-tag-no{background:#fde8e8;color:#c0392b;}
 .bold-pick{border:2px solid var(--red);border-radius:10px;}
 .bonus-badge{background:#fff3cd;color:#856404;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;margin-left:4px;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:998;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-box{background:var(--card);border-radius:18px;padding:20px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto;}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--dark);margin-bottom:4px;}
+.modal-score{font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--red);letter-spacing:3px;text-align:center;margin:10px 0;}
+.modal-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.modal-row:last-child{border-bottom:none;}
+.modal-name{font-size:14px;font-weight:500;color:var(--dark);}
+.modal-pts{font-size:16px;font-weight:600;color:var(--green);}
+.modal-pts.zero{color:var(--muted);}
+.modal-close{width:100%;padding:12px;background:var(--dark);color:#fff;border:none;border-radius:12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;}
+.medal{font-size:18px;margin-right:6px;}
 </style>
 </head>
 <body>
@@ -261,6 +272,15 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           <button class="jump-btn" onclick="document.getElementById('sec-ozel').scrollIntoView({behavior:'smooth'})">➕ Özel Bahis</button>
           <button class="jump-btn" onclick="document.getElementById('sec-duzenle').scrollIntoView({behavior:'smooth'})">✏️ Maç Düzenle</button>
           <button class="jump-btn" onclick="document.getElementById('sec-ekle').scrollIntoView({behavior:'smooth'})">🆕 Maç Ekle</button>
+        </div>
+        <div class="section-label">Sampiyonu Onayla (Final Sonrası)</div>
+        <div class="custom-bet-box">
+          <label>Turnuva Sampiyonu</label>
+          <div class="autocomplete-wrap">
+            <input type="text" class="setup-input" id="sampion-winner-input" placeholder="örn. Ispanya..." oninput="filterTeams(this.value)" autocomplete="off" style="margin-bottom:0">
+            <div class="autocomplete-list" id="winner-autocomplete" style="display:none"></div>
+          </div>
+          <button class="confirm-btn" style="margin-top:10px" onclick="scoreSampionAdmin()">🏆 Sampiyonu Onayla ve Puanları Ver</button>
         </div>
         <div class="section-label" id="sec-sonuc">Sonuç Gir</div>
         <div id="admin-matches-container"><div class="loading">Yükleniyor...</div></div>
@@ -614,6 +634,11 @@ async function checkAdmin() {
     renderAdminMatches();
     populateCustomBetSelect();
     populateEditMatchSelect();
+    // Attach autocomplete to winner input
+    const winnerInp = document.getElementById('sampion-winner-input');
+    if (winnerInp) {
+      winnerInp.addEventListener('input', function() { filterTeams(this.value); });
+    }
   } else { showToast('Yanlış şifre!'); }
 }
 
@@ -867,6 +892,105 @@ function buildPredsTable(m, preds) {
   return html;
 }
 
+
+// ============ MATCH SUMMARY MODAL ============
+function showMatchSummary(mid, summaryData, h, a) {
+  const m = matches.find(x => x.id === mid);
+  const matchName = m ? (m.home + ' — ' + m.away) : 'Mac #' + mid;
+
+  const medals = ['gold','silver','bronze'];
+  const medalEmoji = ['trophy','medal','3rd_place'];
+
+  let rows = '';
+  summaryData.forEach(function(p, i) {
+    const medal = i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+    rows += '<div class="modal-row">' +
+      '<span class="modal-name">' + medal + ' ' + p.name + '</span>' +
+      '<span class="modal-pts' + (p.pts === 0 ? ' zero' : '') + '">+' + p.pts + ' puan</span>' +
+      '</div>';
+  });
+
+  const html = '<div class="modal-overlay" id="match-modal" onclick="closeModal(event)">' +
+    '<div class="modal-box">' +
+    '<div style="text-align:center;margin-bottom:10px">' +
+    '<div class="modal-title">Mac Sonucu</div>' +
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">' + matchName + '</div>' +
+    '<div class="modal-score">' + h + ' — ' + a + '</div>' +
+    '</div>' +
+    '<div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Bu Mactan Puanlar</div>' +
+    rows +
+    '<button class="modal-close" onclick="document.getElementById('match-modal').remove()">Tamam</button>' +
+    '</div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function closeModal(e) {
+  if (e.target.id === 'match-modal') {
+    e.target.remove();
+  }
+}
+
+// ============ SAMPION SCORING ============
+async function scoreSampionAdmin() {
+  const inp = document.getElementById('sampion-winner-input');
+  const val = inp ? inp.value.trim() : '';
+  if (!val) { showToast('Sampiyonu gir!'); return; }
+  if (!confirm(val + ' sampiyonu onaylıyor musun? Bu islem geri alinamaz!')) return;
+  await scoreSampion(val);
+}
+
+async function scoreSampion(winnerTeam) {
+  if (!winnerTeam) { showToast('Sampiyonu gir!'); return; }
+
+  const TIERS = [
+    {pts: 10, teams: ['Fransa','Ispanya','Arjantin','Brezilya','Ingiltere']},
+    {pts: 20, teams: ['Almanya','Portekiz','Hollanda','Belcika','Kolombiya','Uruguay']},
+    {pts: 40, teams: ['ABD','Meksika','Turkiye','Fas','Senegal','G.Kore','Japonya','Avustralya','Isvicre','Hirvatistan']},
+    {pts: 80, teams: []},
+  ];
+
+  function getTierPts(team) {
+    const normalized = normalizeTR(team);
+    for (let i = 0; i < 3; i++) {
+      if (TIERS[i].teams.some(function(t) { return normalizeTR(t) === normalized || normalized.includes(normalizeTR(t)) || normalizeTR(t).includes(normalized); })) {
+        return TIERS[i].pts;
+      }
+    }
+    return TIERS[3].pts;
+  }
+
+  const rows = await sbGet('players', 'select=name,sampion,pts');
+  if (!Array.isArray(rows)) { showToast('Veri yuklenemedi!'); return; }
+
+  const winners = [];
+  const normalizedWinner = normalizeTR(winnerTeam);
+
+  for (const player of rows) {
+    if (!player.sampion) continue;
+    const normalizedPick = normalizeTR(player.sampion);
+    if (normalizedPick === normalizedWinner ||
+        normalizedWinner.includes(normalizedPick) ||
+        normalizedPick.includes(normalizedWinner)) {
+      const pts = getTierPts(player.sampion);
+      await sbPatch('players', 'name=eq.' + encodeURIComponent(player.name),
+        {pts: (player.pts || 0) + pts, trend: pts});
+      winners.push({name: player.name, pts});
+    }
+  }
+
+  await loadAll();
+  renderLeaderboard();
+
+  if (winners.length > 0) {
+    let msg = 'Sampiyonlar: ';
+    winners.forEach(function(w) { msg += w.name + ' (+' + w.pts + ') '; });
+    showToast(msg);
+  } else {
+    showToast('Kimse dogru bilmedi!');
+  }
+}
+
 function renderLeaderboard() {
   const lb = document.getElementById('lb-container');
   if (!players.length) { lb.innerHTML = '<div class="empty-state" style="padding:20px">Henüz oyuncu yok.</div>'; return; }
@@ -1046,7 +1170,19 @@ async function confirmResult(mid) {
   }
   await loadAll();
   renderAdminMatches();
-  showToast('Sonuç onaylandı, puanlar güncellendi!');
+
+  // Build match summary
+  if (Array.isArray(allPreds) && allPreds.length > 0) {
+    const summaryData = [];
+    for (const pred of allPreds) {
+      const p = players.find(x => x.name === pred.player_name);
+      summaryData.push({name: pred.player_name, pts: p ? p.trend : 0});
+    }
+    summaryData.sort(function(a,b){return b.pts - a.pts;});
+    showMatchSummary(mid, summaryData, h, a);
+  } else {
+    showToast('Sonuç onaylandı, puanlar güncellendi!');
+  }
 }
 
 function populateCustomBetSelect() {
@@ -1173,8 +1309,14 @@ function normalizeTR(str) {
     .toLowerCase();
 }
 
-function filterTeams(query) {
-  const list = document.getElementById('samp-autocomplete');
+function filterTeams(query, inputId, listId) {
+  // Support both sampion tab and admin winner input
+  const activeInput = document.activeElement;
+  const isWinner = activeInput && activeInput.id === 'sampion-winner-input';
+  const resolvedListId = listId || (isWinner ? 'winner-autocomplete' : 'samp-autocomplete');
+  const resolvedInputId = inputId || (isWinner ? 'sampion-winner-input' : 'samp-input');
+
+  const list = document.getElementById(resolvedListId);
   if (!list) return;
   if (!query || query.length < 2) { list.style.display = 'none'; return; }
   const q = normalizeTR(query);
@@ -1185,7 +1327,11 @@ function filterTeams(query) {
     const div = document.createElement('div');
     div.className = 'autocomplete-item';
     div.textContent = t;
-    div.addEventListener('click', function() { selectTeam(t); });
+    div.addEventListener('click', function() {
+      const inp = document.getElementById(resolvedInputId);
+      if (inp) inp.value = t;
+      list.style.display = 'none';
+    });
     list.appendChild(div);
   });
   list.style.display = 'block';
