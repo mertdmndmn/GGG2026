@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GGG — Dünya Kupası 2026</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="apple-touch-icon" href="logo.svg">
@@ -1018,56 +1021,112 @@ function renderLeaderboard() {
 function renderAdminMatches() {
   const c = document.getElementById('admin-matches-container');
   if (!c) return;
-  c.innerHTML = '';
-  matches.forEach(m => {
+
+  const pending = matches.filter(function(m) { return !results[m.id] || results[m.id].home_score === null || results[m.id].home_score === undefined; });
+  const finished = matches.filter(function(m) { return results[m.id] && results[m.id].home_score !== null && results[m.id].home_score !== undefined; });
+
+  function buildMatchCard(m) {
     const res = results[m.id] || {};
     const home = splitTeam(m.home), away = splitTeam(m.away);
-    const cH = (m.customBets||[]).map((cb,ci) => {
+    const isFinished = res.home_score !== null && res.home_score !== undefined;
+    const timeStr = m.lock ? formatLocalTime(m.lock) : m.time;
+
+    let customHtml = '';
+    (m.customBets||[]).forEach(function(cb, ci) {
       const cur = (res.custom && res.custom['c'+ci]) || '';
+      const key = 'c' + ci;
       let opts = '';
-      if (cb.type==='yesno') {
-        opts=`<button class="bet-btn ${cur==='Var'?'sel-yes':''}" onclick="setAdminBet(${m.id},'c${ci}','Var',this)">Var</button>
-              <button class="bet-btn ${cur==='Yok'?'sel-no':''}" onclick="setAdminBet(${m.id},'c${ci}','Yok',this)">Yok</button>`;
-      } else if (cb.type==='1x2') {
-        opts=`<button class="bet-btn ${cur==='1'?'sel-1':''}" onclick="setAdminBet(${m.id},'c${ci}','1',this)">1</button>
-              <button class="bet-btn ${cur==='X'?'sel-x':''}" onclick="setAdminBet(${m.id},'c${ci}','X',this)">X</button>
-              <button class="bet-btn ${cur==='2'?'sel-2':''}" onclick="setAdminBet(${m.id},'c${ci}','2',this)">2</button>`;
+      if (cb.type === 'yesno') {
+        opts = '<button class="bet-btn ' + (cur==='Var'?'sel-yes':'') + '" data-mid="' + m.id + '" data-key="' + key + '" data-val="Var" onclick="adminBetClick(this)">Var</button>' +
+               '<button class="bet-btn ' + (cur==='Yok'?'sel-no':'') + '" data-mid="' + m.id + '" data-key="' + key + '" data-val="Yok" onclick="adminBetClick(this)">Yok</button>';
+      } else if (cb.type === '1x2') {
+        opts = '<button class="bet-btn ' + (cur==='1'?'sel-1':'') + '" data-mid="' + m.id + '" data-key="' + key + '" data-val="1" onclick="adminBetClick(this)">1</button>' +
+               '<button class="bet-btn ' + (cur==='X'?'sel-x':'') + '" data-mid="' + m.id + '" data-key="' + key + '" data-val="X" onclick="adminBetClick(this)">X</button>' +
+               '<button class="bet-btn ' + (cur==='2'?'sel-2':'') + '" data-mid="' + m.id + '" data-key="' + key + '" data-val="2" onclick="adminBetClick(this)">2</button>';
       } else {
-        (cb.options||[]).forEach(o => { opts+=`<button class="bet-btn ${cur===o?'sel-alt':''}" onclick="setAdminBet(${m.id},'c${ci}','${o}',this)">${o}</button>`; });
+        (cb.options||[]).forEach(function(o) {
+          opts += '<button class="bet-btn ' + (cur===o?'sel-alt':'') + '" data-mid="' + m.id + '" data-key="' + key + '" data-val="' + o + '" onclick="adminBetClick(this)">' + o + '</button>';
+        });
       }
-      return `<div class="bet-row"><span class="bet-label">${cb.question}</span><div class="bet-options">${opts}</div></div>`;
-    }).join('');
-    c.innerHTML += `<div class="admin-card">
-      <div class="admin-card-title">${home.flag} ${home.name} — ${away.flag} ${away.name}<small>${m.group} · ${m.time}</small></div>
-      <div class="result-inputs">
-        <input class="result-inp" type="number" min="0" id="rh-${m.id}" value="${res.home_score!==undefined&&res.home_score!==null?res.home_score:''}" placeholder="0">
-        <span class="score-dash">—</span>
-        <input class="result-inp" type="number" min="0" id="ra-${m.id}" value="${res.away_score!==undefined&&res.away_score!==null?res.away_score:''}" placeholder="0">
-      </div>
-      <div class="bets-section" style="padding:0 0 6px">
-        <div class="bet-row"><span class="bet-label">İlk yarı</span><div class="bet-options">
-          <button class="bet-btn ${res.hy==='1'?'sel-1':''}" onclick="setAdminBet(${m.id},'hy','1',this)">1</button>
-          <button class="bet-btn ${res.hy==='X'?'sel-x':''}" onclick="setAdminBet(${m.id},'hy','X',this)">X</button>
-          <button class="bet-btn ${res.hy==='2'?'sel-2':''}" onclick="setAdminBet(${m.id},'hy','2',this)">2</button>
-        </div></div>
-        <div class="bet-row"><span class="bet-label">KG</span><div class="bet-options">
-          <button class="bet-btn ${res.kg==='Var'?'sel-yes':''}" onclick="setAdminBet(${m.id},'kg','Var',this)">Var</button>
-          <button class="bet-btn ${res.kg==='Yok'?'sel-no':''}" onclick="setAdminBet(${m.id},'kg','Yok',this)">Yok</button>
-        </div></div>
-        <div class="bet-row"><span class="bet-label">2.5 Gol</span><div class="bet-options">
-          <button class="bet-btn ${res.gol==='Üst'?'sel-yes':''}" onclick="setAdminBet(${m.id},'gol','Üst',this)">Üst</button>
-          <button class="bet-btn ${res.gol==='Alt'?'sel-no':''}" onclick="setAdminBet(${m.id},'gol','Alt',this)">Alt</button>
-        </div></div>
-        <div class="bet-row"><span class="bet-label">Kırmızı Kart</span><div class="bet-options">
-          <button class="bet-btn ${res.kk==='Var'?'sel-yes':''}" onclick="setAdminBet(${m.id},'kk','Var',this)">Var</button>
-          <button class="bet-btn ${res.kk==='Yok'?'sel-no':''}" onclick="setAdminBet(${m.id},'kk','Yok',this)">Yok</button>
-        </div></div>
-        ${cH}
-      </div>
-      <button class="confirm-btn" onclick="confirmResult(${m.id})">✓ Sonucu Onayla & Puanları Güncelle</button>
-    </div>`;
-  });
+      customHtml += '<div class="bet-row"><span class="bet-label">' + cb.question + '</span><div class="bet-options">' + opts + '</div></div>';
+    });
+
+    return '<div class="admin-card" style="' + (isFinished ? 'opacity:0.75;' : '') + '">' +
+      '<div class="admin-card-title">' + home.flag + ' ' + home.name + ' — ' + away.flag + ' ' + away.name +
+        '<small>' + m.group + ' · ' + timeStr + '</small>' +
+      '</div>' +
+      (isFinished ? '<div style="text-align:center;font-size:28px;font-weight:700;color:var(--green);margin-bottom:10px">' + res.home_score + ' - ' + res.away_score + '</div>' : '') +
+      '<div class="result-inputs">' +
+        '<input class="result-inp" type="number" min="0" id="rh-' + m.id + '" value="' + (isFinished ? res.home_score : '') + '" placeholder="0">' +
+        '<span class="score-dash">—</span>' +
+        '<input class="result-inp" type="number" min="0" id="ra-' + m.id + '" value="' + (isFinished ? res.away_score : '') + '" placeholder="0">' +
+      '</div>' +
+      '<div class="bets-section" style="padding:0 0 6px">' +
+        '<div class="bet-row"><span class="bet-label">İlk yarı</span><div class="bet-options">' +
+          '<button class="bet-btn ' + (res.hy==='1'?'sel-1':'') + '" data-mid="' + m.id + '" data-key="hy" data-val="1" onclick="adminBetClick(this)">1</button>' +
+          '<button class="bet-btn ' + (res.hy==='X'?'sel-x':'') + '" data-mid="' + m.id + '" data-key="hy" data-val="X" onclick="adminBetClick(this)">X</button>' +
+          '<button class="bet-btn ' + (res.hy==='2'?'sel-2':'') + '" data-mid="' + m.id + '" data-key="hy" data-val="2" onclick="adminBetClick(this)">2</button>' +
+        '</div></div>' +
+        '<div class="bet-row"><span class="bet-label">KG</span><div class="bet-options">' +
+          '<button class="bet-btn ' + (res.kg==='Var'?'sel-yes':'') + '" data-mid="' + m.id + '" data-key="kg" data-val="Var" onclick="adminBetClick(this)">Var</button>' +
+          '<button class="bet-btn ' + (res.kg==='Yok'?'sel-no':'') + '" data-mid="' + m.id + '" data-key="kg" data-val="Yok" onclick="adminBetClick(this)">Yok</button>' +
+        '</div></div>' +
+        '<div class="bet-row"><span class="bet-label">2.5 Gol</span><div class="bet-options">' +
+          '<button class="bet-btn ' + (res.gol==='Üst'?'sel-yes':'') + '" data-mid="' + m.id + '" data-key="gol" data-val="Üst" onclick="adminBetClick(this)">Üst</button>' +
+          '<button class="bet-btn ' + (res.gol==='Alt'?'sel-no':'') + '" data-mid="' + m.id + '" data-key="gol" data-val="Alt" onclick="adminBetClick(this)">Alt</button>' +
+        '</div></div>' +
+        '<div class="bet-row"><span class="bet-label">Kırmızı Kart</span><div class="bet-options">' +
+          '<button class="bet-btn ' + (res.kk==='Var'?'sel-yes':'') + '" data-mid="' + m.id + '" data-key="kk" data-val="Var" onclick="adminBetClick(this)">Var</button>' +
+          '<button class="bet-btn ' + (res.kk==='Yok'?'sel-no':'') + '" data-mid="' + m.id + '" data-key="kk" data-val="Yok" onclick="adminBetClick(this)">Yok</button>' +
+        '</div></div>' +
+        customHtml +
+      '</div>' +
+      '<button class="confirm-btn" data-mid="' + m.id + '" onclick="adminConfirm(this)">✓ Sonucu Onayla & Puanları Güncelle</button>' +
+    '</div>';
+  }
+
+  let html = '';
+  html += '<div class="section-label" style="margin-top:0">⏳ Sonuç Bekleniyor (' + pending.length + ')</div>';
+  if (pending.length === 0) {
+    html += '<div class="empty-state" style="padding:16px">Bekleyen maç yok.</div>';
+  } else {
+    pending.forEach(function(m) { html += buildMatchCard(m); });
+  }
+
+  html += '<div class="section-label" style="margin-top:20px;cursor:pointer" onclick="toggleFinishedAdmin()">✅ Sonuç Girilmiş (' + finished.length + ') <span id="finished-arrow">▼</span></div>';
+  html += '<div id="finished-admin-section" style="display:none">';
+  if (finished.length === 0) {
+    html += '<div class="empty-state" style="padding:16px">Henüz sonuç girilmedi.</div>';
+  } else {
+    finished.forEach(function(m) { html += buildMatchCard(m); });
+  }
+  html += '</div>';
+
+  c.innerHTML = html;
 }
+
+function adminConfirm(btn) {
+  var mid = parseInt(btn.getAttribute('data-mid'));
+  confirmResult(mid);
+}
+
+function adminBetClick(btn) {
+  const mid = parseInt(btn.getAttribute('data-mid'));
+  const key = btn.getAttribute('data-key');
+  const val = btn.getAttribute('data-val');
+  setAdminBet(mid, key, val, btn);
+}
+
+function toggleFinishedAdmin() {
+  var sec = document.getElementById('finished-admin-section');
+  var arrow = document.getElementById('finished-arrow');
+  if (!sec) return;
+  var isOpen = sec.style.display !== 'none';
+  sec.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+}
+
+
 
 const adminPending = {};
 function setAdminBet(mid, key, val, btn) {
