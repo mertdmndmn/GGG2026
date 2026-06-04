@@ -177,27 +177,46 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
   <img src="logo.svg" width="120" height="120" style="margin-bottom:8px;filter:drop-shadow(0 4px 12px rgba(255,215,0,0.4))" alt="GGG Logo">
   <h2>GGG</h2>
   <p>Dünya Kupası 2026 — Tahmin Ligi</p>
-  <div id="setup-tabs" style="display:flex;gap:8px;margin-bottom:24px;">
-    <button id="tab-giris" class="setup-tab-btn active" onclick="switchSetupTab('giris')">Giriş Yap</button>
-    <button id="tab-kayit" class="setup-tab-btn" onclick="switchSetupTab('kayit')">Yeni Kayıt</button>
+  <div id="setup-tabs" style="display:flex;gap:6px;margin-bottom:24px;">
+    <button id="tab-giris" class="setup-tab-btn active" onclick="switchSetupTab('giris')">Giriş</button>
+    <button id="tab-kayit" class="setup-tab-btn" onclick="switchSetupTab('kayit')">Yeni Üye</button>
+    <button id="tab-grup" class="setup-tab-btn" onclick="switchSetupTab('grup')">Grup Oluştur</button>
   </div>
+
   <div id="form-giris">
     <label class="setup-input-label">Adın</label>
     <input class="setup-input" id="login-name" placeholder="örn. Ahmet" maxlength="20">
+    <label class="setup-input-label">Grup Şifresi</label>
+    <input class="setup-input" id="login-group-pass" type="password" placeholder="Grubun şifresi">
     <label class="setup-input-label">Kişisel Şifren</label>
     <input class="setup-input" id="login-pin" type="password" placeholder="••••" maxlength="20">
     <button class="setup-btn" onclick="doLogin()">Giriş Yap</button>
   </div>
+
   <div id="form-kayit" style="display:none">
     <label class="setup-input-label">Adın</label>
     <input class="setup-input" id="reg-name" placeholder="örn. Ahmet" maxlength="20">
     <label class="setup-input-label">Grup Şifresi</label>
-    <input class="setup-input" id="reg-group-pass" type="password" placeholder="Grup şifresi">
+    <input class="setup-input" id="reg-group-pass" type="password" placeholder="Grubun şifresi">
     <label class="setup-input-label">Kişisel Şifren (kendin belirle)</label>
     <input class="setup-input" id="reg-pin" type="password" placeholder="En az 4 karakter" maxlength="20">
     <label class="setup-input-label">Şifre Tekrar</label>
     <input class="setup-input" id="reg-pin2" type="password" placeholder="Tekrar gir" maxlength="20">
     <button class="setup-btn" onclick="doRegister()">Kayıt Ol</button>
+  </div>
+
+  <div id="form-grup" style="display:none">
+    <label class="setup-input-label">Grup Adı</label>
+    <input class="setup-input" id="new-group-name" placeholder="örn. Adana Dostlar" maxlength="30">
+    <label class="setup-input-label">Grup Şifresi (üyeler bununla katılır)</label>
+    <input class="setup-input" id="new-group-pass" type="password" placeholder="örn. adana2026" maxlength="20">
+    <label class="setup-input-label">Admin Şifresi (sadece sen bileceksin)</label>
+    <input class="setup-input" id="new-admin-pass" type="password" placeholder="En az 4 karakter" maxlength="20">
+    <label class="setup-input-label">Adın (kurucu)</label>
+    <input class="setup-input" id="new-founder-name" placeholder="örn. Ahmet" maxlength="20">
+    <label class="setup-input-label">Kişisel Şifren</label>
+    <input class="setup-input" id="new-founder-pin" type="password" placeholder="••••" maxlength="20">
+    <button class="setup-btn" onclick="doCreateGroup()">Grubu Oluştur</button>
   </div>
 </div>
 
@@ -346,8 +365,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 <script>
 const SUPABASE_URL = 'https://blaesgnkyjjkcsrjpwfy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_faNSQmoTR_LStLViGyM1-A_ItMgoDX3';
-const GROUP_PASS = 'ggg2026';
-const ADMIN_PASS = 'admin123';
+let GROUP_ID = null;   // will be set after login
+let ADMIN_PASS = null; // will be set after login
 
 const HEADERS = {
   'Content-Type': 'application/json',
@@ -504,47 +523,109 @@ let players = [];
 let results = {};
 
 function switchSetupTab(tab) {
-  document.getElementById('form-giris').style.display = tab === 'giris' ? 'block' : 'none';
-  document.getElementById('form-kayit').style.display = tab === 'kayit' ? 'block' : 'none';
-  document.getElementById('tab-giris').classList.toggle('active', tab === 'giris');
-  document.getElementById('tab-kayit').classList.toggle('active', tab === 'kayit');
+  ['giris','kayit','grup'].forEach(function(t) {
+    document.getElementById('form-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+  });
 }
 
 async function doLogin() {
   const name = document.getElementById('login-name').value.trim();
+  const groupPass = document.getElementById('login-group-pass').value.trim();
   const pin = document.getElementById('login-pin').value;
   if (!name) { showToast('İsmini gir!'); return; }
-  if (!pin) { showToast('Şifreni gir!'); return; }
-  const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(name));
-  if (!Array.isArray(rows) || rows.length === 0) {
-    showToast('Bu isim kayıtlı değil! Yeni kayıt ol.'); return;
+  if (!groupPass) { showToast('Grup şifresini gir!'); return; }
+  if (!pin) { showToast('Kişisel şifreni gir!'); return; }
+
+  // Find group
+  const groups = await sbGet('groups', 'pass=eq.' + encodeURIComponent(groupPass));
+  if (!Array.isArray(groups) || groups.length === 0) {
+    showToast('Grup bulunamadı! Şifreyi kontrol et.'); return;
   }
-  const player = rows[0];
+  const group = groups[0];
+
+  // Find player in this group
+  const players = await sbGet('players', 'name=eq.' + encodeURIComponent(name) + '&group_id=eq.' + group.id);
+  if (!Array.isArray(players) || players.length === 0) {
+    showToast('Bu isim bu grupta kayıtlı değil!'); return;
+  }
+  const player = players[0];
   if (player.pin !== pin) { showToast('Hatalı şifre!'); return; }
+
+  GROUP_ID = group.id;
+  ADMIN_PASS = group.admin_pass;
   enterApp(name, pin);
 }
 
 async function doRegister() {
   const name = document.getElementById('reg-name').value.trim();
-  const groupPass = document.getElementById('reg-group-pass').value;
+  const groupPass = document.getElementById('reg-group-pass').value.trim();
   const pin = document.getElementById('reg-pin').value;
   const pin2 = document.getElementById('reg-pin2').value;
   if (!name) { showToast('İsmini gir!'); return; }
-  if (groupPass !== GROUP_PASS) { showToast('Hatalı grup şifresi!'); return; }
+  if (!groupPass) { showToast('Grup şifresini gir!'); return; }
   if (pin.length < 4) { showToast('Şifre en az 4 karakter olmalı!'); return; }
   if (pin !== pin2) { showToast('Şifreler eşleşmiyor!'); return; }
-  const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(name));
-  if (Array.isArray(rows) && rows.length > 0) {
-    showToast('Bu isim zaten alınmış!'); return;
+
+  // Find group
+  const groups = await sbGet('groups', 'pass=eq.' + encodeURIComponent(groupPass));
+  if (!Array.isArray(groups) || groups.length === 0) {
+    showToast('Grup bulunamadı! Şifreyi kontrol et.'); return;
   }
-  await sbPost('players', {name, pts:0, trend:0, pin, sampion:null});
+  const group = groups[0];
+
+  // Check name not taken in this group
+  const existing = await sbGet('players', 'name=eq.' + encodeURIComponent(name) + '&group_id=eq.' + group.id);
+  if (Array.isArray(existing) && existing.length > 0) {
+    showToast('Bu isim bu grupta zaten alınmış!'); return;
+  }
+
+  GROUP_ID = group.id;
+  ADMIN_PASS = group.admin_pass;
+  await sbPost('players', {name, pts:0, trend:0, pin, sampion:null, group_id:GROUP_ID});
   enterApp(name, pin);
+}
+
+async function doCreateGroup() {
+  const groupName = document.getElementById('new-group-name').value.trim();
+  const groupPass = document.getElementById('new-group-pass').value.trim();
+  const adminPass = document.getElementById('new-admin-pass').value.trim();
+  const founderName = document.getElementById('new-founder-name').value.trim();
+  const founderPin = document.getElementById('new-founder-pin').value;
+
+  if (!groupName || !groupPass || !adminPass || !founderName || !founderPin) {
+    showToast('Tüm alanları doldur!'); return;
+  }
+  if (adminPass.length < 4) { showToast('Admin şifresi en az 4 karakter!'); return; }
+  if (founderPin.length < 4) { showToast('Kişisel şifre en az 4 karakter!'); return; }
+
+  // Check group pass not taken
+  const existing = await sbGet('groups', 'pass=eq.' + encodeURIComponent(groupPass));
+  if (Array.isArray(existing) && existing.length > 0) {
+    showToast('Bu grup şifresi alınmış, başka bir şifre seç!'); return;
+  }
+
+  // Create group
+  const newGroup = await sbPost('groups', {name: groupName, pass: groupPass, admin_pass: adminPass});
+  if (!Array.isArray(newGroup) || newGroup.length === 0) {
+    showToast('Grup oluşturulamadı!'); return;
+  }
+  const group = newGroup[0];
+  GROUP_ID = group.id;
+  ADMIN_PASS = group.admin_pass;
+
+  // Register founder
+  await sbPost('players', {name: founderName, pts:0, trend:0, pin: founderPin, sampion:null, group_id: GROUP_ID});
+  showToast('Grup oluşturuldu! Şifre: ' + groupPass);
+  enterApp(founderName, founderPin);
 }
 
 async function enterApp(name, pin) {
   currentUser = name;
   localStorage.setItem('ggg_user', name);
   if (pin) localStorage.setItem('ggg_pin', pin);
+  if (GROUP_ID) localStorage.setItem('ggg_group_id', GROUP_ID);
+  if (ADMIN_PASS) localStorage.setItem('ggg_admin_pass', ADMIN_PASS);
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('user-badge').textContent = name;
@@ -560,7 +641,7 @@ async function loadAll() {
 
 async function loadMatches() {
   // Use static match list + custom bets from DB
-  const customRows = await sbGet('match_results', 'select=match_id,custom');
+  const customRows = await sbGet('match_results', 'select=match_id,custom&group_id=eq.' + GROUP_ID);
   const customMap = {};
   if (Array.isArray(customRows)) {
     customRows.forEach(r => { if (r.custom) customMap[r.match_id] = r.custom; });
@@ -594,12 +675,12 @@ async function loadPredictions() {
 }
 
 async function loadPlayers() {
-  const rows = await sbGet('players', 'order=pts.desc');
+  const rows = await sbGet('players', 'group_id=eq.' + GROUP_ID + '&order=pts.desc');
   players = Array.isArray(rows) ? rows : [];
 }
 
 async function loadResults() {
-  const rows = await sbGet('match_results', 'select=*');
+  const rows = await sbGet('match_results', 'select=*&group_id=eq.' + GROUP_ID);
   results = {};
   if (Array.isArray(rows)) rows.forEach(r => { results[r.match_id] = r; });
 }
@@ -607,13 +688,16 @@ async function loadResults() {
 window.addEventListener('DOMContentLoaded', async () => {
   const saved = localStorage.getItem('ggg_user');
   const savedPin = localStorage.getItem('ggg_pin');
+  const savedGroup = localStorage.getItem('ggg_group_id');
+  const savedAdminPass = localStorage.getItem('ggg_admin_pass');
   if (saved) {
     document.getElementById('login-name').value = saved;
     document.getElementById('reg-name').value = saved;
   }
-  if (saved && savedPin) {
-    // Auto-login
-    const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(saved));
+  if (saved && savedPin && savedGroup) {
+    GROUP_ID = savedGroup;
+    ADMIN_PASS = savedAdminPass;
+    const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(saved) + '&group_id=eq.' + GROUP_ID);
     if (Array.isArray(rows) && rows.length > 0 && rows[0].pin === savedPin) {
       enterApp(saved, savedPin);
     }
@@ -633,7 +717,7 @@ function showTab(tab, btn) {
 }
 
 async function checkAdmin() {
-  if (document.getElementById('admin-pass-input').value === ADMIN_PASS) {
+  if (ADMIN_PASS && document.getElementById('admin-pass-input').value === ADMIN_PASS) {
     isAdmin = true;
     document.getElementById('admin-gate-box').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'block';
@@ -687,7 +771,7 @@ async function renderMatches() {
 
   // Load all predictions for visible matches
   const matchIds = filtered.map(m => m.id).join(',');
-  const allPreds = await sbGet('predictions', 'match_id=in.(' + matchIds + ')');
+  const allPreds = await sbGet('predictions', 'match_id=in.(' + matchIds + ')&group_id=eq.' + GROUP_ID);
   const allPredsMap = {};
   if (Array.isArray(allPreds)) {
     allPreds.forEach(p => {
@@ -809,6 +893,7 @@ async function savePred(mid) {
   const payload = {
     player_name: currentUser,
     match_id: mid,
+    group_id: GROUP_ID,
     home_score: p.home_score !== undefined ? parseInt(p.home_score) : existing.home_score,
     away_score: p.away_score !== undefined ? parseInt(p.away_score) : existing.away_score,
     hy: p.hy || existing.hy || null,
@@ -1221,6 +1306,7 @@ async function confirmResult(mid) {
 
   const resultPayload = {
     match_id: mid,
+    group_id: GROUP_ID,
     home_score: h, away_score: a, ms,
     hy: ap.hy || existingRes.hy || null,
     kg: ap.kg || existingRes.kg || null,
@@ -1228,11 +1314,11 @@ async function confirmResult(mid) {
     kk: ap.kk || existingRes.kk || null,
     custom: newCustom
   };
-  await sbUpsert('match_results', resultPayload, 'match_id');
+  await sbUpsert('match_results', resultPayload, 'match_id,group_id');
   results[mid] = resultPayload;
 
   // calculate & update points for all players
-  const allPreds = await sbGet('predictions', 'match_id=eq.' + mid);
+  const allPreds = await sbGet('predictions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
   if (Array.isArray(allPreds)) {
 
     // Build vote counts for courage bonus
@@ -1289,7 +1375,7 @@ async function confirmResult(mid) {
 
       const totalPts = pts + bonusPts;
       if (totalPts > 0) {
-        await sbPatch('players', 'name=eq.' + encodeURIComponent(pred.player_name),
+        await sbPatch('players', 'name=eq.' + encodeURIComponent(pred.player_name) + '&group_id=eq.' + GROUP_ID,
           {pts: (players.find(p=>p.name===pred.player_name)?.pts||0) + totalPts, trend: totalPts});
       }
     }
@@ -1674,7 +1760,7 @@ async function saveSampion() {
   const val = (inp ? inp.value.trim() : '') || (pendingSampion || '');
   if (!val) { showToast('Bir takım seç!'); return; }
   pendingSampion = null;
-  await sbPatch('players', 'name=eq.' + encodeURIComponent(currentUser), {sampion: val});
+  await sbPatch('players', 'name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID, {sampion: val});
   showToast('Şampiyon tahminin kaydedildi!');
   renderSampionTab();
 }
