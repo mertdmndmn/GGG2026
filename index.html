@@ -1200,18 +1200,29 @@ async function renderSampionTab() {
 
   c.innerHTML = html;
 
-  // Attach click handlers to tier buttons (avoids inline onclick quote issues)
+  // Attach click handlers to tier buttons
   c.querySelectorAll('[data-pick]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       const parts = btn.getAttribute('data-pick').split('_');
       const ti = parseInt(parts[0]);
       const tidx = parseInt(parts[1]);
-      const teamsList = TIERS.slice(0,3).map(t => t.teams)
+      const teamsList = TIERS.slice(0,3).map(function(t) { return t.teams; });
       if (teamsList[ti] && teamsList[ti][tidx]) {
         pickSampion(teamsList[ti][tidx]);
       }
     });
   });
+
+  // Attach input handler for autocomplete (Tier 4)
+  const sampInput = document.getElementById('samp-input');
+  if (sampInput) {
+    sampInput.addEventListener('input', function() {
+      filterTeams(this.value);
+    });
+    sampInput.addEventListener('focus', function() {
+      if (this.value.length >= 2) filterTeams(this.value);
+    });
+  }
 }
 
 let pendingSampion = null;
