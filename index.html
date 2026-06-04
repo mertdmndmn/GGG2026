@@ -285,6 +285,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           </div>
           <button class="confirm-btn" style="margin-top:10px" onclick="scoreSampionAdmin()">🏆 Sampiyonu Onayla ve Puanları Ver</button>
         </div>
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+          <button class="filter-btn active" id="admin-tab-pending" onclick="setAdminTab('pending',this)">⏳ Bekleyen</button>
+          <button class="filter-btn" id="admin-tab-finished" onclick="setAdminTab('finished',this)">✅ Biten</button>
+        </div>
         <div class="section-label" id="sec-sonuc">Sonuç Gir</div>
         <div id="admin-matches-container"><div class="loading">Yükleniyor...</div></div>
         <div class="section-label" id="sec-ozel" style="margin-top:20px">Maça Özel Bahis Ekle</div>
@@ -727,7 +731,7 @@ async function renderMatches() {
       </div>
       <div class="match-teams">
         <div class="team"><span class="team-flag">${home.flag}</span><span class="team-name">${home.name}</span></div>
-        <div class="score-vs">VS</div>
+        ${locked && m.result ? `<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dark);letter-spacing:3px;line-height:1">${m.result.home_score} — ${m.result.away_score}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>` : '<div class="score-vs">VS</div>'}
         <div class="team"><span class="team-flag">${away.flag}</span><span class="team-name">${away.name}</span></div>
       </div>
       <div class="score-inputs">
@@ -843,8 +847,29 @@ function tagClass(key, val) {
   return 'pred-tag pred-tag-x';
 }
 
+function calcPredPts(pred, res) {
+  if (!res || res.home_score === null || res.home_score === undefined) return null;
+  let pts = 0;
+  if (pred.hy && pred.hy === res.hy) pts += 1;
+  if (pred.ms && pred.ms === res.ms) pts += 2;
+  if (pred.home_score !== null && pred.away_score !== null &&
+      parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 3;
+  if (pred.kg && pred.kg === res.kg) pts += 1;
+  if (pred.gol && pred.gol === res.gol) pts += 1;
+  if (pred.kk && pred.kk === res.kk) pts += 1;
+  const pCustom = pred.custom || {};
+  const rCustom = res.custom || {};
+  Object.keys(pCustom).forEach(function(k) {
+    if (k.startsWith('c') && pCustom[k] && rCustom[k] && pCustom[k] === rCustom[k]) pts += 1;
+  });
+  return pts;
+}
+
 function buildPredsTable(m, preds) {
   if (!preds || !preds.length) return '<div style="font-size:12px;color:var(--muted);padding:4px 0">Henüz tahmin yok.</div>';
+
+  const res = results[m.id] || null;
+  const isFinished = res && res.home_score !== null && res.home_score !== undefined;
 
   const fields = [
     {key:'ms', label:'Maç Sonucu'},
@@ -861,6 +886,7 @@ function buildPredsTable(m, preds) {
 
   let html = '<table class="pred-table"><thead><tr><td><b>Oyuncu</b></td>';
   fields.forEach(function(f) { html += '<td><b>' + f.label + '</b></td>'; });
+  if (isFinished) html += '<td><b>Puan</b></td>';
   html += '</tr></thead><tbody>';
 
   // Calculate majority for each field (for bold/lone picks)
@@ -888,10 +914,33 @@ function buildPredsTable(m, preds) {
       const bonusHtml = isLone ? '<span class="bonus-badge">+1?</span>' : '';
       html += '<td><span class="' + tagClass(f.key, val) + (isLone ? ' bold-pick' : '') + '">' + val + '</span>' + bonusHtml + '</td>';
     });
+    if (isFinished) {
+      const pts = calcPredPts(p, res);
+      const bonusCheck = pts !== null;
+      html += '<td style="font-weight:700;color:' + (pts > 0 ? 'var(--green)' : 'var(--muted)') + '">+' + (pts || 0) + '</td>';
+    }
     html += '</tr>';
   });
 
   html += '</tbody></table>';
+
+  // If finished, show sorted summary at top
+  if (isFinished) {
+    const sorted = [...preds].map(function(p) {
+      return {name: p.player_name, pts: calcPredPts(p, res) || 0};
+    }).sort(function(a,b) { return b.pts - a.pts; });
+
+    let summary = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
+    sorted.forEach(function(p, i) {
+      const medal = i===0 ? '🥇' : i===1 ? '🥈' : i===2 ? '🥉' : '';
+      const color = p.pts > 0 ? 'var(--green)' : 'var(--muted)';
+      summary += '<div style="background:var(--surface);border-radius:8px;padding:4px 10px;font-size:12px">' +
+        medal + ' <b>' + p.name + '</b> <span style="color:' + color + ';font-weight:700">+' + p.pts + '</span></div>';
+    });
+    summary += '</div>';
+    html = summary + html;
+  }
+
   return html;
 }
 
@@ -1018,11 +1067,25 @@ function renderLeaderboard() {
   document.getElementById('my-rank').textContent = '#' + (myRank || '—');
 }
 
+let adminTab = 'pending';
+
+function setAdminTab(tab, btn) {
+  adminTab = tab;
+  document.querySelectorAll('[id^="admin-tab-"]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderAdminMatches();
+}
+
 function renderAdminMatches() {
   const c = document.getElementById('admin-matches-container');
   if (!c) return;
 
-  const pending = matches.filter(function(m) { return !results[m.id] || results[m.id].home_score === null || results[m.id].home_score === undefined; });
+  const pending = matches.filter(function(m) { return !results[m.id] || results[m.id].home_score === null || results[m.id].home_score === undefined; })
+    .sort(function(a, b) {
+      const aTime = a.lock ? new Date(a.lock) : new Date('2099-01-01');
+      const bTime = b.lock ? new Date(b.lock) : new Date('2099-01-01');
+      return aTime - bTime;
+    });
   const finished = matches.filter(function(m) { return results[m.id] && results[m.id].home_score !== null && results[m.id].home_score !== undefined; });
 
   function buildMatchCard(m) {
@@ -1086,21 +1149,20 @@ function renderAdminMatches() {
   }
 
   let html = '';
-  html += '<div class="section-label" style="margin-top:0">⏳ Sonuç Bekleniyor (' + pending.length + ')</div>';
-  if (pending.length === 0) {
-    html += '<div class="empty-state" style="padding:16px">Bekleyen maç yok.</div>';
-  } else {
-    pending.forEach(function(m) { html += buildMatchCard(m); });
-  }
 
-  html += '<div class="section-label" style="margin-top:20px;cursor:pointer" onclick="toggleFinishedAdmin()">✅ Sonuç Girilmiş (' + finished.length + ') <span id="finished-arrow">▼</span></div>';
-  html += '<div id="finished-admin-section" style="display:none">';
-  if (finished.length === 0) {
-    html += '<div class="empty-state" style="padding:16px">Henüz sonuç girilmedi.</div>';
+  if (adminTab === 'pending') {
+    if (pending.length === 0) {
+      html += '<div class="empty-state" style="padding:32px 16px">Tüm maçların sonucu girildi! 🎉</div>';
+    } else {
+      pending.forEach(function(m) { html += buildMatchCard(m); });
+    }
   } else {
-    finished.forEach(function(m) { html += buildMatchCard(m); });
+    if (finished.length === 0) {
+      html += '<div class="empty-state" style="padding:32px 16px">Henüz sonuç girilmedi.</div>';
+    } else {
+      finished.forEach(function(m) { html += buildMatchCard(m); });
+    }
   }
-  html += '</div>';
 
   c.innerHTML = html;
 }
@@ -1233,7 +1295,14 @@ async function confirmResult(mid) {
     }
   }
   await loadAll();
+  // Switch to finished tab to show the confirmed match
+  adminTab = 'finished';
+  var pendingBtn = document.getElementById('admin-tab-pending');
+  var finishedBtn = document.getElementById('admin-tab-finished');
+  if (pendingBtn) pendingBtn.classList.remove('active');
+  if (finishedBtn) finishedBtn.classList.add('active');
   renderAdminMatches();
+  window.scrollTo({top: 0, behavior: 'smooth'});
 
   // Build match summary
   if (Array.isArray(allPreds) && allPreds.length > 0) {
