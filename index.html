@@ -140,6 +140,21 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .match-result-badge{background:var(--dark);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:16px;padding:4px 10px;border-radius:8px;letter-spacing:1px;}
 .correct-badge{background:#e8f5ee;color:var(--green);font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}
 .wrong-badge{background:#fef2f2;color:var(--red);font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}
+.group-preds{border-top:1px solid var(--border);padding:10px 14px 8px;}
+.group-preds-title{font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;}
+.pred-table{width:100%;border-collapse:collapse;}
+.pred-table td{padding:4px 6px;font-size:12px;color:var(--mid);}
+.pred-table tr:nth-child(even){background:var(--surface);}
+.pred-table td:first-child{font-weight:500;color:var(--dark);}
+.pred-table td.me-cell{color:var(--red);font-weight:600;}
+.pred-tag{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;margin:1px;}
+.pred-tag-1{background:#e8eef8;color:#1a4fa8;}
+.pred-tag-x{background:#f0f0f0;color:#555;}
+.pred-tag-2{background:#fde8e8;color:#7a1f1f;}
+.pred-tag-yes{background:#e8f5ee;color:#1a7a3c;}
+.pred-tag-no{background:#fde8e8;color:#c0392b;}
+.bold-pick{border:2px solid var(--red);border-radius:10px;}
+.bonus-badge{background:#fff3cd;color:#856404;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;margin-left:4px;}
 </style>
 </head>
 <body>
@@ -213,6 +228,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <div class="pts-row"><span>2.5 gol alt/üst doğru</span><span>1 puan</span></div>
         <div class="pts-row"><span>Kırmızı kart var/yok doğru</span><span>1 puan</span></div>
         <div class="pts-row"><span>Özel bahis doğru</span><span>1 puan</span></div>
+        <div class="pts-row"><span>Cesaret bonusu (tek farklı + doğru)</span><span>+1 puan</span></div>
       </div>
     </div>
     <div id="tab-profil" class="section">
@@ -628,15 +644,29 @@ function formatLocalTime(isoString) {
   return day + ' ' + month + ' · ' + hours + ':' + mins;
 }
 
-function renderMatches() {
+async function renderMatches() {
   const c = document.getElementById('matches-container');
-  c.innerHTML = '';
+  c.innerHTML = '<div class="loading">Yükleniyor...</div>';
   const now = new Date();
   let filtered = currentFilter === 'Tümü' ? matches : matches.filter(m => m.group === currentFilter);
   if (statusFilter === 'upcoming') filtered = filtered.filter(m => m.result === null || m.result.home_score === null);
   else if (statusFilter === 'finished') filtered = filtered.filter(m => m.result !== null && m.result.home_score !== null);
   if (!filtered.length) { c.innerHTML = '<div class="empty-state">Bu grupta maç yok.</div>'; return; }
+
+  // Load all predictions for visible matches
+  const matchIds = filtered.map(m => m.id).join(',');
+  const allPreds = await sbGet('predictions', 'match_id=in.(' + matchIds + ')');
+  const allPredsMap = {};
+  if (Array.isArray(allPreds)) {
+    allPreds.forEach(p => {
+      if (!allPredsMap[p.match_id]) allPredsMap[p.match_id] = [];
+      allPredsMap[p.match_id].push(p);
+    });
+  }
+
+  c.innerHTML = '';
   filtered.forEach(m => {
+    const matchPreds = allPredsMap[m.id] || [];
     const pred = myPredictions[m.id] || {};
     const locked = (m.result !== null && m.result.home_score !== null) || (m.lock && new Date() >= new Date(m.lock));
     const home = splitTeam(m.home), away = splitTeam(m.away);
@@ -704,6 +734,15 @@ function renderMatches() {
         ${customHtml}
       </div>
       ${locked ? '' : `<button class="save-btn" id="sb-${m.id}" onclick="savePred(${m.id})">Tahmini Kaydet</button>`}
+      <div class="group-preds" id="gp-${m.id}">
+        <div class="group-preds-title" onclick="togglePreds(${m.id})">
+          <span>👥 Grup Tahminleri (${matchPreds.length})</span>
+          <span id="gp-arrow-${m.id}">▼</span>
+        </div>
+        <div id="gp-body-${m.id}" style="display:none">
+          ${buildPredsTable(m, matchPreds)}
+        </div>
+      </div>
     </div>`;
   });
 }
@@ -752,6 +791,80 @@ async function savePred(mid) {
   const btn = document.getElementById('sb-'+mid);
   if (btn) { btn.textContent='✓ Kaydedildi!'; btn.classList.add('saved'); setTimeout(()=>{btn.textContent='Tahmini Kaydet';btn.classList.remove('saved');},2000); }
   showToast('Tahmin kaydedildi!');
+}
+
+
+// ============ GROUP PREDICTIONS TABLE ============
+function togglePreds(mid) {
+  const body = document.getElementById('gp-body-' + mid);
+  const arrow = document.getElementById('gp-arrow-' + mid);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+}
+
+function tagClass(key, val) {
+  if (key === 'ms' || key === 'hy') {
+    if (val === '1') return 'pred-tag pred-tag-1';
+    if (val === 'X') return 'pred-tag pred-tag-x';
+    if (val === '2') return 'pred-tag pred-tag-2';
+  }
+  if (val === 'Var' || val === 'Üst') return 'pred-tag pred-tag-yes';
+  if (val === 'Yok' || val === 'Alt') return 'pred-tag pred-tag-no';
+  return 'pred-tag pred-tag-x';
+}
+
+function buildPredsTable(m, preds) {
+  if (!preds || !preds.length) return '<div style="font-size:12px;color:var(--muted);padding:4px 0">Henüz tahmin yok.</div>';
+
+  const fields = [
+    {key:'ms', label:'Maç Sonucu'},
+    {key:'hy', label:'İlk Yarı'},
+    {key:'kg', label:'KG'},
+    {key:'gol', label:'2.5 Gol'},
+    {key:'kk', label:'Kırmızı'},
+  ];
+
+  // Add custom bets
+  (m.customBets || []).forEach(function(cb, ci) {
+    fields.push({key:'c'+ci, label:cb.question, isCustom:true});
+  });
+
+  let html = '<table class="pred-table"><thead><tr><td><b>Oyuncu</b></td>';
+  fields.forEach(function(f) { html += '<td><b>' + f.label + '</b></td>'; });
+  html += '</tr></thead><tbody>';
+
+  // Calculate majority for each field (for bold/lone picks)
+  const majority = {};
+  fields.forEach(function(f) {
+    const counts = {};
+    preds.forEach(function(p) {
+      const v = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
+      if (v) counts[v] = (counts[v] || 0) + 1;
+    });
+    // Find most common
+    let maxCount = 0, maxVal = null;
+    Object.keys(counts).forEach(function(k) { if (counts[k] > maxCount) { maxCount = counts[k]; maxVal = k; } });
+    majority[f.key] = {val: maxVal, count: maxCount, total: preds.filter(function(p) { const v = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key]; return !!v; }).length};
+  });
+
+  preds.forEach(function(p) {
+    const isMe = p.player_name === currentUser;
+    html += '<tr>';
+    html += '<td class="' + (isMe ? 'me-cell' : '') + '">' + p.player_name + (isMe ? ' ★' : '') + '</td>';
+    fields.forEach(function(f) {
+      const val = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
+      if (!val) { html += '<td>—</td>'; return; }
+      const isLone = majority[f.key].total > 1 && majority[f.key].count < majority[f.key].total && val !== majority[f.key].val;
+      const bonusHtml = isLone ? '<span class="bonus-badge">+1?</span>' : '';
+      html += '<td><span class="' + tagClass(f.key, val) + (isLone ? ' bold-pick' : '') + '">' + val + '</span>' + bonusHtml + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  return html;
 }
 
 function renderLeaderboard() {
@@ -869,8 +982,29 @@ async function confirmResult(mid) {
   results[mid] = resultPayload;
 
   // calculate & update points for all players
-  const allPreds = await sbGet('predictions', `match_id=eq.${mid}`);
+  const allPreds = await sbGet('predictions', 'match_id=eq.' + mid);
   if (Array.isArray(allPreds)) {
+
+    // Build vote counts for courage bonus
+    const fields = ['ms','hy','kg','gol','kk'];
+    const voteCounts = {};
+    fields.forEach(function(f) {
+      voteCounts[f] = {};
+      allPreds.forEach(function(p) {
+        const v = p[f];
+        if (v) voteCounts[f][v] = (voteCounts[f][v] || 0) + 1;
+      });
+    });
+    // Custom bet vote counts
+    const m2 = matches.find(x => x.id === mid);
+    (m2 && m2.customBets || []).forEach(function(cb, ci) {
+      voteCounts['c'+ci] = {};
+      allPreds.forEach(function(p) {
+        const v = p.custom && p.custom['c'+ci];
+        if (v) voteCounts['c'+ci][v] = (voteCounts['c'+ci][v] || 0) + 1;
+      });
+    });
+
     for (const pred of allPreds) {
       let pts = 0;
       if (pred.hy && pred.hy === resultPayload.hy) pts += 1;
@@ -885,9 +1019,28 @@ async function confirmResult(mid) {
       Object.keys(pCustom).forEach(k => {
         if (k.startsWith('c') && pCustom[k] && rCustom[k] && pCustom[k] === rCustom[k]) pts += 1;
       });
-      if (pts > 0) {
-        await sbPatch('players', `name=eq.${encodeURIComponent(pred.player_name)}`,
-          {pts: (players.find(p=>p.name===pred.player_name)?.pts||0) + pts, trend: pts});
+
+      // Courage bonus: correct + lone pick (only one person picked it)
+      let bonusPts = 0;
+      fields.forEach(function(f) {
+        const predVal = pred[f];
+        const resVal = resultPayload[f];
+        if (!predVal || !resVal || predVal !== resVal) return;
+        const totalVotes = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
+        if (totalVotes > 1 && voteCounts[f][predVal] === 1) bonusPts += 1;
+      });
+      (m2 && m2.customBets || []).forEach(function(cb, ci) {
+        const predVal = pCustom['c'+ci];
+        const resVal = rCustom['c'+ci];
+        if (!predVal || !resVal || predVal !== resVal) return;
+        const totalVotes = Object.values(voteCounts['c'+ci]).reduce(function(a,b){return a+b;},0);
+        if (totalVotes > 1 && voteCounts['c'+ci][predVal] === 1) bonusPts += 1;
+      });
+
+      const totalPts = pts + bonusPts;
+      if (totalPts > 0) {
+        await sbPatch('players', 'name=eq.' + encodeURIComponent(pred.player_name),
+          {pts: (players.find(p=>p.name===pred.player_name)?.pts||0) + totalPts, trend: totalPts});
       }
     }
   }
