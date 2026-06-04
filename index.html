@@ -1134,9 +1134,13 @@ async function renderSampionTab() {
       html += '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:' + tier.color + ';margin-bottom:6px">' + tier.label + ' · +' + tier.pts + ' puan</div>';
       html += '<div style="display:flex;flex-wrap:wrap;gap:5px">';
       if (ti < 3) {
-        tier.teams.forEach(team => {
+        tier.teams.forEach(function(team, tidx) {
           const sel = mySampion && normalizeTR(mySampion) === normalizeTR(team);
-          html += '<button onclick="pickSampion('' + team.replace(/'/g,"\'") + '')" style="padding:5px 10px;font-size:12px;border-radius:20px;border:1.5px solid ' + (sel ? tier.color : 'var(--border)') + ';background:' + (sel ? tier.bg : 'transparent') + ';color:' + (sel ? tier.color : 'var(--muted)') + ';cursor:pointer;font-weight:' + (sel ? '600' : '400') + '">' + team + '</button>';
+          const borderCol = sel ? tier.color : 'var(--border)';
+          const bgCol = sel ? tier.bg : 'transparent';
+          const textCol = sel ? tier.color : 'var(--muted)';
+          const fw = sel ? '600' : '400';
+          html += '<button data-pick="' + ti + '_' + tidx + '" style="padding:5px 10px;font-size:12px;border-radius:20px;border:1.5px solid ' + borderCol + ';background:' + bgCol + ';color:' + textCol + ';cursor:pointer;font-weight:' + fw + '">' + team + '</button>';
         });
       } else {
         html += '<div style="font-size:12px;color:var(--muted)">Yukarıdaki tier'larda olmayan tüm takımlar</div>';
@@ -1195,22 +1199,40 @@ async function renderSampionTab() {
   }
 
   c.innerHTML = html;
+
+  // Attach click handlers to tier buttons (avoids inline onclick quote issues)
+  c.querySelectorAll('[data-pick]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const parts = btn.getAttribute('data-pick').split('_');
+      const ti = parseInt(parts[0]);
+      const tidx = parseInt(parts[1]);
+      const TIERS_LOCAL = [
+        ['\uD83C\uDDEB\uD83C\uDDF7 Fransa','\uD83C\uDDEA\uD83C\uDDF8 \u0130spanya','\uD83C\uDDE6\uD83C\uDDF7 Arjantin','\uD83C\uDDE7\uD83C\uDDF7 Brezilya','\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F \u0130ngiltere'],
+        ['\uD83C\uDDE9\uD83C\uDDEA Almanya','\uD83C\uDDF5\uD83C\uDDF9 Portekiz','\uD83C\uDDF3\uD83C\uDDF1 Hollanda','\uD83C\uDDE7\uD83C\uDDEA Bel\u00E7ika','\uD83C\uDDE8\uD83C\uDDF4 Kolombiya','\uD83C\uDDFA\uD83C\uDDFE Uruguay'],
+        ['\uD83C\uDDFA\uD83C\uDDF8 ABD','\uD83C\uDDF2\uD83C\uDDFD Meksika','\uD83C\uDDF9\uD83C\uDDF7 T\u00FCrkiye','\uD83C\uDDF2\uD83C\uDDE6 Fas','\uD83C\uDDF8\uD83C\uDDF3 Senegal','\uD83C\uDDF0\uD83C\uDDF7 G.Kore','\uD83C\uDDEF\uD83C\uDDF5 Japonya','\uD83C\uDDE6\uD83C\uDDFA Avustralya','\uD83C\uDDE8\uD83C\uDDED \u0130svi\u00E7re','\uD83C\uDDED\uD83C\uDDF7 H\u0131rvatistan']
+      ];
+      if (TIERS_LOCAL[ti] && TIERS_LOCAL[ti][tidx]) {
+        pickSampion(TIERS_LOCAL[ti][tidx]);
+      }
+    });
+  });
 }
 
+let pendingSampion = null;
 function pickSampion(team) {
-  // Store selection temporarily and re-render with selection
-  const inp = document.getElementById('samp-input');
-  if (inp) inp.value = team;
-  // Update buttons visually without full re-render
-  renderSampionTab();
+  pendingSampion = team;
+  renderSampionTab().then(function() {
+    const inp = document.getElementById('samp-input');
+    if (inp && pendingSampion) inp.value = pendingSampion;
+  });
 }
 
 
 async function saveSampion() {
   const inp = document.getElementById('samp-input');
-  const val = inp ? inp.value.trim() : '';
-  // Also check if a tier button was clicked (stored in renderSampionTab re-render)
+  const val = (inp ? inp.value.trim() : '') || (pendingSampion || '');
   if (!val) { showToast('Bir takım seç!'); return; }
+  pendingSampion = null;
   await sbPatch('players', 'name=eq.' + encodeURIComponent(currentUser), {sampion: val});
   showToast('Şampiyon tahminin kaydedildi!');
   renderSampionTab();
