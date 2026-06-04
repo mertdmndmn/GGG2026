@@ -236,8 +236,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div class="section-label" style="margin-top:20px">Puan Sistemi</div>
       <div class="pts-card">
         <div class="pts-row"><span>İlk yarı sonucu doğru</span><span>1 puan</span></div>
-        <div class="pts-row"><span>Maç sonucu (1/X/2) doğru</span><span>2 puan</span></div>
-        <div class="pts-row"><span>Tam skor doğru</span><span>3 puan</span></div>
+        <div class="pts-row"><span>Maç sonucu (1/X/2) doğru</span><span>1 puan</span></div>
+        <div class="pts-row"><span>Tam skor doğru</span><span>5 puan</span></div>
         <div class="pts-row"><span>KG var/yok doğru</span><span>1 puan</span></div>
         <div class="pts-row"><span>2.5 gol alt/üst doğru</span><span>1 puan</span></div>
         <div class="pts-row"><span>Kırmızı kart var/yok doğru</span><span>1 puan</span></div>
@@ -851,9 +851,9 @@ function calcPredPts(pred, res) {
   if (!res || res.home_score === null || res.home_score === undefined) return null;
   let pts = 0;
   if (pred.hy && pred.hy === res.hy) pts += 1;
-  if (pred.ms && pred.ms === res.ms) pts += 2;
+  if (pred.ms && pred.ms === res.ms) pts += 1;
   if (pred.home_score !== null && pred.away_score !== null &&
-      parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 3;
+      parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
   if (pred.kg && pred.kg === res.kg) pts += 1;
   if (pred.gol && pred.gol === res.gol) pts += 1;
   if (pred.kk && pred.kk === res.kk) pts += 1;
@@ -1258,9 +1258,9 @@ async function confirmResult(mid) {
     for (const pred of allPreds) {
       let pts = 0;
       if (pred.hy && pred.hy === resultPayload.hy) pts += 1;
-      if (pred.ms && pred.ms === ms) pts += 2;
+      if (pred.ms && pred.ms === ms) pts += 1;
       if (pred.home_score !== null && pred.away_score !== null &&
-          pred.home_score === h && pred.away_score === a) pts += 3;
+          pred.home_score === h && pred.away_score === a) pts += 5;
       if (pred.kg && pred.kg === resultPayload.kg) pts += 1;
       if (pred.gol && pred.gol === resultPayload.gol) pts += 1;
       if (pred.kk && pred.kk === resultPayload.kk) pts += 1;
