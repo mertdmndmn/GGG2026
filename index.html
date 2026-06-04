@@ -1143,7 +1143,7 @@ async function renderSampionTab() {
           html += '<button data-pick="' + ti + '_' + tidx + '" style="padding:5px 10px;font-size:12px;border-radius:20px;border:1.5px solid ' + borderCol + ';background:' + bgCol + ';color:' + textCol + ';cursor:pointer;font-weight:' + fw + '">' + team + '</button>';
         });
       } else {
-        html += '<div style="font-size:12px;color:var(--muted)">Yukarıdaki tier'larda olmayan tüm takımlar</div>';
+        html += '<div style="font-size:12px;color:var(--muted)">Diger tier grubundaki takimlar:</div>';
         // Show autocomplete for tier 4
         html += '<div class="autocomplete-wrap" style="width:100%;margin-top:6px">';
         html += '<input type="text" class="setup-input" id="samp-input" placeholder="Takım ara..." value="' + (mySampion && getTier(mySampion).pts === 80 ? mySampion : '') + '" oninput="filterTeams(this.value)" autocomplete="off" style="margin-bottom:0">';
@@ -1206,13 +1206,9 @@ async function renderSampionTab() {
       const parts = btn.getAttribute('data-pick').split('_');
       const ti = parseInt(parts[0]);
       const tidx = parseInt(parts[1]);
-      const TIERS_LOCAL = [
-        ['\uD83C\uDDEB\uD83C\uDDF7 Fransa','\uD83C\uDDEA\uD83C\uDDF8 \u0130spanya','\uD83C\uDDE6\uD83C\uDDF7 Arjantin','\uD83C\uDDE7\uD83C\uDDF7 Brezilya','\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F \u0130ngiltere'],
-        ['\uD83C\uDDE9\uD83C\uDDEA Almanya','\uD83C\uDDF5\uD83C\uDDF9 Portekiz','\uD83C\uDDF3\uD83C\uDDF1 Hollanda','\uD83C\uDDE7\uD83C\uDDEA Bel\u00E7ika','\uD83C\uDDE8\uD83C\uDDF4 Kolombiya','\uD83C\uDDFA\uD83C\uDDFE Uruguay'],
-        ['\uD83C\uDDFA\uD83C\uDDF8 ABD','\uD83C\uDDF2\uD83C\uDDFD Meksika','\uD83C\uDDF9\uD83C\uDDF7 T\u00FCrkiye','\uD83C\uDDF2\uD83C\uDDE6 Fas','\uD83C\uDDF8\uD83C\uDDF3 Senegal','\uD83C\uDDF0\uD83C\uDDF7 G.Kore','\uD83C\uDDEF\uD83C\uDDF5 Japonya','\uD83C\uDDE6\uD83C\uDDFA Avustralya','\uD83C\uDDE8\uD83C\uDDED \u0130svi\u00E7re','\uD83C\uDDED\uD83C\uDDF7 H\u0131rvatistan']
-      ];
-      if (TIERS_LOCAL[ti] && TIERS_LOCAL[ti][tidx]) {
-        pickSampion(TIERS_LOCAL[ti][tidx]);
+      const teamsList = TIERS.slice(0,3).map(t => t.teams)
+      if (teamsList[ti] && teamsList[ti][tidx]) {
+        pickSampion(teamsList[ti][tidx]);
       }
     });
   });
