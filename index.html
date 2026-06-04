@@ -224,7 +224,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
   <div class="header">
     <div class="header-top">
       <div class="logo">GGG <span>Dünya Kupası 2026</span></div>
+      <div style="display:flex;align-items:center;gap:8px">
       <div class="header-badge" id="user-badge">Sen</div>
+      <button onclick="doLogout()" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.5);font-size:11px;padding:4px 8px;border-radius:20px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">Çıkış</button>
+    </div>
     </div>
     <div class="nav">
       <button class="nav-btn active" onclick="showTab('tahmin',this)">Tahmin</button>
@@ -618,6 +621,22 @@ async function doCreateGroup() {
   await sbPost('players', {name: founderName, pts:0, trend:0, pin: founderPin, sampion:null, group_id: GROUP_ID});
   showToast('Grup oluşturuldu! Şifre: ' + groupPass);
   enterApp(founderName, founderPin);
+}
+
+function doLogout() {
+  localStorage.removeItem('ggg_user');
+  localStorage.removeItem('ggg_pin');
+  localStorage.removeItem('ggg_group_id');
+  localStorage.removeItem('ggg_admin_pass');
+  currentUser = null;
+  GROUP_ID = null;
+  ADMIN_PASS = null;
+  isAdmin = false;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'block';
+  document.getElementById('login-name').value = '';
+  document.getElementById('login-pin').value = '';
+  document.getElementById('login-group-pass').value = '';
 }
 
 async function enterApp(name, pin) {
