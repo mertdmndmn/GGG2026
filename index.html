@@ -687,7 +687,7 @@ async function enterApp(name, pin) {
 }
 
 async function loadAll() {
-  await Promise.all([loadMatches(), loadPredictions(), loadPlayers(), loadResults()]);
+  await Promise.all([loadMatches(), loadPredictions(), loadPlayers(), loadResults(), loadTurnuvaBets()]);
   buildFilterBar();
   renderMatches();
   renderLeaderboard();
@@ -1986,6 +1986,9 @@ async function saveSampion() {
   pendingSampion = null;
   await sbPatch('players', 'name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID, {sampion: val});
   showToast('Şampiyon tahminin kaydedildi!');
+  // Update accordion meta
+  const sm2 = document.getElementById('sampion-meta');
+  if (sm2) { sm2.textContent = val; sm2.style.color = 'var(--green)'; sm2.style.fontWeight = '600'; }
   renderSampionTab();
 }
 
@@ -2280,7 +2283,12 @@ async function renderTurnuvaTab() {
   }
 
   function countFilled(fields) {
-    return fields.filter(function(f) { return !!myTurnuvaBets[f.key]; }).length;
+    return fields.filter(function(f) {
+      if (myTurnuvaBets[f.key]) return true;
+      // Also check text input DOM
+      const inp = document.getElementById('tb-' + f.key);
+      return inp && inp.value.trim();
+    }).length;
   }
 
   function buildAccordion(id, emoji, title, fields, openByDefault) {
@@ -2337,6 +2345,31 @@ function selectTbOption(btn) {
   }
   btn.classList.add('selected');
   myTurnuvaBets[field] = val;
+  // Update accordion meta
+  updateAccMeta('bireysel');
+  updateAccMeta('gruplar');
+}
+
+function updateAccMeta(id) {
+  const fields = id === 'bireysel'
+    ? TURNUVA_FIELDS.filter(function(f) { return f.key === 'gol_krali' || f.key === 'asist_krali' || f.key === 'turkiye_tur'; })
+    : TURNUVA_FIELDS.filter(function(f) { return f.key.startsWith('grup_'); });
+  const filled = fields.filter(function(f) { return !!myTurnuvaBets[f.key]; }).length;
+  const total = fields.length;
+  const metaEl = document.querySelector('#body-' + id + ' ~ .acc-meta') ||
+    document.querySelector('[id="arrow-' + id + '"]') &&
+    document.querySelector('[id="arrow-' + id + '"]').previousElementSibling;
+  // Find meta span inside the header
+  const header = document.getElementById('arrow-' + id);
+  if (header) {
+    const meta = header.parentElement.querySelector('.acc-meta');
+    if (meta) {
+      meta.textContent = filled === total
+        ? 'Tamamlandi'
+        : filled + '/' + total + ' dolduruldu';
+      meta.style.color = filled === total ? 'var(--green)' : '';
+    }
+  }
 }
 
 async function saveTurnuvaBets() {
@@ -2355,7 +2388,10 @@ async function saveTurnuvaBets() {
   };
 
   await sbUpsert('tournament_bets', payload, 'player_name,group_id');
-  
+
+  // Re-render to show updated counts
+  await renderTurnuvaTab();
+
   const btn = document.getElementById('tb-save-btn');
   if (btn) {
     btn.textContent = 'Kaydedildi!';
