@@ -172,13 +172,13 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .tb-pts-badge{background:#fff3cd;color:#856404;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;float:right;}
 .tb-results-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .tb-results-row:last-child{border-bottom:none;}
-.acc-section{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;}
+.acc-section{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;margin-top:4px;}
 .acc-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;user-select:none;}
 .acc-title{font-size:14px;font-weight:600;color:var(--dark);}
 .acc-meta{font-size:12px;color:var(--muted);margin-right:8px;}
 .acc-arrow{font-size:12px;color:var(--muted);transition:transform 0.2s;}
 .acc-arrow.open{transform:rotate(180deg);}
-.acc-body{display:none;padding:0 16px 14px;border-top:1px solid var(--border);}
+.acc-body{display:none;padding:12px 16px 14px;border-top:1px solid var(--border);}
 .acc-body.open{display:block;}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:998;display:flex;align-items:center;justify-content:center;padding:20px;}
 .modal-box{background:var(--card);border-radius:18px;padding:20px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto;}
@@ -301,6 +301,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
     </div>
 
         <div id="tab-turnuva" class="section">
+      <div style="height:8px"></div>
       <div id="sampion-content"></div>
       <div id="turnuva-content"><div class="loading">Yükleniyor...</div></div>
     </div>
@@ -737,6 +738,33 @@ async function loadResults() {
   results = {};
   if (Array.isArray(rows)) rows.forEach(r => { results[r.match_id] = r; });
 }
+
+window.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  const active = document.activeElement;
+  if (!active) return;
+  const id = active.id;
+  // Setup screen
+  if (id === 'login-pin') doLogin();
+  else if (id === 'login-group-pass') document.getElementById('login-pin').focus();
+  else if (id === 'login-name') document.getElementById('login-group-pass').focus();
+  else if (id === 'reg-pin2') doRegister();
+  else if (id === 'reg-pin') document.getElementById('reg-pin2').focus();
+  else if (id === 'reg-group-pass') document.getElementById('reg-pin').focus();
+  else if (id === 'reg-name') document.getElementById('reg-group-pass').focus();
+  else if (id === 'new-founder-pin') doCreateGroup();
+  // Admin pass
+  else if (id === 'admin-pass-input') checkAdmin();
+  // Custom bet
+  else if (id === 'custom-bet-q') addCustomBet();
+  // New match
+  else if (id === 'new-time' || id === 'new-lock') addMatch();
+  // Edit match
+  else if (id === 'edit-time' || id === 'edit-lock') saveEditMatch();
+  // Sampion
+  else if (id === 'samp-input') saveSampion();
+  else if (id === 'sampion-winner-input') scoreSampionAdmin();
+});
 
 window.addEventListener('DOMContentLoaded', async () => {
   const saved = localStorage.getItem('ggg_user');
@@ -1765,15 +1793,16 @@ async function renderTurnuvaFull() {
   await renderTurnuvaTab();
   // Now render sampion inside the accordion body
   await renderSampionTab();
-  // Update sampion meta
+  // Update sampion meta from myRow data
   const sm = document.getElementById('sampion-meta');
-  const sc2 = document.getElementById('sampion-content');
-  if (sm && sc2) {
-    const inp = sc2.querySelector('#samp-input');
-    const locked = sc2.querySelector('.samp-locked');
-    if (inp && inp.value) sm.textContent = inp.value;
-    else if (locked) sm.textContent = locked.textContent.trim().substring(0, 20);
-    else sm.textContent = 'Seçilmedi';
+  if (sm) {
+    const rows2 = await sbGet('players', 'name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID);
+    const myRow2 = Array.isArray(rows2) ? rows2.find(function(p) { return p.name === currentUser; }) : null;
+    sm.textContent = (myRow2 && myRow2.sampion) ? myRow2.sampion : 'Seçilmedi';
+    if (myRow2 && myRow2.sampion) {
+      sm.style.color = 'var(--green)';
+      sm.style.fontWeight = '600';
+    }
   }
 }
 
