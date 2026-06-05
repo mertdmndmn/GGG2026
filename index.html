@@ -976,7 +976,8 @@ function buildPredsTable(m, preds) {
   const isFinished = res && res.home_score !== null && res.home_score !== undefined;
 
   const fields = [
-    {key:'ms', label:'Maç Sonucu'},
+    {key:'score', label:'Skor'},
+    {key:'ms', label:'Sonuç'},
     {key:'hy', label:'İlk Yarı'},
     {key:'kg', label:'KG'},
     {key:'gol', label:'2.5 Gol'},
@@ -998,7 +999,9 @@ function buildPredsTable(m, preds) {
   fields.forEach(function(f) {
     const counts = {};
     preds.forEach(function(p) {
-      const v = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
+      const v = f.key === 'score'
+        ? ((p.home_score !== null && p.away_score !== null) ? p.home_score + '-' + p.away_score : null)
+        : f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
       if (v) counts[v] = (counts[v] || 0) + 1;
     });
     // Find most common
@@ -1012,7 +1015,18 @@ function buildPredsTable(m, preds) {
     html += '<tr>';
     html += '<td class="' + (isMe ? 'me-cell' : '') + '">' + p.player_name + (isMe ? ' ★' : '') + '</td>';
     fields.forEach(function(f) {
-      const val = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
+      let val;
+      if (f.key === 'score') {
+        val = (p.home_score !== null && p.home_score !== undefined && p.away_score !== null && p.away_score !== undefined)
+          ? p.home_score + ' - ' + p.away_score : null;
+        if (!val) { html += '<td>—</td>'; return; }
+        const isMe = p.player_name === currentUser;
+        // Check if exact score matches result
+        const exactMatch = isFinished && res && parseInt(p.home_score) === res.home_score && parseInt(p.away_score) === res.away_score;
+        html += '<td><span style="font-weight:600;color:' + (exactMatch ? 'var(--green)' : 'var(--dark)') + '">' + val + (exactMatch ? ' ✅' : '') + '</span></td>';
+        return;
+      }
+      val = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
       if (!val) { html += '<td>—</td>'; return; }
       const isLone = majority[f.key].total > 1 && majority[f.key].count < majority[f.key].total && val !== majority[f.key].val;
       const bonusHtml = isLone ? '<span class="bonus-badge">+1?</span>' : '';
