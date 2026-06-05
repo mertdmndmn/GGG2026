@@ -316,6 +316,15 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           <button class="filter-btn" id="atab-turnuva" onclick="setAdminSubTab('turnuva',this)">🏆 Turnuva</button>
           <button class="filter-btn" id="atab-ayarlar" onclick="setAdminSubTab('ayarlar',this)">⚙️ Ayarlar</button>
         </div>
+        <div id="asec-maclar">
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+          <button class="filter-btn active" id="admin-tab-pending" onclick="setAdminTab('pending',this)">⏳ Bekleyen</button>
+          <button class="filter-btn" id="admin-tab-finished" onclick="setAdminTab('finished',this)">✅ Biten</button>
+        </div>
+        <div class="section-label" id="sec-sonuc">Sonuç Gir</div>
+        <div id="admin-matches-container"><div class="loading">Yükleniyor...</div></div>
+        </div><!-- end asec-maclar -->
+
         <div id="asec-turnuva" style="display:none">
         <div class="section-label">Turnuva Bahisleri Sonuçları</div>
         <div class="custom-bet-box" id="admin-turnuva-results">
@@ -329,14 +338,6 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
             <div class="autocomplete-list" id="winner-autocomplete" style="display:none"></div>
           </div>
           <button class="confirm-btn" style="margin-top:10px" onclick="scoreSampionAdmin()">🏆 Sampiyonu Onayla ve Puanları Ver</button>
-        </div>
-        <div style="display:flex;gap:6px;margin-bottom:14px">
-          <button class="filter-btn active" id="admin-tab-pending" onclick="setAdminTab('pending',this)">⏳ Bekleyen</button>
-          <button class="filter-btn" id="admin-tab-finished" onclick="setAdminTab('finished',this)">✅ Biten</button>
-        </div>
-        <div id="asec-maclar">
-        <div class="section-label" id="sec-sonuc">Sonuç Gir</div>
-        <div id="admin-matches-container"><div class="loading">Yükleniyor...</div></div>
         </div>
         </div><!-- end asec-turnuva -->
 
