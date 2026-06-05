@@ -687,6 +687,14 @@ async function loadMatches() {
 
 async function loadPredictions() {
   const rows = await sbGet('predictions', 'player_name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID);
+  myPredictions = {};
+  if (Array.isArray(rows)) {
+    rows.forEach(r => { myPredictions[r.match_id] = r; });
+  }
+}
+
+async function loadPlayers() {
+  const rows = await sbGet('players', 'group_id=eq.' + GROUP_ID + '&order=pts.desc');
   players = Array.isArray(rows) ? rows : [];
 }
 
@@ -914,7 +922,7 @@ async function savePred(mid) {
     kk: p.kk || existing.kk || null,
     custom: {...(existing.custom||{}), ...(p.custom||{})}
   };
-  await sbUpsert('predictions', payload, 'player_name,match_id');
+  await sbUpsert('predictions', payload, 'player_name,match_id,group_id');
   myPredictions[mid] = payload;
   const btn = document.getElementById('sb-'+mid);
   if (btn) { btn.textContent='✓ Kaydedildi!'; btn.classList.add('saved'); setTimeout(()=>{btn.textContent='Tahmini Kaydet';btn.classList.remove('saved');},2000); }
