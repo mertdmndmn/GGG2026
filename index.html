@@ -172,6 +172,14 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .tb-pts-badge{background:#fff3cd;color:#856404;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;float:right;}
 .tb-results-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .tb-results-row:last-child{border-bottom:none;}
+.acc-section{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;}
+.acc-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;user-select:none;}
+.acc-title{font-size:14px;font-weight:600;color:var(--dark);}
+.acc-meta{font-size:12px;color:var(--muted);margin-right:8px;}
+.acc-arrow{font-size:12px;color:var(--muted);transition:transform 0.2s;}
+.acc-arrow.open{transform:rotate(180deg);}
+.acc-body{display:none;padding:0 16px 14px;border-top:1px solid var(--border);}
+.acc-body.open{display:block;}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:998;display:flex;align-items:center;justify-content:center;padding:20px;}
 .modal-box{background:var(--card);border-radius:18px;padding:20px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto;}
 .modal-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--dark);margin-bottom:4px;}
@@ -248,7 +256,6 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <button class="nav-btn" onclick="showTab('puan',this)">Puan</button>
       <button class="nav-btn" onclick="showTab('turnuva',this)">Turnuva</button>
       <button class="nav-btn" onclick="showTab('profil',this)">Profil</button>
-      <button class="nav-btn" onclick="showTab('sampion',this)">Şampiyon</button>
       <button class="nav-btn" onclick="showTab('admin',this)">Admin</button>
     </div>
   </div>
@@ -293,15 +300,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div id="prof-history"><div class="loading">Yükleniyor...</div></div>
     </div>
 
-    <div id="tab-sampion" class="section">
-      <div id="sampion-content"><div class="loading">Yükleniyor...</div></div>
-    </div>
-
-    <div id="tab-turnuva" class="section">
-      <div id="turnuva-content"><div class="loading">Yükleniyor...</div></div>
-    </div>
-
-    <div id="tab-admin" class="section">
+        <div id="tab-admin" class="section">
       <div id="admin-gate-box">
         <div class="admin-gate">
           <h3>Admin Girişi</h3>
@@ -761,9 +760,8 @@ function showTab(tab, btn) {
   window.scrollTo({top:0, behavior:'smooth'});
   if (tab === 'puan') { loadPlayers().then(async () => { renderLeaderboard(); const wk = await renderWeeklyBest(); const c = document.getElementById('lb-container'); if (wk && c) c.insertAdjacentHTML('beforebegin', wk); }); }
   if (tab === 'admin' && isAdmin) renderAdminMatches();
-  if (tab === 'turnuva') renderTurnuvaTab();
+  if (tab === 'turnuva') { renderSampionTab(); renderTurnuvaTab(); }
   if (tab === 'profil') { loadPlayers().then(() => renderProfilTab()); }
-  if (tab === 'sampion') renderSampionTab();
 }
 
 async function checkAdmin() {
@@ -2177,73 +2175,94 @@ async function renderTurnuvaTab() {
   const c = document.getElementById('turnuva-content');
   if (!c) return;
   c.innerHTML = '<div class="loading">Yükleniyor...</div>';
-
   await loadTurnuvaBets();
-
   const isLocked = new Date() >= new Date(TURNUVA_LOCK);
-  let html = '';
-
-  // Header info card
-  html += '<div class="tb-card">';
-  html += '<div class="tb-title">Turnuva Bahisleri</div>';
-  html += '<div class="tb-sub">Turnuva baslamadan once tahminlerini yap! Her dogru tahmin puan kazandirir. ' + (isLocked ? 'Tahminler kilitlendi.' : '11 Haziran 22:00a kadar degistirilebilir.') + '</div>';
-  
-  // Points summary
-  const totalPts = TURNUVA_FIELDS.reduce(function(sum, f) { return sum + f.pts; }, 0);
-  html += '<div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center;font-size:13px;color:var(--muted)">Maksimum kazanilabilir puan: <strong style="color:var(--red)">' + totalPts + ' puan</strong></div>';
 
   // Load actual results if available
   const trRows = await sbGet('tournament_results', 'group_id=eq.' + GROUP_ID);
   const actualResults = (Array.isArray(trRows) && trRows.length > 0) ? trRows[0].results || {} : {};
-  html += '</div>';
 
-  // Each field
-  TURNUVA_FIELDS.forEach(function(field) {
+  const totalPts = TURNUVA_FIELDS.reduce(function(sum, f) { return sum + f.pts; }, 0);
+
+  // Split fields into groups
+  const bireyselFields = TURNUVA_FIELDS.filter(function(f) { return f.key === 'gol_krali' || f.key === 'asist_krali' || f.key === 'turkiye_tur'; });
+  const grupFields = TURNUVA_FIELDS.filter(function(f) { return f.key.startsWith('grup_'); });
+
+  function buildFieldHtml(field) {
     const val = myTurnuvaBets[field.key] || '';
-    html += '<div class="tb-card">';
-    html += '<div class="tb-title">' + field.title + ' <span class="tb-pts-badge">+' + field.pts + ' puan</span></div>';
-    html += '<div class="tb-sub">' + field.desc + '</div>';
+    const actual = actualResults[field.key] || '';
+    let html = '<div style="margin-bottom:12px">';
+    html += '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">' + field.title + ' <span style="color:var(--red)">+' + field.pts + '</span></div>';
 
-    if (field.type === 'text') {
-      if (isLocked) {
-        const actual = actualResults[field.key];
-        html += '<div class="tb-locked">';
-        html += 'Tahminin: <strong>' + (val || '—') + '</strong>';
-        if (actual) {
-          const correct = normalizeTR(val || '') === normalizeTR(actual);
-          html += ' &nbsp; Sonuc: <strong style="color:' + (correct ? 'var(--green)' : 'var(--red)') + '">' + actual + (correct ? ' ✅' : ' ❌') + '</strong>';
-        }
-        html += '</div>';
-      } else {
-        html += '<input type="text" class="tb-input" id="tb-' + field.key + '" placeholder="' + field.placeholder + '" value="' + val + '">';
+    if (isLocked) {
+      html += '<div class="tb-locked">';
+      html += 'Tahminin: <strong>' + (val || '—') + '</strong>';
+      if (actual) {
+        const correct = normalizeTR(val || '') === normalizeTR(actual);
+        html += ' &nbsp; Sonuç: <strong style="color:' + (correct ? 'var(--green)' : 'var(--red)') + '">' + actual + (correct ? ' ✅' : ' ❌') + '</strong>';
       }
-    } else if (field.type === 'select') {
-      if (isLocked) {
-        const actual = actualResults[field.key];
-        html += '<div class="tb-locked">';
-        html += 'Tahminin: <strong>' + (val || '—') + '</strong>';
-        if (actual) {
-          const correct = normalizeTR(val || '') === normalizeTR(actual);
-          html += ' &nbsp; Sonuc: <strong style="color:' + (correct ? 'var(--green)' : 'var(--red)') + '">' + actual + (correct ? ' ✅' : ' ❌') + '</strong>';
-        }
-        html += '</div>';
-      } else {
-        html += '<div class="tb-select-grid" id="tbg-' + field.key + '">';
-        field.options.forEach(function(opt) {
-          html += '<button class="tb-option' + (val === opt ? ' selected' : '') + '" data-field="' + field.key + '" data-val="' + opt + '" onclick="selectTbOption(this)">' + opt + '</button>';
-        });
-        html += '</div>';
-      }
+      html += '</div>';
+    } else if (field.type === 'text') {
+      html += '<input type="text" class="tb-input" id="tb-' + field.key + '" placeholder="' + field.placeholder + '" value="' + val + '">';
+    } else {
+      html += '<div class="tb-select-grid" id="tbg-' + field.key + '">';
+      field.options.forEach(function(opt) {
+        html += '<button class="tb-option' + (val === opt ? ' selected' : '') + '" data-field="' + field.key + '" data-val="' + opt + '" onclick="selectTbOption(this)">' + opt + '</button>';
+      });
+      html += '</div>';
     }
     html += '</div>';
-  });
+    return html;
+  }
+
+  function countFilled(fields) {
+    return fields.filter(function(f) { return !!myTurnuvaBets[f.key]; }).length;
+  }
+
+  function buildAccordion(id, emoji, title, fields, openByDefault) {
+    const filled = countFilled(fields);
+    const total = fields.length;
+    const metaText = filled === total ? '<span style="color:var(--green);font-weight:600">✓ Tamamlandı</span>' : filled + '/' + total + ' dolduruldu';
+    let html = '<div class="acc-section">';
+    html += '<div class="acc-header" onclick="toggleAcc(\'' + id + '\')">'; 
+    html += '<div><div class="acc-title">' + emoji + ' ' + title + '</div></div>';
+    html += '<div style="display:flex;align-items:center;gap:8px"><span class="acc-meta">' + metaText + '</span><span class="acc-arrow ' + (openByDefault ? 'open' : '') + '" id="arrow-' + id + '">▼</span></div>';
+    html += '</div>';
+    html += '<div class="acc-body ' + (openByDefault ? 'open' : '') + '" id="body-' + id + '">';
+    fields.forEach(function(f) { html += buildFieldHtml(f); });
+    html += '</div></div>';
+    return html;
+  }
+
+  let html = '';
+
+  // Info bar
+  html += '<div style="background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">';
+  html += '<span style="font-size:13px;color:var(--muted)">' + (isLocked ? '🔒 Tahminler kilitlendi' : '11 Haz 22:00a kadar degistirilebilir') + '</span>';
+  html += '<span style="font-size:13px;font-weight:600;color:var(--red)">Max +' + totalPts + ' puan</span>';
+  html += '</div>';
+
+  // Accordions
+  const bireyselFilled = countFilled(bireyselFields);
+  html += buildAccordion('bireysel', '⚽', 'Bireysel Tahminler', bireyselFields, bireyselFilled < bireyselFields.length);
+  html += buildAccordion('gruplar', '📊', 'Grup Tahminleri (Her biri +3 puan)', grupFields, false);
 
   if (!isLocked) {
-    html += '<button class="tb-save" id="tb-save-btn" onclick="saveTurnuvaBets()">Turnuva Tahminlerimi Kaydet</button>';
+    html += '<button class="tb-save" id="tb-save-btn" onclick="saveTurnuvaBets()" style="margin-top:4px">Turnuva Tahminlerimi Kaydet</button>';
   }
 
   c.innerHTML = html;
 }
+
+function toggleAcc(id) {
+  const body = document.getElementById('body-' + id);
+  const arrow = document.getElementById('arrow-' + id);
+  if (!body) return;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (arrow) arrow.classList.toggle('open', !isOpen);
+}
+
 
 function selectTbOption(btn) {
   const field = btn.getAttribute('data-field');
