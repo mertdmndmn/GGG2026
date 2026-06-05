@@ -2308,7 +2308,7 @@ async function renderTurnuvaTab() {
 
   // Accordions
   const bireyselFilled = countFilled(bireyselFields);
-  html += buildAccordion('bireysel', '⚽', 'Bireysel Tahminler', bireyselFields, bireyselFilled < bireyselFields.length);
+  html += buildAccordion('bireysel', '⚽', 'Bireysel Tahminler', bireyselFields, false);
   html += buildAccordion('gruplar', '📊', 'Grup Tahminleri (Her biri +3 puan)', grupFields, false);
 
   if (!isLocked) {
