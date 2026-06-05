@@ -311,12 +311,12 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         </div>
       </div>
       <div id="admin-panel" style="display:none">
-        <div class="admin-jump-bar">
-          <button class="jump-btn" onclick="document.getElementById('sec-sonuc').scrollIntoView({behavior:'smooth'})">⚽ Sonuç Gir</button>
-          <button class="jump-btn" onclick="document.getElementById('sec-ozel').scrollIntoView({behavior:'smooth'})">➕ Özel Bahis</button>
-          <button class="jump-btn" onclick="document.getElementById('sec-duzenle').scrollIntoView({behavior:'smooth'})">✏️ Maç Düzenle</button>
-          <button class="jump-btn" onclick="document.getElementById('sec-ekle').scrollIntoView({behavior:'smooth'})">🆕 Maç Ekle</button>
+        <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none">
+          <button class="filter-btn active" id="atab-maclar" onclick="setAdminSubTab('maclar',this)">⚽ Maçlar</button>
+          <button class="filter-btn" id="atab-turnuva" onclick="setAdminSubTab('turnuva',this)">🏆 Turnuva</button>
+          <button class="filter-btn" id="atab-ayarlar" onclick="setAdminSubTab('ayarlar',this)">⚙️ Ayarlar</button>
         </div>
+        <div id="asec-turnuva" style="display:none">
         <div class="section-label">Turnuva Bahisleri Sonuçları</div>
         <div class="custom-bet-box" id="admin-turnuva-results">
           <div class="loading">Yükleniyor...</div>
@@ -334,9 +334,14 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           <button class="filter-btn active" id="admin-tab-pending" onclick="setAdminTab('pending',this)">⏳ Bekleyen</button>
           <button class="filter-btn" id="admin-tab-finished" onclick="setAdminTab('finished',this)">✅ Biten</button>
         </div>
+        <div id="asec-maclar">
         <div class="section-label" id="sec-sonuc">Sonuç Gir</div>
         <div id="admin-matches-container"><div class="loading">Yükleniyor...</div></div>
-        <div class="section-label" id="sec-ozel" style="margin-top:20px">Maça Özel Bahis Ekle</div>
+        </div>
+        </div><!-- end asec-turnuva -->
+
+        <div id="asec-ayarlar" style="display:none">
+        <div class="section-label" id="sec-ozel" style="margin-top:0">Maça Özel Bahis Ekle</div>
         <div class="custom-bet-box">
           <label>Maç Seç</label>
           <select id="custom-bet-match"></select>
@@ -382,6 +387,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           <input type="datetime-local" id="new-lock" style="font-size:14px">
           <button class="add-bet-btn" onclick="addMatch()">+ Maç Ekle</button>
         </div>
+        </div><!-- end asec-ayarlar -->
       </div>
     </div>
   </div>
@@ -765,8 +771,7 @@ async function checkAdmin() {
     document.getElementById('admin-gate-box').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'block';
     await loadMatches();
-    renderAdminMatches();
-    renderAdminTurnuvaResults();
+    setAdminSubTab('maclar', document.getElementById('atab-maclar'));
     populateCustomBetSelect();
     populateEditMatchSelect();
     renderAdminTurnuvaResults();
@@ -1304,6 +1309,17 @@ function setAdminTab(tab, btn) {
   document.querySelectorAll('[id^="admin-tab-"]').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   renderAdminMatches();
+}
+
+
+function setAdminSubTab(tab, btn) {
+  document.querySelectorAll('[id^="asec-"]').forEach(function(el) { el.style.display = 'none'; });
+  document.querySelectorAll('[id^="atab-"]').forEach(function(b) { b.classList.remove('active'); });
+  var sec = document.getElementById('asec-' + tab);
+  if (sec) sec.style.display = 'block';
+  if (btn) btn.classList.add('active');
+  if (tab === 'maclar') renderAdminMatches();
+  if (tab === 'turnuva') renderAdminTurnuvaResults();
 }
 
 function renderAdminMatches() {
