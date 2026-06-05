@@ -158,6 +158,20 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .pred-tag-no{background:#fde8e8;color:#c0392b;}
 .bold-pick{border:2px solid var(--red);border-radius:10px;}
 .bonus-badge{background:#fff3cd;color:#856404;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;margin-left:4px;}
+.tb-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+.tb-title{font-size:14px;font-weight:600;color:var(--dark);margin-bottom:4px;}
+.tb-sub{font-size:12px;color:var(--muted);margin-bottom:12px;}
+.tb-input{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--dark);background:var(--surface);outline:none;margin-bottom:8px;}
+.tb-input:focus{border-color:var(--red);}
+.tb-select-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px;}
+.tb-option{padding:8px 10px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;border:1.5px solid var(--border);border-radius:10px;background:transparent;color:var(--mid);cursor:pointer;text-align:center;transition:all 0.15s;}
+.tb-option.selected{background:var(--dark);border-color:var(--dark);color:#fff;}
+.tb-save{width:100%;padding:11px;background:var(--red);color:#fff;border:none;border-radius:10px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;}
+.tb-saved{background:var(--green);}
+.tb-locked{background:var(--surface);border-radius:10px;padding:10px;text-align:center;font-size:12px;color:var(--muted);margin-top:6px;}
+.tb-pts-badge{background:#fff3cd;color:#856404;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;float:right;}
+.tb-results-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.tb-results-row:last-child{border-bottom:none;}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:998;display:flex;align-items:center;justify-content:center;padding:20px;}
 .modal-box{background:var(--card);border-radius:18px;padding:20px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto;}
 .modal-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--dark);margin-bottom:4px;}
@@ -232,6 +246,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
     <div class="nav">
       <button class="nav-btn active" onclick="showTab('tahmin',this)">Tahmin</button>
       <button class="nav-btn" onclick="showTab('puan',this)">Puan</button>
+      <button class="nav-btn" onclick="showTab('turnuva',this)">Turnuva</button>
       <button class="nav-btn" onclick="showTab('profil',this)">Profil</button>
       <button class="nav-btn" onclick="showTab('sampion',this)">Şampiyon</button>
       <button class="nav-btn" onclick="showTab('admin',this)">Admin</button>
@@ -280,6 +295,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 
     <div id="tab-sampion" class="section">
       <div id="sampion-content"><div class="loading">Yükleniyor...</div></div>
+    </div>
+
+    <div id="tab-turnuva" class="section">
+      <div id="turnuva-content"><div class="loading">Yükleniyor...</div></div>
     </div>
 
     <div id="tab-admin" class="section">
@@ -731,6 +750,7 @@ function showTab(tab, btn) {
   window.scrollTo({top:0, behavior:'smooth'});
   if (tab === 'puan') { loadPlayers().then(async () => { renderLeaderboard(); const wk = await renderWeeklyBest(); const c = document.getElementById('lb-container'); if (wk && c) c.insertAdjacentHTML('beforebegin', wk); }); }
   if (tab === 'admin' && isAdmin) renderAdminMatches();
+  if (tab === 'turnuva') renderTurnuvaTab();
   if (tab === 'profil') { loadPlayers().then(() => renderProfilTab()); }
   if (tab === 'sampion') renderSampionTab();
 }
@@ -1889,6 +1909,253 @@ async function renderWeeklyBest() {
       '</div>';
   }
   return weekHtml;
+}
+
+
+// ============ TURNUVA BAHİSLERİ ============
+
+const TURNUVA_LOCK = '2026-06-11T19:00:00Z'; // 11 Haz 22:00 TR
+
+const TURNUVA_FIELDS = [
+  {
+    key: 'gol_krali',
+    title: 'Gol Krali',
+    emoji: 'medalla',
+    desc: 'Turnuvanin gol kralini tahmin et',
+    type: 'text',
+    placeholder: 'örn. Mbappe, Haaland...',
+    pts: 10
+  },
+  {
+    key: 'asist_krali',
+    title: 'Asist Krali',
+    emoji: 'medalla',
+    desc: 'En fazla asist yapan oyuncuyu tahmin et',
+    type: 'text',
+    placeholder: 'örn. De Bruyne, Messi...',
+    pts: 10
+  },
+  {
+    key: 'turkiye_tur',
+    title: 'Turkiye Kac Tura Gider?',
+    emoji: 'soccer',
+    desc: 'Turkiye hangi turda elenir?',
+    type: 'select',
+    options: ['Grup Asamasi', 'Son 32', 'Son 16', 'Ceyrek Final', 'Yari Final', '3. luk Maci', 'Sampiyonluk'],
+    pts: 5
+  },
+  {
+    key: 'grup_a',
+    title: 'Grup A - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Meksika, G.Afrika, G.Kore, Cekya',
+    type: 'select',
+    options: ['Meksika', 'G.Afrika', 'G.Kore', 'Cekya'],
+    pts: 3
+  },
+  {
+    key: 'grup_b',
+    title: 'Grup B - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Kanada, Bosna, Katar, Isvicre',
+    type: 'select',
+    options: ['Kanada', 'Bosna', 'Katar', 'Isvicre'],
+    pts: 3
+  },
+  {
+    key: 'grup_c',
+    title: 'Grup C - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Brezilya, Fas, Haiti, Iskocya',
+    type: 'select',
+    options: ['Brezilya', 'Fas', 'Haiti', 'Iskocya'],
+    pts: 3
+  },
+  {
+    key: 'grup_d',
+    title: 'Grup D - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'ABD, Paraguay, Avustralya, Turkiye',
+    type: 'select',
+    options: ['ABD', 'Paraguay', 'Avustralya', 'Turkiye'],
+    pts: 3
+  },
+  {
+    key: 'grup_e',
+    title: 'Grup E - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Almanya, Curacao, Fildisi, Ekvador',
+    type: 'select',
+    options: ['Almanya', 'Curacao', 'Fildisi', 'Ekvador'],
+    pts: 3
+  },
+  {
+    key: 'grup_f',
+    title: 'Grup F - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Hollanda, Japonya, Tunus, Isvec',
+    type: 'select',
+    options: ['Hollanda', 'Japonya', 'Tunus', 'Isvec'],
+    pts: 3
+  },
+  {
+    key: 'grup_g',
+    title: 'Grup G - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Belcika, Misir, Iran, Y.Zelanda',
+    type: 'select',
+    options: ['Belcika', 'Misir', 'Iran', 'Y.Zelanda'],
+    pts: 3
+  },
+  {
+    key: 'grup_h',
+    title: 'Grup H - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Ispanya, Yesilburun, S.Arabistan, Uruguay',
+    type: 'select',
+    options: ['Ispanya', 'Yesilburun', 'S.Arabistan', 'Uruguay'],
+    pts: 3
+  },
+  {
+    key: 'grup_i',
+    title: 'Grup I - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Fransa, Senegal, Irak, Norvec',
+    type: 'select',
+    options: ['Fransa', 'Senegal', 'Irak', 'Norvec'],
+    pts: 3
+  },
+  {
+    key: 'grup_j',
+    title: 'Grup J - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Arjantin, Cezayir, Avusturya, Urdun',
+    type: 'select',
+    options: ['Arjantin', 'Cezayir', 'Avusturya', 'Urdun'],
+    pts: 3
+  },
+  {
+    key: 'grup_k',
+    title: 'Grup K - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Portekiz, Kongo, Ozbekistan, Kolombiya',
+    type: 'select',
+    options: ['Portekiz', 'Kongo', 'Ozbekistan', 'Kolombiya'],
+    pts: 3
+  },
+  {
+    key: 'grup_l',
+    title: 'Grup L - Kim 1. Cikar?',
+    emoji: 'chart',
+    desc: 'Ingiltere, Hirvatistan, Gana, Panama',
+    type: 'select',
+    options: ['Ingiltere', 'Hirvatistan', 'Gana', 'Panama'],
+    pts: 3
+  },
+];
+
+let myTurnuvaBets = {};
+
+async function loadTurnuvaBets() {
+  const rows = await sbGet('tournament_bets', 'player_name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID);
+  myTurnuvaBets = {};
+  if (Array.isArray(rows) && rows.length > 0) {
+    myTurnuvaBets = rows[0].bets || {};
+  }
+}
+
+async function renderTurnuvaTab() {
+  const c = document.getElementById('turnuva-content');
+  if (!c) return;
+  c.innerHTML = '<div class="loading">Yükleniyor...</div>';
+
+  await loadTurnuvaBets();
+
+  const isLocked = new Date() >= new Date(TURNUVA_LOCK);
+  let html = '';
+
+  // Header info card
+  html += '<div class="tb-card">';
+  html += '<div class="tb-title">Turnuva Bahisleri</div>';
+  html += '<div class="tb-sub">Turnuva baslamadan once tahminlerini yap! Her dogru tahmin puan kazandirir. ' + (isLocked ? 'Tahminler kilitlendi.' : '11 Haziran 22:00a kadar degistirilebilir.') + '</div>';
+  
+  // Points summary
+  const totalPts = TURNUVA_FIELDS.reduce(function(sum, f) { return sum + f.pts; }, 0);
+  html += '<div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center;font-size:13px;color:var(--muted)">Maksimum kazanilabilir puan: <strong style="color:var(--red)">' + totalPts + ' puan</strong></div>';
+  html += '</div>';
+
+  // Each field
+  TURNUVA_FIELDS.forEach(function(field) {
+    const val = myTurnuvaBets[field.key] || '';
+    html += '<div class="tb-card">';
+    html += '<div class="tb-title">' + field.title + ' <span class="tb-pts-badge">+' + field.pts + ' puan</span></div>';
+    html += '<div class="tb-sub">' + field.desc + '</div>';
+
+    if (field.type === 'text') {
+      if (isLocked) {
+        html += '<div class="tb-locked">' + (val ? val : 'Tahmin girilmedi') + '</div>';
+      } else {
+        html += '<input type="text" class="tb-input" id="tb-' + field.key + '" placeholder="' + field.placeholder + '" value="' + val + '">';
+      }
+    } else if (field.type === 'select') {
+      if (isLocked) {
+        html += '<div class="tb-locked">' + (val ? val : 'Tahmin girilmedi') + '</div>';
+      } else {
+        html += '<div class="tb-select-grid" id="tbg-' + field.key + '">';
+        field.options.forEach(function(opt) {
+          html += '<button class="tb-option' + (val === opt ? ' selected' : '') + '" data-field="' + field.key + '" data-val="' + opt + '" onclick="selectTbOption(this)">' + opt + '</button>';
+        });
+        html += '</div>';
+      }
+    }
+    html += '</div>';
+  });
+
+  if (!isLocked) {
+    html += '<button class="tb-save" id="tb-save-btn" onclick="saveTurnuvaBets()">Turnuva Tahminlerimi Kaydet</button>';
+  }
+
+  c.innerHTML = html;
+}
+
+function selectTbOption(btn) {
+  const field = btn.getAttribute('data-field');
+  const val = btn.getAttribute('data-val');
+  const group = document.getElementById('tbg-' + field);
+  if (group) {
+    group.querySelectorAll('.tb-option').forEach(function(b) { b.classList.remove('selected'); });
+  }
+  btn.classList.add('selected');
+  myTurnuvaBets[field] = val;
+}
+
+async function saveTurnuvaBets() {
+  // Collect text inputs
+  TURNUVA_FIELDS.forEach(function(field) {
+    if (field.type === 'text') {
+      const inp = document.getElementById('tb-' + field.key);
+      if (inp && inp.value.trim()) myTurnuvaBets[field.key] = inp.value.trim();
+    }
+  });
+
+  const payload = {
+    player_name: currentUser,
+    group_id: GROUP_ID,
+    bets: myTurnuvaBets
+  };
+
+  await sbUpsert('tournament_bets', payload, 'player_name,group_id');
+  
+  const btn = document.getElementById('tb-save-btn');
+  if (btn) {
+    btn.textContent = 'Kaydedildi!';
+    btn.classList.add('tb-saved');
+    setTimeout(function() {
+      btn.textContent = 'Turnuva Tahminlerimi Kaydet';
+      btn.classList.remove('tb-saved');
+    }, 2000);
+  }
+  showToast('Turnuva tahminleri kaydedildi!');
 }
 
 function showToast(msg) {
