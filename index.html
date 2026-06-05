@@ -671,7 +671,7 @@ async function loadMatches() {
     customBets: (customMap[m.id] && customMap[m.id].bets) ? customMap[m.id].bets : []
   }));
   // overlay results
-  const resRows = await sbGet('match_results', 'select=*');
+  const resRows = await sbGet('match_results', 'select=*&group_id=eq.' + GROUP_ID);
   if (Array.isArray(resRows)) {
     resRows.forEach(r => {
       const m = matches.find(x => x.id === r.match_id);
@@ -686,15 +686,7 @@ async function loadMatches() {
 }
 
 async function loadPredictions() {
-  const rows = await sbGet('predictions', `player_name=eq.${encodeURIComponent(currentUser)}`);
-  myPredictions = {};
-  if (Array.isArray(rows)) {
-    rows.forEach(r => { myPredictions[r.match_id] = r; });
-  }
-}
-
-async function loadPlayers() {
-  const rows = await sbGet('players', 'group_id=eq.' + GROUP_ID + '&order=pts.desc');
+  const rows = await sbGet('predictions', 'player_name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID);
   players = Array.isArray(rows) ? rows : [];
 }
 
@@ -1135,7 +1127,7 @@ async function scoreSampion(winnerTeam) {
     return TIERS[3].pts;
   }
 
-  const rows = await sbGet('players', 'select=name,sampion,pts');
+  const rows = await sbGet('players', 'select=name,sampion,pts&group_id=eq.' + GROUP_ID);
   if (!Array.isArray(rows)) { showToast('Veri yuklenemedi!'); return; }
 
   const winners = [];
@@ -1644,7 +1636,7 @@ async function renderSampionTab() {
   const firstMatch = matches[0];
   const tournamentStarted = firstMatch && firstMatch.lock && new Date() >= new Date(firstMatch.lock);
 
-  const rows = await sbGet('players', 'select=name,sampion,pts&order=pts.desc');
+  const rows = await sbGet('players', 'select=name,sampion,pts&group_id=eq.' + GROUP_ID + '&order=pts.desc');
   const myRow = Array.isArray(rows) ? rows.find(p => p.name === currentUser) : null;
   const mySampion = myRow ? myRow.sampion : null;
   const myTier = mySampion ? getTier(mySampion) : null;
@@ -1809,8 +1801,8 @@ async function renderProfilTab() {
   document.getElementById('prof-rank').textContent = '#' + (myRank || '—');
 
   // Load my predictions
-  const myPreds = await sbGet('predictions', 'player_name=eq.' + encodeURIComponent(currentUser));
-  const allResults = await sbGet('match_results', 'select=*');
+  const myPreds = await sbGet('predictions', 'player_name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID);
+  const allResults = await sbGet('match_results', 'select=*&group_id=eq.' + GROUP_ID);
   const resultsMap = {};
   if (Array.isArray(allResults)) allResults.forEach(r => { resultsMap[r.match_id] = r; });
 
@@ -1876,7 +1868,7 @@ async function renderProfilTab() {
 // ============ HAFTALIK EN IYI ============
 async function renderWeeklyBest() {
   // Get players sorted by trend (points earned in last result entry)
-  const rows = await sbGet('players', 'order=trend.desc&limit=3');
+  const rows = await sbGet('players', 'group_id=eq.' + GROUP_ID + '&order=trend.desc&limit=3');
   const c = document.getElementById('lb-container');
   if (!c) return;
 
