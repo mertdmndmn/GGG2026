@@ -317,6 +317,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           <button class="jump-btn" onclick="document.getElementById('sec-duzenle').scrollIntoView({behavior:'smooth'})">✏️ Maç Düzenle</button>
           <button class="jump-btn" onclick="document.getElementById('sec-ekle').scrollIntoView({behavior:'smooth'})">🆕 Maç Ekle</button>
         </div>
+        <div class="section-label">Turnuva Bahisleri Sonuçları</div>
+        <div class="custom-bet-box" id="admin-turnuva-results">
+          <div class="loading">Yükleniyor...</div>
+        </div>
         <div class="section-label">Sampiyonu Onayla (Final Sonrası)</div>
         <div class="custom-bet-box">
           <label>Turnuva Sampiyonu</label>
@@ -762,8 +766,10 @@ async function checkAdmin() {
     document.getElementById('admin-panel').style.display = 'block';
     await loadMatches();
     renderAdminMatches();
+    renderAdminTurnuvaResults();
     populateCustomBetSelect();
     populateEditMatchSelect();
+    renderAdminTurnuvaResults();
     // Attach autocomplete to winner input
     const winnerInp = document.getElementById('sampion-winner-input');
     if (winnerInp) {
@@ -1082,6 +1088,92 @@ function buildPredsTable(m, preds) {
   return html;
 }
 
+
+
+// ============ ADMIN TURNUVA RESULTS ============
+
+async function renderAdminTurnuvaResults() {
+  const c = document.getElementById('admin-turnuva-results');
+  if (!c) return;
+
+  // Load existing results
+  const rows = await sbGet('tournament_results', 'group_id=eq.' + GROUP_ID);
+  const existing = (Array.isArray(rows) && rows.length > 0) ? rows[0].results || {} : {};
+
+  let html = '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Sonucu belli olan bahisleri gir, puan otomatik hesaplanir.</div>';
+
+  TURNUVA_FIELDS.forEach(function(field) {
+    const val = existing[field.key] || '';
+    html += '<div style="margin-bottom:10px">';
+    html += '<label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">' + field.title + ' (+' + field.pts + ' puan)</label>';
+
+    if (field.type === 'text') {
+      html += '<input type="text" class="tb-input" id="tr-' + field.key + '" placeholder="Sonucu gir..." value="' + val + '">';
+    } else {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:5px">';
+      field.options.forEach(function(opt) {
+        html += '<button class="bet-btn ' + (val === opt ? 'sel-yes' : '') + '" data-field="' + field.key + '" data-val="' + opt + '" onclick="selectTrOption(this)">' + opt + '</button>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  html += '<button class="confirm-btn" style="margin-top:10px" onclick="saveTurnuvaResults()">✓ Sonuclari Kaydet & Puanlari Ver</button>';
+  c.innerHTML = html;
+}
+
+function selectTrOption(btn) {
+  const field = btn.getAttribute('data-field');
+  const val = btn.getAttribute('data-val');
+  btn.closest('div').querySelectorAll('.bet-btn').forEach(function(b) {
+    b.classList.remove('sel-yes');
+  });
+  btn.classList.add('sel-yes');
+}
+
+async function saveTurnuvaResults() {
+  const results = {};
+
+  TURNUVA_FIELDS.forEach(function(field) {
+    if (field.type === 'text') {
+      const inp = document.getElementById('tr-' + field.key);
+      if (inp && inp.value.trim()) results[field.key] = inp.value.trim();
+    } else {
+      // Find selected button
+      const container = document.querySelector('[data-field="' + field.key + '"].sel-yes');
+      if (container) results[field.key] = container.getAttribute('data-val');
+    }
+  });
+
+  if (Object.keys(results).length === 0) { showToast('Hic sonuc girilmedi!'); return; }
+
+  // Save results
+  await sbUpsert('tournament_results', {group_id: GROUP_ID, results: results}, 'group_id');
+
+  // Calculate points for all players
+  const allBets = await sbGet('tournament_bets', 'group_id=eq.' + GROUP_ID);
+  if (Array.isArray(allBets)) {
+    for (const bet of allBets) {
+      const playerBets = bet.bets || {};
+      let pts = 0;
+      TURNUVA_FIELDS.forEach(function(field) {
+        const predicted = playerBets[field.key];
+        const actual = results[field.key];
+        if (!predicted || !actual) return;
+        if (normalizeTR(predicted) === normalizeTR(actual)) pts += field.pts;
+      });
+      if (pts > 0) {
+        const player = players.find(function(p) { return p.name === bet.player_name; });
+        await sbPatch('players', 'name=eq.' + encodeURIComponent(bet.player_name) + '&group_id=eq.' + GROUP_ID,
+          {pts: (player ? player.pts : 0) + pts, trend: pts});
+      }
+    }
+  }
+
+  await loadAll();
+  showToast('Sonuclar kaydedildi, puanlar guncellendi!');
+}
 
 // ============ MATCH SUMMARY MODAL ============
 function showMatchSummary(mid, summaryData, h, a) {
@@ -2082,6 +2174,10 @@ async function renderTurnuvaTab() {
   // Points summary
   const totalPts = TURNUVA_FIELDS.reduce(function(sum, f) { return sum + f.pts; }, 0);
   html += '<div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center;font-size:13px;color:var(--muted)">Maksimum kazanilabilir puan: <strong style="color:var(--red)">' + totalPts + ' puan</strong></div>';
+
+  // Load actual results if available
+  const trRows = await sbGet('tournament_results', 'group_id=eq.' + GROUP_ID);
+  const actualResults = (Array.isArray(trRows) && trRows.length > 0) ? trRows[0].results || {} : {};
   html += '</div>';
 
   // Each field
@@ -2093,13 +2189,27 @@ async function renderTurnuvaTab() {
 
     if (field.type === 'text') {
       if (isLocked) {
-        html += '<div class="tb-locked">' + (val ? val : 'Tahmin girilmedi') + '</div>';
+        const actual = actualResults[field.key];
+        html += '<div class="tb-locked">';
+        html += 'Tahminin: <strong>' + (val || '—') + '</strong>';
+        if (actual) {
+          const correct = normalizeTR(val || '') === normalizeTR(actual);
+          html += ' &nbsp; Sonuc: <strong style="color:' + (correct ? 'var(--green)' : 'var(--red)') + '">' + actual + (correct ? ' ✅' : ' ❌') + '</strong>';
+        }
+        html += '</div>';
       } else {
         html += '<input type="text" class="tb-input" id="tb-' + field.key + '" placeholder="' + field.placeholder + '" value="' + val + '">';
       }
     } else if (field.type === 'select') {
       if (isLocked) {
-        html += '<div class="tb-locked">' + (val ? val : 'Tahmin girilmedi') + '</div>';
+        const actual = actualResults[field.key];
+        html += '<div class="tb-locked">';
+        html += 'Tahminin: <strong>' + (val || '—') + '</strong>';
+        if (actual) {
+          const correct = normalizeTR(val || '') === normalizeTR(actual);
+          html += ' &nbsp; Sonuc: <strong style="color:' + (correct ? 'var(--green)' : 'var(--red)') + '">' + actual + (correct ? ' ✅' : ' ❌') + '</strong>';
+        }
+        html += '</div>';
       } else {
         html += '<div class="tb-select-grid" id="tbg-' + field.key + '">';
         field.options.forEach(function(opt) {
