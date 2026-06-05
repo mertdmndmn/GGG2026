@@ -1621,13 +1621,13 @@ async function renderSampionTab() {
   if (!c) return;
 
   const TIERS = [
-    { label: '🥇 Tier 1', pts: 10, color: '#d4a017', bg: '#fffbeb',
+    { label: '🥇 1. Torba', pts: 10, color: '#d4a017', bg: '#fffbeb',
       teams: ['🇫🇷 Fransa','🇪🇸 İspanya','🇦🇷 Arjantin','🇧🇷 Brezilya','🏴󠁧󠁢󠁥󠁮󠁧󠁿 İngiltere'] },
-    { label: '🥈 Tier 2', pts: 20, color: '#6b7280', bg: '#f3f4f6',
+    { label: '🥈 2. Torba', pts: 20, color: '#6b7280', bg: '#f3f4f6',
       teams: ['🇩🇪 Almanya','🇵🇹 Portekiz','🇳🇱 Hollanda','🇧🇪 Belçika','🇨🇴 Kolombiya','🇺🇾 Uruguay'] },
-    { label: '🥉 Tier 3', pts: 40, color: '#b5622a', bg: '#fff7ed',
+    { label: '🥉 3. Torba', pts: 40, color: '#b5622a', bg: '#fff7ed',
       teams: ['🇺🇸 ABD','🇲🇽 Meksika','🇹🇷 Türkiye','🇲🇦 Fas','🇸🇳 Senegal','🇰🇷 G.Kore','🇯🇵 Japonya','🇦🇺 Avustralya','🇨🇭 İsviçre','🇭🇷 Hırvatistan'] },
-    { label: '🎲 Tier 4', pts: 80, color: '#7c3aed', bg: '#f5f3ff',
+    { label: '🎲 4. Torba', pts: 80, color: '#7c3aed', bg: '#f5f3ff',
       teams: [] },
   ];
 
@@ -1696,7 +1696,7 @@ async function renderSampionTab() {
           html += '<button data-pick="' + ti + '_' + tidx + '" style="padding:5px 10px;font-size:12px;border-radius:20px;border:1.5px solid ' + borderCol + ';background:' + bgCol + ';color:' + textCol + ';cursor:pointer;font-weight:' + fw + '">' + team + '</button>';
         });
       } else {
-        html += '<div style="font-size:12px;color:var(--muted)">Diger tier grubundaki takimlar:</div>';
+        html += '<div style="font-size:12px;color:var(--muted)">Diger torba grubundaki takimlar:</div>';
         // Show autocomplete for tier 4
         html += '<div class="autocomplete-wrap" style="width:100%;margin-top:6px">';
         html += '<input type="text" class="setup-input" id="samp-input" placeholder="Takım ara..." value="' + (mySampion && getTier(mySampion).pts === 80 ? mySampion : '') + '" oninput="filterTeams(this.value)" autocomplete="off" style="margin-bottom:0">';
@@ -1766,7 +1766,7 @@ async function renderSampionTab() {
     });
   });
 
-  // Attach input handler for autocomplete (Tier 4)
+  // Attach input handler for autocomplete (4. Torba)
   const sampInput = document.getElementById('samp-input');
   if (sampInput) {
     sampInput.addEventListener('input', function() {
