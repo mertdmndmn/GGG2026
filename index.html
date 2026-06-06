@@ -172,6 +172,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .tb-pts-badge{background:#fff3cd;color:#856404;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;float:right;}
 .tb-results-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .tb-results-row:last-child{border-bottom:none;}
+.share-btn{width:100%;padding:11px;background:var(--green);color:#fff;border:none;border-radius:12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;}
 .comments-section{border-top:1px solid var(--border);padding:10px 14px 12px;}
 .comments-title{font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;}
 .comment-item{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;}
@@ -286,7 +287,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div id="matches-container"><div class="loading">Maçlar yükleniyor...</div></div>
     </div>
     <div id="tab-puan" class="section">
-      <div class="section-label">Sıralama</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="section-label" style="margin:0">Sıralama</div>
+        <button class="share-btn" style="width:auto;padding:8px 16px;margin:0" onclick="shareLeaderboard()">📤 WhatsApp'ta Paylaş</button>
+      </div>
       <div class="lb-header"><span>#</span><span>Oyuncu</span><span>Puan</span><span>+/-</span></div>
       <div class="lb-card" id="lb-container"><div class="loading">Yükleniyor...</div></div>
       <div class="section-label" style="margin-top:20px">Puan Sistemi</div>
@@ -955,7 +959,7 @@ async function renderMatches() {
       </div>
       <div class="comments-section">
         <div class="comments-title" onclick="toggleComments(${m.id})">
-          <span>💬 Yorumlar</span>
+          <span>💬 Yorumlar <span id="cm-count-${m.id}" style="color:var(--red);font-weight:700"></span></span>
           <span id="cm-arrow-${m.id}">▼</span>
         </div>
         <div id="cm-body-${m.id}" style="display:none">
@@ -1038,6 +1042,7 @@ async function loadComments(mid) {
   const rows = await sbGet('comments', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID + '&order=created_at.asc');
   commentsCache[mid] = Array.isArray(rows) ? rows : [];
   renderComments(mid);
+  updateCommentCount(mid);
 
   // Add enter key listener
   const inp = document.getElementById('cm-input-' + mid);
@@ -1072,6 +1077,14 @@ function renderComments(mid) {
   }).join('');
   // Scroll to bottom
   list.scrollTop = list.scrollHeight;
+  updateCommentCount(mid);
+}
+
+function updateCommentCount(mid) {
+  const countEl = document.getElementById('cm-count-' + mid);
+  if (!countEl) return;
+  const count = (commentsCache[mid] || []).length;
+  countEl.textContent = count > 0 ? count : '';
 }
 
 function escapeHtml(str) {
@@ -2507,6 +2520,57 @@ async function saveTurnuvaBets() {
     }, 2000);
   }
   showToast('Turnuva tahminleri kaydedildi!');
+}
+
+
+// ============ SHARE LEADERBOARD ============
+function shareLeaderboard() {
+  const sorted = [...players].sort(function(a,b) { return b.pts - a.pts; });
+  if (!sorted.length) { showToast('Puan tablosu bos!'); return; }
+
+  const medals = ['🥇','🥈','🥉'];
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('tr-TR', {day:'numeric', month:'long'});
+
+  let text = '🏆 *Puan Tablosu*\n';
+  text += '📅 ' + dateStr + '\n';
+  text += '─────────────────\n';
+
+  sorted.forEach(function(p, i) {
+    const medal = medals[i] || (i+1) + '.';
+    const trend = p.trend > 0 ? ' (+' + p.trend + ')' : '';
+    text += medal + ' ' + p.name + '   *' + p.pts + ' puan*' + trend + '\n';
+  });
+
+  text += '─────────────────\n';
+  text += '🔗 ' + window.location.href;
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'Puan Tablosu',
+      text: text
+    }).catch(function() {
+      copyToClipboard(text);
+    });
+  } else {
+    copyToClipboard(text);
+  }
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('Kopyalandi! WhatsAppa yapistir.');
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Kopyalandi! WhatsAppa yapistir.');
+  }
 }
 
 function showToast(msg) {
