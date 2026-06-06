@@ -725,7 +725,7 @@ async function loadAll() {
 
 async function loadMatches() {
   // Use static match list + custom bets from DB
-  const customRows = await sbGet('match_results', 'select=match_id,custom&group_id=eq.' + GROUP_ID);
+  const customRows = await sbGet('match_results', 'select=match_id,custom&group_id=is.null');
   const customMap = {};
   if (Array.isArray(customRows)) {
     customRows.forEach(r => { if (r.custom) customMap[r.match_id] = r.custom; });
@@ -766,7 +766,8 @@ async function loadPlayers() {
 }
 
 async function loadResults() {
-  const rows = await sbGet('match_results', 'select=*&group_id=eq.' + GROUP_ID);
+  // Load global results (group_id is null = global)
+  const rows = await sbGet('match_results', 'select=*&group_id=is.null');
   results = {};
   if (Array.isArray(rows)) rows.forEach(r => { results[r.match_id] = r; });
 }
@@ -1864,7 +1865,21 @@ async function confirmResult(mid) {
     kk: ap.kk || existingRes.kk || null,
     custom: newCustom
   };
-  await sbUpsert('match_results', resultPayload, 'match_id,group_id');
+  // Save score globally (all groups see the same score)
+  await sbUpsert('match_results', {
+    match_id: mid,
+    home_score: h,
+    away_score: a,
+    ms: ms,
+    hy: resultPayload.hy || null,
+    kg: resultPayload.kg || null,
+    gol: resultPayload.gol || null,
+    kk: resultPayload.kk || null,
+  }, 'match_id');
+  // Save custom bets globally too
+  if (resultPayload.custom) {
+    await sbUpsert('match_results', {match_id: mid, custom: resultPayload.custom}, 'match_id');
+  }
   results[mid] = resultPayload;
 
   // calculate & update points for all players
