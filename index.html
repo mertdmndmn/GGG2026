@@ -740,14 +740,14 @@ async function loadMatches() {
   if (Array.isArray(resRows)) {
     resRows.forEach(r => {
       const m = matches.find(x => x.id === r.match_id);
-      if (m && r.home_score !== null && r.away_score !== null) {
-        m.result = r;
-        m.customBets = (r.custom && r.custom.bets) ? r.custom.bets : m.customBets;
-      } else if (m && r.custom && r.custom.bets) {
-        m.customBets = r.custom.bets;
+      if (m) {
+        if (r.home_score !== null && r.away_score !== null) {
+          m.result = r;
+        }
+        if (r.custom && r.custom.bets) m.customBets = r.custom.bets;
+        if (r.lineup_home) m.lineup_home = r.lineup_home;
+        if (r.lineup_away) m.lineup_away = r.lineup_away;
       }
-      if (m && r.lineup_home) m.lineup_home = r.lineup_home;
-      if (m && r.lineup_away) m.lineup_away = r.lineup_away;
     });
   }
 }
