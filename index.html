@@ -949,12 +949,20 @@ async function renderMatches() {
         ${locked && m.result ? `<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dark);letter-spacing:3px;line-height:1">${m.result.home_score} — ${m.result.away_score}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>` : '<div class="score-vs">VS</div>'}
         <div class="team"><span class="team-flag">${away.flag}</span><span class="team-name">${away.name}</span></div>
       </div>
-      ${(m.lineup_home || m.lineup_away) ? `<div style="display:flex;gap:6px;padding:4px 14px 8px">
-        ${m.lineup_home ? `<button class="lineup-btn" style="flex:1" onclick="toggleLineup(${m.id},'home')">📋 ${home.name} <span id="lu-arrow-${m.id}-home">▼</span></button>` : ''}
-        ${m.lineup_away ? `<button class="lineup-btn" style="flex:1" onclick="toggleLineup(${m.id},'away')">📋 ${away.name} <span id="lu-arrow-${m.id}-away">▼</span></button>` : ''}
+      ${(m.lineup_home || m.lineup_away) ? `<div style="padding:4px 14px 8px">
+        <button class="lineup-btn" style="width:100%" onclick="toggleLineup(${m.id})">📋 İlk 11 <span id="lu-arrow-${m.id}">▼</span></button>
       </div>
       <div id="lu-body-${m.id}" style="display:none;padding:0 14px 12px">
-        <div id="lu-content-${m.id}"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${home.name}</div>
+            <div id="lu-home-${m.id}">${(m.lineup_home||'').split('\n').map(p=>p.trim()).filter(Boolean).map(p=>'<div style="padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">'+p+'</div>').join('')}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${away.name}</div>
+            <div id="lu-away-${m.id}">${(m.lineup_away||'').split('\n').map(p=>p.trim()).filter(Boolean).map(p=>'<div style="padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">'+p+'</div>').join('')}</div>
+          </div>
+        </div>
       </div>` : ''}
       <div class="score-inputs">
         <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'home_score',this.value)">
@@ -1316,35 +1324,13 @@ async function saveLineup(mid) {
   showToast('Kadro kaydedildi!');
 }
 
-function toggleLineup(mid, side) {
+function toggleLineup(mid) {
   const body = document.getElementById('lu-body-' + mid);
-  const contentEl = document.getElementById('lu-content-' + mid);
-  if (!body || !contentEl) return;
-  const m = matches.find(function(x) { return x.id === mid; });
-  const players = m ? (side === 'home' ? m.lineup_home : m.lineup_away) : '';
-  const currentSide = body.getAttribute('data-side');
-
-  // Toggle close if same side
-  if (body.style.display !== 'none' && currentSide === side) {
-    body.style.display = 'none';
-    ['home','away'].forEach(function(s) {
-      const a = document.getElementById('lu-arrow-' + mid + '-' + s);
-      if (a) a.textContent = '▼';
-    });
-    return;
-  }
-
-  // Show players
-  body.setAttribute('data-side', side);
-  body.style.display = 'block';
-  contentEl.innerHTML = (players || '').split('\n').map(function(p) {
-    return p.trim() ? '<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--dark)">' + p.trim() + '</div>' : '';
-  }).join('');
-
-  ['home','away'].forEach(function(s) {
-    const a = document.getElementById('lu-arrow-' + mid + '-' + s);
-    if (a) a.textContent = s === side ? '▲' : '▼';
-  });
+  const arrow = document.getElementById('lu-arrow-' + mid);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
 }
 
 function togglePreds(mid) {
