@@ -1297,21 +1297,15 @@ async function saveLineup(mid) {
 
   if (!lineupHome && !lineupAway) { showToast('Kadro gir!'); return; }
 
-  // Save via direct fetch to handle upsert properly
+  // Save globally (no group_id)
   const existing = results[mid] || {};
   const payload = {
     match_id: mid,
-    group_id: GROUP_ID,
     lineup_home: lineupHome,
     lineup_away: lineupAway
   };
-  if (existing.home_score !== null && existing.home_score !== undefined) {
-    payload.home_score = existing.home_score;
-    payload.away_score = existing.away_score;
-    payload.ms = existing.ms;
-  }
 
-  await fetch(SUPABASE_URL + '/rest/v1/match_results?on_conflict=match_id,group_id', {
+  await fetch(SUPABASE_URL + '/rest/v1/match_results?on_conflict=match_id', {
     method: 'POST',
     headers: {...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation'},
     body: JSON.stringify(payload)
