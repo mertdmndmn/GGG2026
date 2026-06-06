@@ -172,6 +172,18 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .tb-pts-badge{background:#fff3cd;color:#856404;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;float:right;}
 .tb-results-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .tb-results-row:last-child{border-bottom:none;}
+.comments-section{border-top:1px solid var(--border);padding:10px 14px 12px;}
+.comments-title{font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;}
+.comment-item{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;}
+.comment-avatar{width:28px;height:28px;border-radius:50%;background:var(--dark);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.comment-bubble{background:var(--surface);border-radius:10px;padding:6px 10px;flex:1;}
+.comment-name{font-size:11px;font-weight:600;color:var(--dark);margin-bottom:2px;}
+.comment-text{font-size:13px;color:var(--mid);line-height:1.4;}
+.comment-time{font-size:10px;color:var(--muted);margin-top:2px;}
+.comment-input-row{display:flex;gap:6px;margin-top:8px;}
+.comment-input{flex:1;padding:8px 12px;border-radius:20px;border:1.5px solid var(--border);font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--dark);background:var(--surface);outline:none;}
+.comment-input:focus{border-color:var(--red);}
+.comment-send{padding:8px 14px;background:var(--dark);color:#fff;border:none;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .acc-section{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;margin-top:4px;}
 .acc-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;user-select:none;}
 .acc-title{font-size:14px;font-weight:600;color:var(--dark);}
@@ -941,6 +953,19 @@ async function renderMatches() {
           ${buildPredsTable(m, matchPreds)}
         </div>
       </div>
+      <div class="comments-section">
+        <div class="comments-title" onclick="toggleComments(${m.id})">
+          <span>💬 Yorumlar</span>
+          <span id="cm-arrow-${m.id}">▼</span>
+        </div>
+        <div id="cm-body-${m.id}" style="display:none">
+          <div id="cm-list-${m.id}"><div class="loading" style="font-size:12px;padding:4px 0">Yükleniyor...</div></div>
+          <div class="comment-input-row">
+            <input class="comment-input" id="cm-input-${m.id}" placeholder="Yorum yaz..." maxlength="200">
+            <button class="comment-send" onclick="sendComment(${m.id})">Gönder</button>
+          </div>
+        </div>
+      </div>
     </div>`;
   });
 }
@@ -992,6 +1017,86 @@ async function savePred(mid) {
   showToast('Tahmin kaydedildi!');
 }
 
+
+
+// ============ COMMENTS ============
+const commentsCache = {};
+
+function toggleComments(mid) {
+  const body = document.getElementById('cm-body-' + mid);
+  const arrow = document.getElementById('cm-arrow-' + mid);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+  if (!isOpen) loadComments(mid);
+}
+
+async function loadComments(mid) {
+  const list = document.getElementById('cm-list-' + mid);
+  if (!list) return;
+  const rows = await sbGet('comments', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID + '&order=created_at.asc');
+  commentsCache[mid] = Array.isArray(rows) ? rows : [];
+  renderComments(mid);
+
+  // Add enter key listener
+  const inp = document.getElementById('cm-input-' + mid);
+  if (inp && !inp.dataset.listener) {
+    inp.dataset.listener = '1';
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') sendComment(mid);
+    });
+  }
+}
+
+function renderComments(mid) {
+  const list = document.getElementById('cm-list-' + mid);
+  if (!list) return;
+  const comments = commentsCache[mid] || [];
+  if (!comments.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0;text-align:center">Henüz yorum yok. İlk yorumu sen yap!</div>';
+    return;
+  }
+  list.innerHTML = comments.map(function(c) {
+    const initial = c.player_name ? c.player_name.charAt(0).toUpperCase() : '?';
+    const isMe = c.player_name === currentUser;
+    const time = new Date(c.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+    const date = new Date(c.created_at).toLocaleDateString('tr-TR', {day:'numeric', month:'short'});
+    return '<div class="comment-item">' +
+      '<div class="comment-avatar" style="background:' + (isMe ? 'var(--red)' : 'var(--dark)') + '">' + initial + '</div>' +
+      '<div class="comment-bubble">' +
+      '<div class="comment-name">' + c.player_name + (isMe ? ' (sen)' : '') + '</div>' +
+      '<div class="comment-text">' + escapeHtml(c.text) + '</div>' +
+      '<div class="comment-time">' + date + ' ' + time + '</div>' +
+      '</div></div>';
+  }).join('');
+  // Scroll to bottom
+  list.scrollTop = list.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function sendComment(mid) {
+  const inp = document.getElementById('cm-input-' + mid);
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  const payload = {
+    match_id: mid,
+    group_id: GROUP_ID,
+    player_name: currentUser,
+    text: text
+  };
+  const result = await sbPost('comments', payload);
+  if (Array.isArray(result) && result.length > 0) {
+    if (!commentsCache[mid]) commentsCache[mid] = [];
+    commentsCache[mid].push(result[0]);
+    renderComments(mid);
+  }
+}
 
 // ============ GROUP PREDICTIONS TABLE ============
 function togglePreds(mid) {
