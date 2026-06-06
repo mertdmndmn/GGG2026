@@ -185,6 +185,12 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .comment-input{flex:1;padding:8px 12px;border-radius:20px;border:1.5px solid var(--border);font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--dark);background:var(--surface);outline:none;}
 .comment-input:focus{border-color:var(--red);}
 .comment-send{padding:8px 14px;background:var(--dark);color:#fff;border:none;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.lineup-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:12px;font-weight:500;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;color:var(--mid);}
+.lineup-section{border-top:1px solid var(--border);padding:10px 14px;}
+.lineup-teams{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.lineup-team-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:6px;}
+.lineup-player{font-size:13px;color:var(--dark);padding:3px 0;border-bottom:0.5px solid var(--border);}
+.lineup-player:last-child{border-bottom:none;}
 .reactions-row{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px 4px;border-top:1px solid var(--border);}
 .reaction-btn{padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all 0.15s;}
 .reaction-btn.mine{border-color:var(--red);background:#fef2f2;}
@@ -740,6 +746,8 @@ async function loadMatches() {
       } else if (m && r.custom && r.custom.bets) {
         m.customBets = r.custom.bets;
       }
+      if (m && r.lineup_home) m.lineup_home = r.lineup_home;
+      if (m && r.lineup_away) m.lineup_away = r.lineup_away;
     });
   }
 }
@@ -941,6 +949,13 @@ async function renderMatches() {
         ${locked && m.result ? `<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dark);letter-spacing:3px;line-height:1">${m.result.home_score} — ${m.result.away_score}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>` : '<div class="score-vs">VS</div>'}
         <div class="team"><span class="team-flag">${away.flag}</span><span class="team-name">${away.name}</span></div>
       </div>
+      ${(m.lineup_home || m.lineup_away) ? `<div style="text-align:center;padding:4px 14px 8px"><button class="lineup-btn" onclick="toggleLineup(${m.id})">📋 İlk 11 <span id="lu-arrow-${m.id}">▼</span></button></div>
+      <div id="lu-body-${m.id}" style="display:none" class="lineup-section">
+        <div class="lineup-teams">
+          <div><div class="lineup-team-title">${home.name}</div>${(m.lineup_home||'').split(',').map(p=>p.trim()).filter(Boolean).map(p=>'<div class="lineup-player">'+p+'</div>').join('')}</div>
+          <div><div class="lineup-team-title">${away.name}</div>${(m.lineup_away||'').split(',').map(p=>p.trim()).filter(Boolean).map(p=>'<div class="lineup-player">'+p+'</div>').join('')}</div>
+        </div>
+      </div>` : ''}
       <div class="score-inputs">
         <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'home_score',this.value)">
         <span class="score-dash">—</span>
@@ -1263,6 +1278,16 @@ async function sendComment(mid) {
 }
 
 // ============ GROUP PREDICTIONS TABLE ============
+
+function toggleLineup(mid) {
+  const body = document.getElementById('lu-body-' + mid);
+  const arrow = document.getElementById('lu-arrow-' + mid);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+}
+
 function togglePreds(mid) {
   const body = document.getElementById('gp-body-' + mid);
   const arrow = document.getElementById('gp-arrow-' + mid);
@@ -1692,6 +1717,12 @@ function renderAdminMatches() {
         '</div></div>' +
         customHtml +
       '</div>' +
+      '<div style="margin-top:10px">' +
+      '<label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">İlk 11 - Ev Sahibi (virgülle ayır)</label>' +
+      '<input type="text" class="result-inp" id="lu-home-' + m.id + '" style="font-size:12px;font-family:IBM Plex Sans,sans-serif;padding:8px;margin-bottom:6px" placeholder="Mbappe, Griezmann..." value="' + (m.lineup_home || '') + '">' +
+      '<label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">İlk 11 - Deplasman (virgülle ayır)</label>' +
+      '<input type="text" class="result-inp" id="lu-away-' + m.id + '" style="font-size:12px;font-family:IBM Plex Sans,sans-serif;padding:8px" placeholder="Salah, Nunez..." value="' + (m.lineup_away || '') + '">' +
+      '</div>' +
       '<button class="confirm-btn" data-mid="' + m.id + '" onclick="adminConfirm(this)">✓ Sonucu Onayla & Puanları Güncelle</button>' +
     '</div>';
   }
@@ -1767,10 +1798,19 @@ async function confirmResult(mid) {
   const m = matches.find(x => x.id === mid);
   if (m) newCustom.bets = m.customBets;
 
+  const luHome = document.getElementById('lu-home-' + mid);
+  const luAway = document.getElementById('lu-away-' + mid);
+  if (luHome && luHome.value.trim()) {
+    const m2 = matches.find(function(x) { return x.id === mid; });
+    if (m2) { m2.lineup_home = luHome.value.trim(); m2.lineup_away = luAway ? luAway.value.trim() : ''; }
+  }
+
   const resultPayload = {
     match_id: mid,
     group_id: GROUP_ID,
     home_score: h, away_score: a, ms,
+    lineup_home: (matches.find(function(x){return x.id===mid;})||{}).lineup_home || null,
+    lineup_away: (matches.find(function(x){return x.id===mid;})||{}).lineup_away || null,
     hy: ap.hy || existingRes.hy || null,
     kg: ap.kg || existingRes.kg || null,
     gol: ap.gol || existingRes.gol || null,
