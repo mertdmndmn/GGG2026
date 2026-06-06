@@ -747,6 +747,7 @@ async function loadMatches() {
         if (r.custom && r.custom.bets) m.customBets = r.custom.bets;
         if (r.lineup_home) m.lineup_home = r.lineup_home;
         if (r.lineup_away) m.lineup_away = r.lineup_away;
+        if (r.lineup_img) m.lineup_img = r.lineup_img;
       }
     });
   }
@@ -949,12 +950,9 @@ async function renderMatches() {
         ${locked && m.result ? `<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dark);letter-spacing:3px;line-height:1">${m.result.home_score} — ${m.result.away_score}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>` : '<div class="score-vs">VS</div>'}
         <div class="team"><span class="team-flag">${away.flag}</span><span class="team-name">${away.name}</span></div>
       </div>
-      ${(m.lineup_home || m.lineup_away) ? `<div style="text-align:center;padding:4px 14px 8px"><button class="lineup-btn" onclick="toggleLineup(${m.id})">📋 İlk 11 <span id="lu-arrow-${m.id}">▼</span></button></div>
-      <div id="lu-body-${m.id}" style="display:none" class="lineup-section">
-        <div class="lineup-teams">
-          <div><div class="lineup-team-title">${home.name}</div>${(m.lineup_home||'').split('\n').map(p=>p.trim()).filter(Boolean).map(p=>'<div class="lineup-player">'+p+'</div>').join('')}</div>
-          <div><div class="lineup-team-title">${away.name}</div>${(m.lineup_away||'').split('\n').map(p=>p.trim()).filter(Boolean).map(p=>'<div class="lineup-player">'+p+'</div>').join('')}</div>
-        </div>
+      ${m.lineup_img ? `<div style="text-align:center;padding:4px 14px 8px"><button class="lineup-btn" onclick="toggleLineup(${m.id})">📋 İlk 11 <span id="lu-arrow-${m.id}">▼</span></button></div>
+      <div id="lu-body-${m.id}" style="display:none;padding:0 14px 12px">
+        <img src="${m.lineup_img}" style="width:100%;border-radius:10px" alt="İlk 11">
       </div>` : ''}
       <div class="score-inputs">
         <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'home_score',this.value)">
@@ -1280,32 +1278,68 @@ async function sendComment(mid) {
 // ============ GROUP PREDICTIONS TABLE ============
 
 
-async function saveLineup(mid) {
-  const homeEl = document.getElementById('lu-home-' + mid);
-  const awayEl = document.getElementById('lu-away-' + mid);
-  if (!homeEl && !awayEl) { showToast('Kadro alani bulunamadi!'); return; }
+async function saveLineupImg(mid) {
+  const fileInput = document.getElementById('lu-img-' + mid);
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+    showToast('Önce bir görsel seç!'); return;
+  }
 
-  const lineupHome = homeEl ? homeEl.value.trim() : '';
-  const lineupAway = awayEl ? awayEl.value.trim() : '';
+  const file = fileInput.files[0];
+  const fileName = 'lineup_' + mid + '_' + GROUP_ID + '_' + Date.now() + '.' + file.name.split('.').pop();
 
-  // Update match object
-  const m = matches.find(function(x) { return x.id === mid; });
-  if (m) { m.lineup_home = lineupHome; m.lineup_away = lineupAway; }
+  showToast('Yükleniyor...');
 
-  // Save to match_results (upsert)
-  const existing = results[mid] || {};
-  await sbUpsert('match_results', {
-    match_id: mid,
-    group_id: GROUP_ID,
-    home_score: existing.home_score !== undefined ? existing.home_score : null,
-    away_score: existing.away_score !== undefined ? existing.away_score : null,
-    lineup_home: lineupHome,
-    lineup_away: lineupAway
-  }, 'match_id,group_id');
+  try {
+    // Upload to Supabase Storage
+    const arrayBuffer = await file.arrayBuffer();
+    const response = await fetch(SUPABASE_URL + '/storage/v1/object/lineups/' + fileName, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': file.type,
+        'x-upsert': 'true'
+      },
+      body: arrayBuffer
+    });
 
-  results[mid] = {...existing, lineup_home: lineupHome, lineup_away: lineupAway};
-  renderMatches();
-  showToast('Kadro kaydedildi!');
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('Upload error:', err);
+      showToast('Yukleme hatasi! Bucket var mi?'); return;
+    }
+
+    // Get public URL
+    const imgUrl = SUPABASE_URL + '/storage/v1/object/public/lineups/' + fileName;
+
+    // Save URL to match_results
+    const existing = results[mid] || {};
+    const payload = {
+      match_id: mid,
+      group_id: GROUP_ID,
+      lineup_img: imgUrl
+    };
+    if (existing.home_score !== undefined && existing.home_score !== null) {
+      payload.home_score = existing.home_score;
+      payload.away_score = existing.away_score;
+    }
+    await fetch(SUPABASE_URL + '/rest/v1/match_results?on_conflict=match_id,group_id', {
+      method: 'POST',
+      headers: {...HEADERS, 'Prefer': 'resolution=merge-duplicates'},
+      body: JSON.stringify(payload)
+    });
+
+    // Update local state
+    const m = matches.find(function(x) { return x.id === mid; });
+    if (m) m.lineup_img = imgUrl;
+    results[mid] = {...existing, lineup_img: imgUrl};
+
+    renderMatches();
+    showToast('İlk 11 kaydedildi!');
+  } catch(e) {
+    console.error(e);
+    showToast('Hata: ' + e.message);
+  }
 }
 
 function toggleLineup(mid) {
@@ -1746,12 +1780,11 @@ function renderAdminMatches() {
         '</div></div>' +
         customHtml +
       '</div>' +
-      '<div style="margin-top:10px">' +
-      '<label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">' + home.name + ' - İlk 11 (her satıra bir oyuncu)</label>' +
-      '<textarea id="lu-home-' + m.id + '" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;height:120px;resize:none;background:var(--surface);margin-bottom:8px" placeholder="Mbappe, Griezmann, Dembele...">' + (m.lineup_home || '') + '</textarea>' +
-      '<label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">' + away.name + ' - İlk 11 (her satıra bir oyuncu)</label>' +
-      '<textarea id="lu-away-' + m.id + '" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;height:120px;resize:none;background:var(--surface);margin-bottom:8px" placeholder="Salah, Nunez, Alisson...">' + (m.lineup_away || '') + '</textarea>' +
-      '<button onclick="saveLineup(' + m.id + ')" style="width:100%;padding:9px;background:#1a7a3c;color:#fff;border:none;border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px">📋 Kadroyu Kaydet</button>' +
+      '<div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:12px">' +
+      '<div style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:8px">📋 İlk 11 Görsel</div>' +
+      (m.lineup_img ? '<img src="' + m.lineup_img + '" style="width:100%;border-radius:8px;margin-bottom:8px" alt="İlk 11">' : '') +
+      '<input type="file" id="lu-img-' + m.id + '" accept="image/*" style="width:100%;margin-bottom:8px;font-size:13px">' +
+      '<button onclick="saveLineupImg(' + m.id + ')" style="width:100%;padding:9px;background:#1a7a3c;color:#fff;border:none;border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer">📤 Görseli Yükle</button>' +
       '</div>' +
       '<button class="confirm-btn" data-mid="' + m.id + '" onclick="adminConfirm(this)">✓ Sonucu Onayla & Puanları Güncelle</button>' +
     '</div>';
