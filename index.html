@@ -314,6 +314,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <div class="score-bar-left">Toplam Puanım<strong id="prof-pts">0</strong></div>
         <div class="score-bar-right">Sıralama<strong id="prof-rank">—</strong></div>
       </div>
+      <div style="text-align:center;margin:-8px 0 12px">
+        <span id="prof-streak" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+      <button class="share-btn" onclick="shareProfileCard()" style="margin-bottom:14px">📤 Profil Kartımı Paylaş</button>
       <div class="section-label">İstatistiklerim</div>
       <div class="lb-card" id="prof-stats"></div>
       <div class="section-label" style="margin-top:20px">Tahmin Geçmişim</div>
@@ -882,6 +886,15 @@ async function renderMatches() {
       reactionsCache[m.id] = allReactions.filter(function(r) { return r.match_id === m.id; });
     });
   }
+
+  // Load comment counts
+  const allComments = await sbGet('comments', 'match_id=in.(' + matchIds + ')&group_id=eq.' + GROUP_ID + '&select=match_id');
+  const commentCounts = {};
+  if (Array.isArray(allComments)) {
+    allComments.forEach(function(c) {
+      commentCounts[c.match_id] = (commentCounts[c.match_id] || 0) + 1;
+    });
+  }
   const allPredsMap = {};
   if (Array.isArray(allPreds)) {
     allPreds.forEach(p => {
@@ -978,7 +991,7 @@ async function renderMatches() {
       </div>
       <div class="comments-section">
         <div class="comments-title" onclick="toggleComments(${m.id})">
-          <span>💬 Yorumlar <span id="cm-count-${m.id}" style="color:var(--red);font-weight:700"></span></span>
+          <span>💬 Yorumlar <span id="cm-count-${m.id}" style="color:var(--red);font-weight:700">${commentCounts[m.id] > 0 ? commentCounts[m.id] : ''}</span></span>
           <span id="cm-arrow-${m.id}">▼</span>
         </div>
         <div id="cm-body-${m.id}" style="display:none">
@@ -1522,9 +1535,10 @@ function renderLeaderboard() {
     const rc = i===0?'gold':i===1?'silver':i===2?'bronze':'';
     const tr = p.trend>0?`<span class="lb-trend up">+${p.trend}</span>`:p.trend<0?`<span class="lb-trend down">${p.trend}</span>`:`<span class="lb-trend flat">—</span>`;
     const isMe = p.name === currentUser;
+    const streakBadge = p.streak >= 3 ? ` <span style="font-size:11px">🔥${p.streak}</span>` : '';
     return `<div class="lb-row ${isMe?'me':''}">
       <span class="lb-rank ${rc}">${i+1}</span>
-      <span class="lb-name">${p.name}${isMe?' <small>sen</small>':''}</span>
+      <span class="lb-name">${p.name}${streakBadge}${isMe?' <small>sen</small>':''}</span>
       <span class="lb-pts">${p.pts}</span>${tr}</div>`;
   }).join('');
   const me = sorted.find(p => p.name === currentUser);
@@ -1772,6 +1786,8 @@ async function confirmResult(mid) {
       }
     }
   }
+  // Update streaks for all players
+  await updateAllStreaks();
   await loadAll();
   // Switch to finished tab to show the confirmed match
   adminTab = 'finished';
@@ -2200,6 +2216,17 @@ async function renderProfilTab() {
   // Update header
   document.getElementById('prof-pts').textContent = me ? me.pts : 0;
   document.getElementById('prof-rank').textContent = '#' + (myRank || '—');
+  const streakEl = document.getElementById('prof-streak');
+  if (streakEl && me) {
+    if (me.streak >= 3) {
+      streakEl.innerHTML = '🔥 <strong>' + me.streak + ' maclik seri!</strong> Devam et!';
+      streakEl.style.color = 'var(--red)';
+    } else if (me.streak > 0) {
+      streakEl.textContent = me.streak + ' dogru tahmin serisi';
+    } else {
+      streakEl.textContent = '';
+    }
+  }
 
   // Load my predictions
   const myPreds = await sbGet('predictions', 'player_name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID);
@@ -2603,6 +2630,75 @@ async function saveTurnuvaBets() {
   showToast('Turnuva tahminleri kaydedildi!');
 }
 
+
+
+// ============ STREAK ============
+async function updateAllStreaks() {
+  // Get all finished matches
+  const finishedMatches = matches.filter(function(m) {
+    return results[m.id] && results[m.id].home_score !== null;
+  });
+  if (!finishedMatches.length) return;
+
+  // Get all predictions
+  const allPreds = await sbGet('predictions', 'group_id=eq.' + GROUP_ID);
+  if (!Array.isArray(allPreds)) return;
+
+  // Calculate streak per player
+  const playerPreds = {};
+  allPreds.forEach(function(p) {
+    if (!playerPreds[p.player_name]) playerPreds[p.player_name] = {};
+    playerPreds[p.player_name][p.match_id] = p;
+  });
+
+  for (const playerName of Object.keys(playerPreds)) {
+    let streak = 0;
+    // Go through finished matches in reverse order
+    const reversed = [...finishedMatches].reverse();
+    for (const m of reversed) {
+      const pred = playerPreds[playerName][m.id];
+      const res = results[m.id];
+      if (!pred || !res) break;
+      const ms = res.home_score > res.away_score ? '1' : res.home_score === res.away_score ? 'X' : '2';
+      const correct = pred.ms && pred.ms === ms;
+      if (correct) streak++;
+      else break;
+    }
+    if (streak > 0) {
+      await sbPatch('players', 'name=eq.' + encodeURIComponent(playerName) + '&group_id=eq.' + GROUP_ID, {streak: streak});
+    }
+  }
+}
+
+// ============ SHARE PROFILE CARD ============
+function shareProfileCard() {
+  const me = players.find(function(p) { return p.name === currentUser; });
+  const sorted = [...players].sort(function(a,b) { return b.pts - a.pts; });
+  const myRank = sorted.findIndex(function(p) { return p.name === currentUser; }) + 1;
+
+  if (!me) { showToast('Profil yuklenemedi!'); return; }
+
+  const streak = me.streak || 0;
+  const streakText = streak >= 3 ? '\n🔥 ' + streak + ' maclik seri!' : '';
+
+  // Calculate accuracy from profile stats
+  const correct = parseInt(document.getElementById('prof-pts') ? document.getElementById('prof-pts').textContent : 0);
+
+  let text = '⚽ *GGG 2026 - Profil Kartim*\n';
+  text += '─────────────────\n';
+  text += '👤 *' + currentUser + '*\n';
+  text += '🏆 Siralama: #' + myRank + '\n';
+  text += '⭐ Puan: *' + (me.pts || 0) + '*\n';
+  if (streakText) text += streakText + '\n';
+  text += '─────────────────\n';
+  text += '🔗 ' + window.location.href;
+
+  if (navigator.share) {
+    navigator.share({ title: 'GGG 2026 Profil', text: text }).catch(function() { copyToClipboard(text); });
+  } else {
+    copyToClipboard(text);
+  }
+}
 
 // ============ SHARE LEADERBOARD ============
 function shareLeaderboard() {
