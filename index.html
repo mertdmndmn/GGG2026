@@ -747,7 +747,8 @@ async function loadMatches() {
         if (r.custom && r.custom.bets) m.customBets = r.custom.bets;
         if (r.lineup_home) m.lineup_home = r.lineup_home;
         if (r.lineup_away) m.lineup_away = r.lineup_away;
-        if (r.lineup_img) m.lineup_img = r.lineup_img;
+        if (r.lineup_img_home) m.lineup_img_home = r.lineup_img_home;
+        if (r.lineup_img_away) m.lineup_img_away = r.lineup_img_away;
       }
     });
   }
@@ -950,9 +951,12 @@ async function renderMatches() {
         ${locked && m.result ? `<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dark);letter-spacing:3px;line-height:1">${m.result.home_score} — ${m.result.away_score}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>` : '<div class="score-vs">VS</div>'}
         <div class="team"><span class="team-flag">${away.flag}</span><span class="team-name">${away.name}</span></div>
       </div>
-      ${m.lineup_img ? `<div style="text-align:center;padding:4px 14px 8px"><button class="lineup-btn" onclick="toggleLineup(${m.id})">📋 İlk 11 <span id="lu-arrow-${m.id}">▼</span></button></div>
+      ${(m.lineup_img_home || m.lineup_img_away) ? `<div style="display:flex;gap:6px;padding:4px 14px 8px">
+        ${m.lineup_img_home ? `<button class="lineup-btn" style="flex:1" onclick="toggleLineup(${m.id},'home')">📋 ${home.name} <span id="lu-arrow-${m.id}-home">▼</span></button>` : ''}
+        ${m.lineup_img_away ? `<button class="lineup-btn" style="flex:1" onclick="toggleLineup(${m.id},'away')">📋 ${away.name} <span id="lu-arrow-${m.id}-away">▼</span></button>` : ''}
+      </div>
       <div id="lu-body-${m.id}" style="display:none;padding:0 14px 12px">
-        <img src="${m.lineup_img}" style="width:100%;border-radius:10px" alt="İlk 11">
+        <img id="lu-img-display-${m.id}" src="" style="width:100%;border-radius:10px" alt="İlk 11">
       </div>` : ''}
       <div class="score-inputs">
         <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'home_score',this.value)">
@@ -1278,14 +1282,15 @@ async function sendComment(mid) {
 // ============ GROUP PREDICTIONS TABLE ============
 
 
-async function saveLineupImg(mid) {
-  const fileInput = document.getElementById('lu-img-' + mid);
+async function saveLineupImg(mid, isHome) {
+  const fileInput = document.getElementById(isHome ? 'lu-img-home-' + mid : 'lu-img-away-' + mid);
   if (!fileInput || !fileInput.files || !fileInput.files[0]) {
     showToast('Önce bir görsel seç!'); return;
   }
 
   const file = fileInput.files[0];
-  const fileName = 'lineup_' + mid + '_' + GROUP_ID + '_' + Date.now() + '.' + file.name.split('.').pop();
+  const side = isHome ? 'home' : 'away';
+  const fileName = 'lineup_' + mid + '_' + side + '_' + GROUP_ID + '_' + Date.now() + '.' + file.name.split('.').pop();
 
   showToast('Yükleniyor...');
 
@@ -1314,11 +1319,12 @@ async function saveLineupImg(mid) {
 
     // Save URL to match_results
     const existing = results[mid] || {};
+    const imgField = isHome ? 'lineup_img_home' : 'lineup_img_away';
     const payload = {
       match_id: mid,
-      group_id: GROUP_ID,
-      lineup_img: imgUrl
+      group_id: GROUP_ID
     };
+    payload[imgField] = imgUrl;
     if (existing.home_score !== undefined && existing.home_score !== null) {
       payload.home_score = existing.home_score;
       payload.away_score = existing.away_score;
@@ -1331,8 +1337,9 @@ async function saveLineupImg(mid) {
 
     // Update local state
     const m = matches.find(function(x) { return x.id === mid; });
-    if (m) m.lineup_img = imgUrl;
-    results[mid] = {...existing, lineup_img: imgUrl};
+    if (m) m[imgField] = imgUrl;
+    results[mid] = {...existing};
+    results[mid][imgField] = imgUrl;
 
     renderMatches();
     showToast('İlk 11 kaydedildi!');
@@ -1342,13 +1349,31 @@ async function saveLineupImg(mid) {
   }
 }
 
-function toggleLineup(mid) {
+function toggleLineup(mid, side) {
   const body = document.getElementById('lu-body-' + mid);
-  const arrow = document.getElementById('lu-arrow-' + mid);
   if (!body) return;
-  const isOpen = body.style.display !== 'none';
-  body.style.display = isOpen ? 'none' : 'block';
-  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+  const imgEl = document.getElementById('lu-img-display-' + mid);
+  const m = matches.find(function(x) { return x.id === mid; });
+  const currentSrc = imgEl ? imgEl.src : '';
+  const newSrc = m ? (side === 'home' ? m.lineup_img_home : m.lineup_img_away) : '';
+
+  // If same side clicked again, toggle close
+  if (body.style.display !== 'none' && currentSrc === newSrc) {
+    body.style.display = 'none';
+    ['home','away'].forEach(function(s) {
+      const a = document.getElementById('lu-arrow-' + mid + '-' + s);
+      if (a) a.textContent = '▼';
+    });
+    return;
+  }
+
+  // Show new image
+  if (imgEl && newSrc) imgEl.src = newSrc;
+  body.style.display = 'block';
+  ['home','away'].forEach(function(s) {
+    const a = document.getElementById('lu-arrow-' + mid + '-' + s);
+    if (a) a.textContent = s === side ? '▲' : '▼';
+  });
 }
 
 function togglePreds(mid) {
@@ -1781,10 +1806,19 @@ function renderAdminMatches() {
         customHtml +
       '</div>' +
       '<div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:12px">' +
-      '<div style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:8px">📋 İlk 11 Görsel</div>' +
-      (m.lineup_img ? '<img src="' + m.lineup_img + '" style="width:100%;border-radius:8px;margin-bottom:8px" alt="İlk 11">' : '') +
-      '<input type="file" id="lu-img-' + m.id + '" accept="image/*" style="width:100%;margin-bottom:8px;font-size:13px">' +
-      '<button onclick="saveLineupImg(' + m.id + ')" style="width:100%;padding:9px;background:#1a7a3c;color:#fff;border:none;border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer">📤 Görseli Yükle</button>' +
+      '<div style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:10px">📋 İlk 11 Görselleri</div>' +
+      '<div style="margin-bottom:10px">' +
+      '<div style="font-size:12px;font-weight:600;color:var(--dark);margin-bottom:4px">' + home.name + '</div>' +
+      (m.lineup_img_home ? '<img src="' + m.lineup_img_home + '" style="width:100%;border-radius:8px;margin-bottom:6px" alt="' + home.name + '">' : '') +
+      '<input type="file" id="lu-img-home-' + m.id + '" accept="image/*" style="width:100%;margin-bottom:6px;font-size:12px">' +
+      '<button onclick="saveLineupImg(' + m.id + ',true)" style="width:100%;padding:8px;background:#1a7a3c;color:#fff;border:none;border-radius:8px;font-family:IBM Plex Sans,sans-serif;font-size:12px;font-weight:600;cursor:pointer">📤 ' + home.name + ' Yükle</button>' +
+      '</div>' +
+      '<div>' +
+      '<div style="font-size:12px;font-weight:600;color:var(--dark);margin-bottom:4px">' + away.name + '</div>' +
+      (m.lineup_img_away ? '<img src="' + m.lineup_img_away + '" style="width:100%;border-radius:8px;margin-bottom:6px" alt="' + away.name + '">' : '') +
+      '<input type="file" id="lu-img-away-' + m.id + '" accept="image/*" style="width:100%;margin-bottom:6px;font-size:12px">' +
+      '<button onclick="saveLineupImg(' + m.id + ',false)" style="width:100%;padding:8px;background:#1a4fa8;color:#fff;border:none;border-radius:8px;font-family:IBM Plex Sans,sans-serif;font-size:12px;font-weight:600;cursor:pointer">📤 ' + away.name + ' Yükle</button>' +
+      '</div>' +
       '</div>' +
       '<button class="confirm-btn" data-mid="' + m.id + '" onclick="adminConfirm(this)">✓ Sonucu Onayla & Puanları Güncelle</button>' +
     '</div>';
