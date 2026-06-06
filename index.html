@@ -185,6 +185,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .comment-input{flex:1;padding:8px 12px;border-radius:20px;border:1.5px solid var(--border);font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--dark);background:var(--surface);outline:none;}
 .comment-input:focus{border-color:var(--red);}
 .comment-send{padding:8px 14px;background:var(--dark);color:#fff;border:none;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.reactions-row{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px 4px;border-top:1px solid var(--border);}
+.reaction-btn{padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all 0.15s;}
+.reaction-btn.mine{border-color:var(--red);background:#fef2f2;}
+.reaction-btn span{font-size:12px;font-weight:600;color:var(--muted);}
 .acc-section{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;margin-top:4px;}
 .acc-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;user-select:none;}
 .acc-title{font-size:14px;font-weight:600;color:var(--dark);}
@@ -870,6 +874,14 @@ async function renderMatches() {
   // Load all predictions for visible matches
   const matchIds = filtered.map(m => m.id).join(',');
   const allPreds = await sbGet('predictions', 'match_id=in.(' + matchIds + ')&group_id=eq.' + GROUP_ID);
+
+  // Load reactions for visible matches
+  const allReactions = await sbGet('reactions', 'match_id=in.(' + matchIds + ')&group_id=eq.' + GROUP_ID);
+  if (Array.isArray(allReactions)) {
+    filtered.forEach(function(m) {
+      reactionsCache[m.id] = allReactions.filter(function(r) { return r.match_id === m.id; });
+    });
+  }
   const allPredsMap = {};
   if (Array.isArray(allPreds)) {
     allPreds.forEach(p => {
@@ -957,6 +969,13 @@ async function renderMatches() {
           ${buildPredsTable(m, matchPreds)}
         </div>
       </div>
+      <div class="reactions-row" id="react-row-${m.id}">
+        <button class="reaction-btn" data-mid="${m.id}" data-emoji="🔥" onclick="toggleReaction(this)">🔥 <span id="react-count-${m.id}-fire">0</span></button>
+        <button class="reaction-btn" data-mid="${m.id}" data-emoji="😂" onclick="toggleReaction(this)">😂 <span id="react-count-${m.id}-laugh">0</span></button>
+        <button class="reaction-btn" data-mid="${m.id}" data-emoji="😮" onclick="toggleReaction(this)">😮 <span id="react-count-${m.id}-wow">0</span></button>
+        <button class="reaction-btn" data-mid="${m.id}" data-emoji="👍" onclick="toggleReaction(this)">👍 <span id="react-count-${m.id}-like">0</span></button>
+        <button class="reaction-btn" data-mid="${m.id}" data-emoji="💀" onclick="toggleReaction(this)">💀 <span id="react-count-${m.id}-skull">0</span></button>
+      </div>
       <div class="comments-section">
         <div class="comments-title" onclick="toggleComments(${m.id})">
           <span>💬 Yorumlar <span id="cm-count-${m.id}" style="color:var(--red);font-weight:700"></span></span>
@@ -972,6 +991,8 @@ async function renderMatches() {
       </div>
     </div>`;
   });
+  // Render reactions after DOM is built
+  filtered.forEach(function(m) { renderReactions(m.id); });
 }
 
 const pendingPreds = {};
@@ -1022,6 +1043,66 @@ async function savePred(mid) {
 }
 
 
+
+
+// ============ REACTIONS ============
+const EMOJI_MAP = {'🔥':'fire','😂':'laugh','😮':'wow','👍':'like','💀':'skull'};
+const reactionsCache = {};
+
+async function loadReactions(mid) {
+  const rows = await sbGet('reactions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
+  reactionsCache[mid] = Array.isArray(rows) ? rows : [];
+  renderReactions(mid);
+}
+
+function renderReactions(mid) {
+  const reactions = reactionsCache[mid] || [];
+  const counts = {};
+  const myReactions = new Set();
+  reactions.forEach(function(r) {
+    counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+    if (r.player_name === currentUser) myReactions.add(r.emoji);
+  });
+
+  Object.keys(EMOJI_MAP).forEach(function(emoji) {
+    const key = EMOJI_MAP[emoji];
+    const countEl = document.getElementById('react-count-' + mid + '-' + key);
+    const btn = countEl ? countEl.closest('.reaction-btn') : null;
+    if (countEl) countEl.textContent = counts[emoji] || 0;
+    if (btn) btn.classList.toggle('mine', myReactions.has(emoji));
+  });
+}
+
+async function toggleReaction(btn) {
+  const mid = parseInt(btn.getAttribute('data-mid'));
+  const emoji = btn.getAttribute('data-emoji');
+  if (!mid || !emoji) return;
+
+  if (!reactionsCache[mid]) reactionsCache[mid] = [];
+  const existing = reactionsCache[mid].find(function(r) {
+    return r.player_name === currentUser && r.emoji === emoji;
+  });
+
+  if (existing) {
+    // Remove reaction
+    await sbPatch('reactions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID + '&player_name=eq.' + encodeURIComponent(currentUser) + '&emoji=eq.' + encodeURIComponent(emoji), {deleted: true});
+    reactionsCache[mid] = reactionsCache[mid].filter(function(r) {
+      return !(r.player_name === currentUser && r.emoji === emoji);
+    });
+  } else {
+    // Add reaction
+    const result = await sbPost('reactions', {
+      match_id: mid,
+      group_id: GROUP_ID,
+      player_name: currentUser,
+      emoji: emoji
+    });
+    if (Array.isArray(result) && result.length > 0) {
+      reactionsCache[mid].push(result[0]);
+    }
+  }
+  renderReactions(mid);
+}
 
 // ============ COMMENTS ============
 const commentsCache = {};
