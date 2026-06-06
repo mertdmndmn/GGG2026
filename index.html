@@ -982,13 +982,7 @@ async function renderMatches() {
           ${buildPredsTable(m, matchPreds)}
         </div>
       </div>
-      <div class="reactions-row" id="react-row-${m.id}">
-        <button class="reaction-btn" data-mid="${m.id}" data-emoji="🔥" onclick="toggleReaction(this)">🔥 <span id="react-count-${m.id}-fire">0</span></button>
-        <button class="reaction-btn" data-mid="${m.id}" data-emoji="😂" onclick="toggleReaction(this)">😂 <span id="react-count-${m.id}-laugh">0</span></button>
-        <button class="reaction-btn" data-mid="${m.id}" data-emoji="😮" onclick="toggleReaction(this)">😮 <span id="react-count-${m.id}-wow">0</span></button>
-        <button class="reaction-btn" data-mid="${m.id}" data-emoji="👍" onclick="toggleReaction(this)">👍 <span id="react-count-${m.id}-like">0</span></button>
-        <button class="reaction-btn" data-mid="${m.id}" data-emoji="💀" onclick="toggleReaction(this)">💀 <span id="react-count-${m.id}-skull">0</span></button>
-      </div>
+
       <div class="comments-section">
         <div class="comments-title" onclick="toggleComments(${m.id})">
           <span>💬 Yorumlar <span id="cm-count-${m.id}" style="color:var(--red);font-weight:700">${commentCounts[m.id] > 0 ? commentCounts[m.id] : ''}</span></span>
@@ -1135,6 +1129,21 @@ async function loadComments(mid) {
   if (!list) return;
   const rows = await sbGet('comments', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID + '&order=created_at.asc');
   commentsCache[mid] = Array.isArray(rows) ? rows : [];
+
+  // Load comment reactions
+  if (commentsCache[mid].length > 0) {
+    const commentIds = commentsCache[mid].map(function(c) { return c.id; }).join(',');
+    const reacts = await sbGet('comment_reactions', 'comment_id=in.(' + commentIds + ')&group_id=eq.' + GROUP_ID);
+    if (Array.isArray(reacts)) {
+      reacts.forEach(function(r) {
+        if (!commentsCache['react_' + r.comment_id]) commentsCache['react_' + r.comment_id] = {};
+        commentsCache['react_' + r.comment_id][r.emoji] = (commentsCache['react_' + r.comment_id][r.emoji] || 0) + 1;
+        if (r.player_name === currentUser) {
+          commentsCache['react_' + r.comment_id]['mine_' + r.emoji] = true;
+        }
+      });
+    }
+  }
   renderComments(mid);
   updateCommentCount(mid);
 
@@ -1161,11 +1170,18 @@ function renderComments(mid) {
     const isMe = c.player_name === currentUser;
     const time = new Date(c.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
     const date = new Date(c.created_at).toLocaleDateString('tr-TR', {day:'numeric', month:'short'});
+    const cReacts = (commentsCache['react_' + c.id] || {});
+    const reactBtns = ['👍','😂','🔥','😮','💀'].map(function(e) {
+      const count = cReacts[e] || 0;
+      const iMine = (cReacts['mine_' + e] || false);
+      const bg = iMine ? '#fef2f2' : 'transparent'; const brd = iMine ? 'var(--red)' : 'var(--border)'; return '<button data-cid="' + c.id + '" data-emoji="' + e + '" onclick="crClick(this)" style="padding:2px 7px;border-radius:12px;border:1px solid ' + brd + ';background:' + bg + ';font-size:12px;cursor:pointer;margin-right:3px">' + e + (count > 0 ? ' ' + count : '') + '</button>';
+    }).join('');
     return '<div class="comment-item">' +
       '<div class="comment-avatar" style="background:' + (isMe ? 'var(--red)' : 'var(--dark)') + '">' + initial + '</div>' +
       '<div class="comment-bubble">' +
       '<div class="comment-name">' + c.player_name + (isMe ? ' (sen)' : '') + '</div>' +
       '<div class="comment-text">' + escapeHtml(c.text) + '</div>' +
+      '<div style="margin-top:5px">' + reactBtns + '</div>' +
       '<div class="comment-time">' + date + ' ' + time + '</div>' +
       '</div></div>';
   }).join('');
@@ -1179,6 +1195,47 @@ function updateCommentCount(mid) {
   if (!countEl) return;
   const count = (commentsCache[mid] || []).length;
   countEl.textContent = count > 0 ? count : '';
+}
+
+function crClick(btn) {
+  toggleCommentReaction(btn.getAttribute('data-cid'), btn.getAttribute('data-emoji'));
+}
+
+async function toggleCommentReaction(commentId, emoji) {
+  const key = 'react_' + commentId;
+  if (!commentsCache[key]) commentsCache[key] = {};
+  const isMine = commentsCache[key]['mine_' + emoji];
+
+  if (isMine) {
+    // Remove
+    await sbPatch('comment_reactions',
+      'comment_id=eq.' + commentId + '&group_id=eq.' + GROUP_ID + '&player_name=eq.' + encodeURIComponent(currentUser) + '&emoji=eq.' + encodeURIComponent(emoji),
+      {deleted: true});
+    commentsCache[key][emoji] = Math.max(0, (commentsCache[key][emoji] || 1) - 1);
+    commentsCache[key]['mine_' + emoji] = false;
+  } else {
+    // Add
+    await sbPost('comment_reactions', {
+      comment_id: commentId,
+      group_id: GROUP_ID,
+      player_name: currentUser,
+      emoji: emoji
+    });
+    commentsCache[key][emoji] = (commentsCache[key][emoji] || 0) + 1;
+    commentsCache[key]['mine_' + emoji] = true;
+  }
+
+  // Re-render the comment list
+  const comment = Object.values(commentsCache).flat().find(function(c) { return c && c.id === commentId; });
+  if (comment) {
+    // Find which match this comment belongs to and re-render
+    for (const key2 of Object.keys(commentsCache)) {
+      if (!isNaN(key2) && Array.isArray(commentsCache[key2])) {
+        const found = commentsCache[key2].find(function(c) { return c && c.id === commentId; });
+        if (found) { renderComments(parseInt(key2)); break; }
+      }
+    }
+  }
 }
 
 function escapeHtml(str) {
