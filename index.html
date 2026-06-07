@@ -1236,12 +1236,15 @@ async function deleteComment(btn) {
   const mid = parseInt(btn.getAttribute('data-mid'));
   if (!confirm('Yorumu sil?')) return;
 
+  // Delete reactions first (foreign key constraint)
+  await sbDelete('comment_reactions', 'comment_id=eq.' + cid);
+  // Then delete comment
   await sbDelete('comments', 'id=eq.' + cid);
 
-  // Remove from cache
   if (commentsCache[mid]) {
     commentsCache[mid] = commentsCache[mid].filter(function(c) { return c.id !== cid; });
   }
+  delete commentsCache['react_' + cid];
   renderComments(mid);
   showToast('Yorum silindi!');
 }
