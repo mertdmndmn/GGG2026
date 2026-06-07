@@ -1200,12 +1200,13 @@ function renderComments(mid) {
       const iMine = (cReacts['mine_' + e] || false);
       const bg = iMine ? '#fef2f2' : 'transparent'; const brd = iMine ? 'var(--red)' : 'var(--border)'; return '<button data-cid="' + c.id + '" data-emoji="' + e + '" onclick="crClick(this)" style="padding:2px 7px;border-radius:12px;border:1px solid ' + brd + ';background:' + bg + ';font-size:12px;cursor:pointer;margin-right:3px">' + e + (count > 0 ? ' ' + count : '') + '</button>';
     }).join('');
-    return '<div class="comment-item">' +
+    return '<div class="comment-item" id="comment-' + c.id + '">' +
       '<div class="comment-avatar" style="background:' + (isMe ? 'var(--red)' : 'var(--dark)') + '">' + initial + '</div>' +
       '<div class="comment-bubble">' +
       '<div class="comment-name">' + c.player_name + (isMe ? ' (sen)' : '') + '</div>' +
-      '<div class="comment-text">' + escapeHtml(c.text) + '</div>' +
+      '<div class="comment-text" id="ctext-' + c.id + '">' + escapeHtml(c.text) + '</div>' +
       '<div style="margin-top:5px">' + reactBtns + '</div>' +
+      (isMe ? '<div style="display:flex;gap:8px;margin-top:4px"><button data-cid="' + c.id + '" data-mid="' + c.match_id + '" onclick="editComment(this)" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0">✏️ Düzenle</button><button data-cid="' + c.id + '" data-mid="' + c.match_id + '" onclick="deleteComment(this)" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;padding:0">🗑️ Sil</button></div>' : '') +
       '<div class="comment-time">' + date + ' ' + time + '</div>' +
       '</div></div>';
   }).join('');
@@ -1219,6 +1220,71 @@ function updateCommentCount(mid) {
   if (!countEl) return;
   const count = (commentsCache[mid] || []).length;
   countEl.textContent = count > 0 ? count : '';
+}
+
+
+async function deleteComment(btn) {
+  const cid = btn.getAttribute('data-cid');
+  const mid = parseInt(btn.getAttribute('data-mid'));
+  if (!confirm('Yorumu sil?')) return;
+
+  await fetch(SUPABASE_URL + '/rest/v1/comments?id=eq.' + cid, {
+    method: 'DELETE',
+    headers: HEADERS
+  });
+
+  // Remove from cache
+  if (commentsCache[mid]) {
+    commentsCache[mid] = commentsCache[mid].filter(function(c) { return c.id !== cid; });
+  }
+  renderComments(mid);
+  showToast('Yorum silindi!');
+}
+
+function editComment(btn) {
+  const cid = btn.getAttribute('data-cid');
+  const mid = parseInt(btn.getAttribute('data-mid'));
+  const textEl = document.getElementById('ctext-' + cid);
+  if (!textEl) return;
+
+  const currentText = textEl.textContent;
+  const ta = document.createElement('textarea');
+  ta.style.cssText = 'width:100%;padding:6px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;resize:none';
+  ta.rows = 2; ta.id = 'cedit-' + cid; ta.value = currentText;
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Kaydet';
+  saveBtn.style.cssText = 'padding:4px 10px;background:var(--dark);color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;margin-right:6px';
+  saveBtn.addEventListener('click', function() { saveCommentEdit(cid, mid); });
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Iptal';
+  cancelBtn.style.cssText = 'padding:4px 10px;background:transparent;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer';
+  cancelBtn.addEventListener('click', function() { cancelCommentEdit(cid, currentText); });
+  const btnRow = document.createElement('div');
+  btnRow.style.marginTop = '4px';
+  btnRow.appendChild(saveBtn); btnRow.appendChild(cancelBtn);
+  textEl.innerHTML = ''; textEl.appendChild(ta); textEl.appendChild(btnRow); ta.focus();
+}
+
+async function saveCommentEdit(cid, mid) {
+  const inp = document.getElementById('cedit-' + cid);
+  if (!inp) return;
+  const newText = inp.value.trim();
+  if (!newText) { showToast('Yorum boş olamaz!'); return; }
+
+  await sbPatch('comments', 'id=eq.' + cid, {text: newText});
+
+  // Update cache
+  if (commentsCache[mid]) {
+    const c = commentsCache[mid].find(function(c) { return c.id === cid; });
+    if (c) c.text = newText;
+  }
+  renderComments(mid);
+  showToast('Yorum güncellendi!');
+}
+
+function cancelCommentEdit(cid, originalText) {
+  const textEl = document.getElementById('ctext-' + cid);
+  if (textEl) textEl.innerHTML = escapeHtml(originalText);
 }
 
 function crClick(btn) {
