@@ -458,6 +458,14 @@ async function sbUpsert(table, body, onConflict) {
   });
   return r.json();
 }
+async function sbDelete(table, params) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    method: 'DELETE',
+    headers: HEADERS
+  });
+  return r.ok;
+}
+
 async function sbPatch(table, params, body) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
     method:'PATCH', headers:{...HEADERS,'Prefer':'return=representation'}, body:JSON.stringify(body)
@@ -1228,10 +1236,7 @@ async function deleteComment(btn) {
   const mid = parseInt(btn.getAttribute('data-mid'));
   if (!confirm('Yorumu sil?')) return;
 
-  await fetch(SUPABASE_URL + '/rest/v1/comments?id=eq.' + cid, {
-    method: 'DELETE',
-    headers: HEADERS
-  });
+  await sbDelete('comments', 'id=eq.' + cid);
 
   // Remove from cache
   if (commentsCache[mid]) {
