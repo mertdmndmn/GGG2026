@@ -1876,66 +1876,86 @@ async function confirmResult(mid) {
   }
   results[mid] = resultPayload;
 
-  // calculate & update points for all players
-  const allPreds = await sbGet('predictions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
+  // calculate & update points for ALL groups
+  const allPreds = await sbGet('predictions', 'match_id=eq.' + mid);
   if (Array.isArray(allPreds)) {
-
-    // Build vote counts for courage bonus
-    const fields = ['ms','hy','kg','gol','kk'];
-    const voteCounts = {};
-    fields.forEach(function(f) {
-      voteCounts[f] = {};
-      allPreds.forEach(function(p) {
-        const v = p[f];
-        if (v) voteCounts[f][v] = (voteCounts[f][v] || 0) + 1;
-      });
-    });
-    // Custom bet vote counts
     const m2 = matches.find(x => x.id === mid);
-    (m2 && m2.customBets || []).forEach(function(cb, ci) {
-      voteCounts['c'+ci] = {};
-      allPreds.forEach(function(p) {
-        const v = p.custom && p.custom['c'+ci];
-        if (v) voteCounts['c'+ci][v] = (voteCounts['c'+ci][v] || 0) + 1;
-      });
+    const fields = ['ms','hy','kg','gol','kk'];
+
+    // Group preds by group_id for courage bonus calculation per group
+    const predsByGroup = {};
+    allPreds.forEach(function(p) {
+      const gid = p.group_id;
+      if (!predsByGroup[gid]) predsByGroup[gid] = [];
+      predsByGroup[gid].push(p);
     });
 
-    for (const pred of allPreds) {
-      let pts = 0;
-      if (pred.hy && pred.hy === resultPayload.hy) pts += 1;
-      if (pred.ms && pred.ms === ms) pts += 1;
-      if (pred.home_score !== null && pred.away_score !== null &&
-          pred.home_score === h && pred.away_score === a) pts += 5;
-      if (pred.kg && pred.kg === resultPayload.kg) pts += 1;
-      if (pred.gol && pred.gol === resultPayload.gol) pts += 1;
-      if (pred.kk && pred.kk === resultPayload.kk) pts += 1;
-      const pCustom = pred.custom || {};
-      const rCustom = resultPayload.custom || {};
-      Object.keys(pCustom).forEach(k => {
-        if (k.startsWith('c') && pCustom[k] && rCustom[k] && pCustom[k] === rCustom[k]) pts += 1;
-      });
+    // Process each group separately (courage bonus is per group)
+    for (const gid of Object.keys(predsByGroup)) {
+      const groupPreds = predsByGroup[gid];
 
-      // Courage bonus: correct + lone pick (only one person picked it)
-      let bonusPts = 0;
+      // Vote counts for courage bonus within this group
+      const voteCounts = {};
       fields.forEach(function(f) {
-        const predVal = pred[f];
-        const resVal = resultPayload[f];
-        if (!predVal || !resVal || predVal !== resVal) return;
-        const totalVotes = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
-        if (totalVotes > 1 && voteCounts[f][predVal] === 1) bonusPts += 1;
+        voteCounts[f] = {};
+        groupPreds.forEach(function(p) {
+          const v = p[f];
+          if (v) voteCounts[f][v] = (voteCounts[f][v] || 0) + 1;
+        });
       });
       (m2 && m2.customBets || []).forEach(function(cb, ci) {
-        const predVal = pCustom['c'+ci];
-        const resVal = rCustom['c'+ci];
-        if (!predVal || !resVal || predVal !== resVal) return;
-        const totalVotes = Object.values(voteCounts['c'+ci]).reduce(function(a,b){return a+b;},0);
-        if (totalVotes > 1 && voteCounts['c'+ci][predVal] === 1) bonusPts += 1;
+        voteCounts['c'+ci] = {};
+        groupPreds.forEach(function(p) {
+          const v = p.custom && p.custom['c'+ci];
+          if (v) voteCounts['c'+ci][v] = (voteCounts['c'+ci][v] || 0) + 1;
+        });
       });
 
-      const totalPts = pts + bonusPts;
-      if (totalPts > 0) {
-        await sbPatch('players', 'name=eq.' + encodeURIComponent(pred.player_name) + '&group_id=eq.' + GROUP_ID,
-          {pts: (players.find(p=>p.name===pred.player_name)?.pts||0) + totalPts, trend: totalPts});
+      // Load current pts for this group's players
+      const groupPlayers = await sbGet('players', 'group_id=eq.' + gid);
+      const groupPlayersMap = {};
+      if (Array.isArray(groupPlayers)) {
+        groupPlayers.forEach(function(p) { groupPlayersMap[p.name] = p; });
+      }
+
+      for (const pred of groupPreds) {
+        let pts = 0;
+        if (pred.hy && pred.hy === resultPayload.hy) pts += 1;
+        if (pred.ms && pred.ms === ms) pts += 1;
+        if (pred.home_score !== null && pred.away_score !== null &&
+            pred.home_score === h && pred.away_score === a) pts += 5;
+        if (pred.kg && pred.kg === resultPayload.kg) pts += 1;
+        if (pred.gol && pred.gol === resultPayload.gol) pts += 1;
+        if (pred.kk && pred.kk === resultPayload.kk) pts += 1;
+        const pCustom = pred.custom || {};
+        const rCustom = resultPayload.custom || {};
+        Object.keys(pCustom).forEach(k => {
+          if (k.startsWith('c') && pCustom[k] && rCustom[k] && pCustom[k] === rCustom[k]) pts += 1;
+        });
+
+        // Courage bonus per group
+        let bonusPts = 0;
+        fields.forEach(function(f) {
+          const predVal = pred[f];
+          const resVal = resultPayload[f];
+          if (!predVal || !resVal || predVal !== resVal) return;
+          const totalVotes = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
+          if (totalVotes > 1 && voteCounts[f][predVal] === 1) bonusPts += 1;
+        });
+        (m2 && m2.customBets || []).forEach(function(cb, ci) {
+          const predVal = pCustom['c'+ci];
+          const resVal = rCustom['c'+ci];
+          if (!predVal || !resVal || predVal !== resVal) return;
+          const totalVotes = Object.values(voteCounts['c'+ci]).reduce(function(a,b){return a+b;},0);
+          if (totalVotes > 1 && voteCounts['c'+ci][predVal] === 1) bonusPts += 1;
+        });
+
+        const totalPts = pts + bonusPts;
+        if (totalPts > 0) {
+          const currentPts = groupPlayersMap[pred.player_name] ? (groupPlayersMap[pred.player_name].pts || 0) : 0;
+          await sbPatch('players', 'name=eq.' + encodeURIComponent(pred.player_name) + '&group_id=eq.' + gid,
+            {pts: currentPts + totalPts, trend: totalPts});
+        }
       }
     }
   }
@@ -2787,38 +2807,39 @@ async function saveTurnuvaBets() {
 
 // ============ STREAK ============
 async function updateAllStreaks() {
-  // Get all finished matches
   const finishedMatches = matches.filter(function(m) {
     return results[m.id] && results[m.id].home_score !== null;
   });
   if (!finishedMatches.length) return;
 
-  // Get all predictions
-  const allPreds = await sbGet('predictions', 'group_id=eq.' + GROUP_ID);
+  // Get ALL predictions across all groups
+  const allPreds = await sbGet('predictions', 'match_id=in.(' + finishedMatches.map(function(m){return m.id;}).join(',') + ')');
   if (!Array.isArray(allPreds)) return;
 
-  // Calculate streak per player
-  const playerPreds = {};
+  // Group by group_id then player_name
+  const byGroup = {};
   allPreds.forEach(function(p) {
-    if (!playerPreds[p.player_name]) playerPreds[p.player_name] = {};
-    playerPreds[p.player_name][p.match_id] = p;
+    if (!byGroup[p.group_id]) byGroup[p.group_id] = {};
+    if (!byGroup[p.group_id][p.player_name]) byGroup[p.group_id][p.player_name] = {};
+    byGroup[p.group_id][p.player_name][p.match_id] = p;
   });
 
-  for (const playerName of Object.keys(playerPreds)) {
-    let streak = 0;
-    // Go through finished matches in reverse order
-    const reversed = [...finishedMatches].reverse();
-    for (const m of reversed) {
-      const pred = playerPreds[playerName][m.id];
-      const res = results[m.id];
-      if (!pred || !res) break;
-      const ms = res.home_score > res.away_score ? '1' : res.home_score === res.away_score ? 'X' : '2';
-      const correct = pred.ms && pred.ms === ms;
-      if (correct) streak++;
-      else break;
-    }
-    if (streak > 0) {
-      await sbPatch('players', 'name=eq.' + encodeURIComponent(playerName) + '&group_id=eq.' + GROUP_ID, {streak: streak});
+  const reversed = [...finishedMatches].reverse();
+
+  for (const gid of Object.keys(byGroup)) {
+    for (const playerName of Object.keys(byGroup[gid])) {
+      let streak = 0;
+      for (const m of reversed) {
+        const pred = byGroup[gid][playerName][m.id];
+        const res = results[m.id];
+        if (!pred || !res) break;
+        const ms = res.home_score > res.away_score ? '1' : res.home_score === res.away_score ? 'X' : '2';
+        if (pred.ms && pred.ms === ms) streak++;
+        else break;
+      }
+      if (streak > 0) {
+        await sbPatch('players', 'name=eq.' + encodeURIComponent(playerName) + '&group_id=eq.' + gid, {streak: streak});
+      }
     }
   }
 }
