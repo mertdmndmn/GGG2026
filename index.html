@@ -736,7 +736,7 @@ async function loadMatches() {
     customBets: (customMap[m.id] && customMap[m.id].bets) ? customMap[m.id].bets : []
   }));
   // overlay results
-  const resRows = await sbGet('match_results', 'select=*&group_id=eq.' + GROUP_ID);
+  const resRows = await sbGet('match_results', 'select=*&group_id=is.null');
   if (Array.isArray(resRows)) {
     resRows.forEach(r => {
       const m = matches.find(x => x.id === r.match_id);
