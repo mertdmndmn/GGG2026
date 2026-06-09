@@ -2900,7 +2900,7 @@ async function renderTurnuvaTab() {
   const elekFields = TURNUVA_FIELDS.filter(function(f) { return f.key.startsWith('elek_'); });
   html += buildAccordion('bireysel', '⚽', 'Bireysel Tahminler', bireyselFields, false);
   html += buildAccordion('gruplar', '📊', 'Grup Tahminleri - Kim 1. Cikar? (+3)', grupFields, false);
-  html += buildAccordion('elek', '❌', 'Grup Tahminleri - Kim Elenir? (+2)', elekFields, false);
+  html += buildAccordion('elek', '❌', 'Grup Tahminleri - Kim Sonuncu Olur? (+2)', elekFields, false);
 
   if (!isLocked) {
     html += '<button class="tb-save" id="tb-save-btn" onclick="saveTurnuvaBets()" style="margin-top:4px">Turnuva Tahminlerimi Kaydet</button>';
