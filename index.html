@@ -974,9 +974,9 @@ async function renderMatches() {
         </div>
       </div>` : ''}
       <div class="score-inputs">
-        <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'home_score',this.value)">
+        <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'home_score',this.value);autoFillPred(${m.id})">
         <span class="score-dash">—</span>
-        <input class="score-inp" type="number" min="0" max="20" value="${aS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'away_score',this.value)">
+        <input class="score-inp" type="number" min="0" max="20" value="${aS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id})">
       </div>
       <div class="bets-section">
         <div class="bets-title">Bahisler</div>
@@ -1460,7 +1460,7 @@ function buildPredsTable(m, preds) {
     fields.push({key:'c'+ci, label:cb.question, isCustom:true});
   });
 
-  let html = '<table class="pred-table"><thead><tr><td><b>Oyuncu</b></td>';
+  let html = '<div style="overflow-x:auto"><table class="pred-table"><thead><tr><td><b>Oyuncu</b></td>';
   fields.forEach(function(f) { html += '<td><b>' + f.label + '</b></td>'; });
   if (isFinished) html += '<td><b>Puan</b></td>';
   html += '</tr></thead><tbody>';
@@ -1516,7 +1516,7 @@ function buildPredsTable(m, preds) {
     html += '</tr>';
   });
 
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
 
   // If finished, show sorted summary at top
   if (isFinished) {
@@ -1812,9 +1812,9 @@ function renderAdminMatches() {
       '</div>' +
       (isFinished ? '<div style="text-align:center;font-size:28px;font-weight:700;color:var(--green);margin-bottom:10px">' + res.home_score + ' - ' + res.away_score + '</div>' : '') +
       '<div class="result-inputs">' +
-        '<input class="result-inp" type="number" min="0" id="rh-' + m.id + '" value="' + (isFinished ? res.home_score : '') + '" placeholder="0">' +
+        '<input class="result-inp" type="number" min="0" id="rh-' + m.id + '" value="' + (isFinished ? res.home_score : '') + '" placeholder="0" oninput="autoFillBets(' + m.id + ')">' +
         '<span class="score-dash">—</span>' +
-        '<input class="result-inp" type="number" min="0" id="ra-' + m.id + '" value="' + (isFinished ? res.away_score : '') + '" placeholder="0">' +
+        '<input class="result-inp" type="number" min="0" id="ra-' + m.id + '" value="' + (isFinished ? res.away_score : '') + '" placeholder="0" oninput="autoFillBets(' + m.id + ')">' +
       '</div>' +
       '<div class="bets-section" style="padding:0 0 6px">' +
         '<div class="bet-row"><span class="bet-label">İlk yarı</span><div class="bet-options">' +
@@ -1870,6 +1870,93 @@ function renderAdminMatches() {
 function adminConfirm(btn) {
   var mid = parseInt(btn.getAttribute('data-mid'));
   confirmResult(mid);
+}
+
+
+
+function autoFillPred(mid) {
+  const pred = pendingPreds[mid] || {};
+  const h = parseInt(pred.home_score);
+  const a = parseInt(pred.away_score);
+  if (isNaN(h) || isNaN(a)) return;
+
+  // Auto MS
+  const ms = h > a ? '1' : h === a ? 'X' : '2';
+  setPred(mid, 'ms', ms);
+
+  // Auto KG
+  const kg = (h > 0 && a > 0) ? 'Var' : 'Yok';
+  setPred(mid, 'kg', kg);
+
+  // Auto 2.5 Gol
+  const gol = (h + a) > 2 ? 'Üst' : 'Alt';
+  setPred(mid, 'gol', gol);
+
+  // Update button visuals using data attributes
+  var fakeMap = {ms: ms, kg: kg, gol: gol};
+  Object.keys(fakeMap).forEach(function(key) {
+    var val = fakeMap[key];
+    document.querySelectorAll('[data-mid="' + mid + '"][data-key="' + key + '"]').forEach(function(btn) {
+      btn.classList.remove('sel-1','sel-x','sel-2','sel-yes','sel-no');
+      if (btn.getAttribute('data-val') === val) {
+        if (val === '1') btn.classList.add('sel-1');
+        else if (val === 'X') btn.classList.add('sel-x');
+        else if (val === '2') btn.classList.add('sel-2');
+        else if (val === 'Var' || val === 'Üst') btn.classList.add('sel-yes');
+        else btn.classList.add('sel-no');
+      }
+    });
+  });
+}
+
+function autoFillBets(mid) {
+  const h = parseInt(document.getElementById('rh-' + mid).value);
+  const a = parseInt(document.getElementById('ra-' + mid).value);
+  if (isNaN(h) || isNaN(a)) return;
+
+  // Auto MS
+  const ms = h > a ? '1' : h === a ? 'X' : '2';
+  setAdminBetSilent(mid, 'ms', ms);
+
+  // Auto KG
+  const kg = (h > 0 && a > 0) ? 'Var' : 'Yok';
+  setAdminBetSilent(mid, 'kg', kg);
+
+  // Auto 2.5 Gol
+  const gol = (h + a) > 2 ? 'Üst' : 'Alt';
+  setAdminBetSilent(mid, 'gol', gol);
+
+  // Refresh button states
+  renderAdminBetButtons(mid, ms, kg, gol);
+}
+
+function setAdminBetSilent(mid, key, val) {
+  if (!adminPending[mid]) adminPending[mid] = {custom:{}};
+  adminPending[mid][key] = val;
+}
+
+function renderAdminBetButtons(mid, ms, kg, gol) {
+  // Update MS buttons
+  ['1','X','2'].forEach(function(v) {
+    const btns = document.querySelectorAll('[data-mid="' + mid + '"][data-key="ms"][data-val="' + v + '"]');
+    btns.forEach(function(b) {
+      b.className = 'bet-btn' + (v === ms ? (v==='1'?' sel-1':v==='X'?' sel-x':' sel-2') : '');
+    });
+  });
+  // Update KG buttons
+  ['Var','Yok'].forEach(function(v) {
+    const btns = document.querySelectorAll('[data-mid="' + mid + '"][data-key="kg"][data-val="' + v + '"]');
+    btns.forEach(function(b) {
+      b.className = 'bet-btn' + (v === kg ? (v==='Var'?' sel-yes':' sel-no') : '');
+    });
+  });
+  // Update Gol buttons
+  ['Üst','Alt'].forEach(function(v) {
+    const btns = document.querySelectorAll('[data-mid="' + mid + '"][data-key="gol"][data-val="' + v + '"]');
+    btns.forEach(function(b) {
+      b.className = 'bet-btn' + (v === gol ? (v==='Üst'?' sel-yes':' sel-no') : '');
+    });
+  });
 }
 
 function adminBetClick(btn) {
@@ -2897,7 +2984,7 @@ async function renderTurnuvaTab() {
   // Info bar
   html += '<div style="background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">';
   html += '<span style="font-size:13px;color:var(--muted)">' + (isLocked ? '🔒 Tahminler kilitlendi' : '11 Haz 22:00a kadar degistirilebilir') + '</span>';
-  html += '<span style="font-size:13px;font-weight:600;color:var(--red)">Max +' + totalPts + ' puan</span>';
+
   html += '</div>';
 
   // Accordions
