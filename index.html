@@ -996,17 +996,17 @@ async function renderMatches() {
           <button class="bet-btn ${pred.hy==='2'?'sel-2':''}" onclick="setBet(${m.id},'hy','2',this)" ${locked?'disabled':''}>2</button>
         </div></div>
         <div class="bet-row"><span class="bet-label">Maç sonucu</span><div class="bet-options">
-          <button class="bet-btn ${pred.ms==='1'?'sel-1':''}" onclick="setBet(${m.id},'ms','1',this)" ${locked?'disabled':''}>1</button>
-          <button class="bet-btn ${pred.ms==='X'?'sel-x':''}" onclick="setBet(${m.id},'ms','X',this)" ${locked?'disabled':''}>X</button>
-          <button class="bet-btn ${pred.ms==='2'?'sel-2':''}" onclick="setBet(${m.id},'ms','2',this)" ${locked?'disabled':''}>2</button>
+          <button class="bet-btn ${pred.ms==='1'?'sel-1':''}" data-mid="${m.id}" data-key="ms" data-val="1" onclick="setBet(${m.id},'ms','1',this)" ${locked?'disabled':''}>1</button>
+          <button class="bet-btn ${pred.ms==='X'?'sel-x':''}" data-mid="${m.id}" data-key="ms" data-val="X" onclick="setBet(${m.id},'ms','X',this)" ${locked?'disabled':''}>X</button>
+          <button class="bet-btn ${pred.ms==='2'?'sel-2':''}" data-mid="${m.id}" data-key="ms" data-val="2" onclick="setBet(${m.id},'ms','2',this)" ${locked?'disabled':''}>2</button>
         </div></div>
         <div class="bet-row"><span class="bet-label">KG (Karşılıklı Gol)</span><div class="bet-options">
-          <button class="bet-btn ${pred.kg==='Var'?'sel-yes':''}" onclick="setBet(${m.id},'kg','Var',this)" ${locked?'disabled':''}>Var</button>
-          <button class="bet-btn ${pred.kg==='Yok'?'sel-no':''}" onclick="setBet(${m.id},'kg','Yok',this)" ${locked?'disabled':''}>Yok</button>
+          <button class="bet-btn ${pred.kg==='Var'?'sel-yes':''}" data-mid="${m.id}" data-key="kg" data-val="Var" onclick="setBet(${m.id},'kg','Var',this)" ${locked?'disabled':''}>Var</button>
+          <button class="bet-btn ${pred.kg==='Yok'?'sel-no':''}" data-mid="${m.id}" data-key="kg" data-val="Yok" onclick="setBet(${m.id},'kg','Yok',this)" ${locked?'disabled':''}>Yok</button>
         </div></div>
         <div class="bet-row"><span class="bet-label">2.5 Gol</span><div class="bet-options">
-          <button class="bet-btn ${pred.gol==='Üst'?'sel-yes':''}" onclick="setBet(${m.id},'gol','Üst',this)" ${locked?'disabled':''}>Üst</button>
-          <button class="bet-btn ${pred.gol==='Alt'?'sel-no':''}" onclick="setBet(${m.id},'gol','Alt',this)" ${locked?'disabled':''}>Alt</button>
+          <button class="bet-btn ${pred.gol==='Üst'?'sel-yes':''}" data-mid="${m.id}" data-key="gol" data-val="Üst" onclick="setBet(${m.id},'gol','Üst',this)" ${locked?'disabled':''}>Üst</button>
+          <button class="bet-btn ${pred.gol==='Alt'?'sel-no':''}" data-mid="${m.id}" data-key="gol" data-val="Alt" onclick="setBet(${m.id},'gol','Alt',this)" ${locked?'disabled':''}>Alt</button>
         </div></div>
         <div class="bet-row"><span class="bet-label">Kırmızı Kart</span><div class="bet-options">
           <button class="bet-btn ${pred.kk==='Var'?'sel-yes':''}" onclick="setBet(${m.id},'kk','Var',this)" ${locked?'disabled':''}>Var</button>
@@ -1014,7 +1014,7 @@ async function renderMatches() {
         </div></div>
         ${customHtml}
       </div>
-      ${locked ? '' : `<button class="save-btn" id="sb-${m.id}" onclick="savePred(${m.id})">Tahmini Kaydet</button>`}
+      
       <div class="group-preds" id="gp-${m.id}">
         <div class="group-preds-title" onclick="togglePreds(${m.id})">
           <span>👥 Grup Tahminleri (${matchPreds.length})</span>
@@ -1049,6 +1049,9 @@ const pendingPreds = {};
 function setPred(mid, key, val) {
   if (!pendingPreds[mid]) pendingPreds[mid] = {};
   pendingPreds[mid][key] = val;
+  // Auto-save with debounce for score inputs
+  clearTimeout(window['saveTimer_' + mid]);
+  window['saveTimer_' + mid] = setTimeout(function() { autoSavePred(mid); }, 600);
 }
 
 function setBet(mid, key, val, btn) {
@@ -1067,6 +1070,19 @@ function setBet(mid, key, val, btn) {
   else if (val==='X') btn.classList.add('sel-x');
   else if (val==='2') btn.classList.add('sel-2');
   else btn.classList.add('sel-alt');
+  // Auto-save
+  autoSavePred(mid);
+}
+
+async function autoSavePred(mid) {
+  const locked = (results[mid] && results[mid].home_score !== null) ||
+    (matches.find(function(m) { return m.id === mid; }) || {}).lock &&
+    new Date() >= new Date((matches.find(function(m) { return m.id === mid; }) || {}).lock);
+  if (locked) return;
+  const btn = document.getElementById('sb-' + mid);
+  if (btn) { btn.textContent = 'Kaydediliyor...'; btn.disabled = true; }
+  await savePred(mid);
+  if (btn) { btn.textContent = 'Kaydedildi ✓'; setTimeout(function() { btn.textContent = 'Tahmini Kaydet'; btn.disabled = false; }, 1500); }
 }
 
 async function savePred(mid) {
