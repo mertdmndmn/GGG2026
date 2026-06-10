@@ -729,6 +729,8 @@ async function enterApp(name, pin) {
   document.getElementById('app').style.display = 'block';
   document.getElementById('user-badge').textContent = name;
   await loadAll();
+  renderLeaderboard();
+  startRealtime();
 }
 
 async function loadAll() {
@@ -960,7 +962,7 @@ async function renderMatches() {
         <span class="match-time">${m.lock ? formatLocalTime(m.lock) : m.time}${!locked && m.lock ? `<span class="countdown" id="cd-${m.id}"></span>` : ''}</span>
         <span class="${locked?'match-status-closed':'match-status-open'}">${locked?'KAPALI':'AÇIK'}</span>
       </div>
-      ${!locked && !myPred.home_score && !myPred.ms ? '<div class="no-pred-warning">⚠️ Henüz tahmin girmedin!</div>' : ''}
+      ${!locked && !pred.home_score && !pred.ms ? '<div class="no-pred-warning">⚠️ Henüz tahmin girmedin!</div>' : ''}
       <div class="match-teams">
         <div class="team"><span class="team-flag">${home.flag}</span><span class="team-name">${home.name}</span></div>
         ${locked && m.result ? `<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dark);letter-spacing:3px;line-height:1">${m.result.home_score} — ${m.result.away_score}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>` : '<div class="score-vs">VS</div>'}
