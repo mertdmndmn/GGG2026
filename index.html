@@ -1086,6 +1086,7 @@ async function autoSavePred(mid) {
 }
 
 async function savePred(mid) {
+  window._selfSaving = true;
   const p = pendingPreds[mid] || {};
   const existing = myPredictions[mid] || {};
   const payload = {
@@ -1103,6 +1104,7 @@ async function savePred(mid) {
   };
   await sbUpsert('predictions', payload, 'player_name,match_id,group_id');
   myPredictions[mid] = payload;
+  setTimeout(function() { window._selfSaving = false; }, 2000);
   const btn = document.getElementById('sb-'+mid);
   if (btn) { btn.textContent='✓ Kaydedildi!'; btn.classList.add('saved'); setTimeout(()=>{btn.textContent='Tahmini Kaydet';btn.classList.remove('saved');},2000); }
   showToast('Tahmin kaydedildi!');
@@ -3260,12 +3262,15 @@ function startRealtime() {
       const topic = msg.topic || '';
 
       if (topic.includes('match_results')) {
-        // Reload matches and re-render
-        loadMatches().then(function() {
-          buildFilterBar();
-          renderMatches();
-        });
+        if (!window._selfSaving) {
+          loadMatches().then(function() {
+            buildFilterBar();
+            renderMatches();
+          });
+        }
       }
+
+      if (topic.includes('predictions')) return; // ignore own prediction saves
 
       if (topic.includes('players')) {
         // Reload players and update leaderboard if visible
