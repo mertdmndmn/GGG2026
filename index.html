@@ -186,6 +186,13 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .comment-input:focus{border-color:var(--red);}
 .comment-send{padding:8px 14px;background:var(--dark);color:#fff;border:none;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .lineup-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:12px;font-weight:500;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;color:var(--mid);}
+.countdown{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;display:inline-block;margin-left:6px;}
+.countdown-urgent{background:#fef2f2;color:var(--red);}
+.countdown-normal{background:#f0f7ff;color:#1a4fa8;}
+.no-pred-warning{background:#fff3cd;border-radius:8px;padding:6px 10px;font-size:12px;color:#856404;margin:4px 14px;display:flex;align-items:center;gap:6px;}
+.trend-chart{padding:14px;background:var(--card);border-radius:14px;margin-bottom:12px;}
+.chart-line{stroke:var(--red);stroke-width:2.5;fill:none;}
+.chart-dot{fill:var(--red);}
 .lineup-section{border-top:1px solid var(--border);padding:10px 14px;}
 .lineup-teams{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .lineup-team-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:6px;}
@@ -950,9 +957,10 @@ async function renderMatches() {
     <div class="match-card">
       <div class="match-card-header">
         <span class="match-group">${m.group}</span>
-        <span class="match-time">${m.lock ? formatLocalTime(m.lock) : m.time}</span>
+        <span class="match-time">${m.lock ? formatLocalTime(m.lock) : m.time}${!locked && m.lock ? `<span class="countdown" id="cd-${m.id}"></span>` : ''}</span>
         <span class="${locked?'match-status-closed':'match-status-open'}">${locked?'KAPALI':'AÇIK'}</span>
       </div>
+      ${!locked && !myPred.home_score && !myPred.ms ? '<div class="no-pred-warning">⚠️ Henüz tahmin girmedin!</div>' : ''}
       <div class="match-teams">
         <div class="team"><span class="team-flag">${home.flag}</span><span class="team-name">${home.name}</span></div>
         ${locked && m.result ? `<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dark);letter-spacing:3px;line-height:1">${m.result.home_score} — ${m.result.away_score}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>` : '<div class="score-vs">VS</div>'}
@@ -974,9 +982,9 @@ async function renderMatches() {
         </div>
       </div>` : ''}
       <div class="score-inputs">
-        <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'home_score',this.value);autoFillPred(${m.id})">
+        <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} oninput="setPred(${m.id},'home_score',this.value);autoFillPred(${m.id},this.value,null)">
         <span class="score-dash">—</span>
-        <input class="score-inp" type="number" min="0" max="20" value="${aS}" placeholder="0" ${locked?'disabled':''} onchange="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id})">
+        <input class="score-inp" type="number" min="0" max="20" value="${aS}" placeholder="0" ${locked?'disabled':''} oninput="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id},null,this.value)">
       </div>
       <div class="bets-section">
         <div class="bets-title">Bahisler</div>
@@ -1032,6 +1040,7 @@ async function renderMatches() {
   });
   // Render reactions after DOM is built
   filtered.forEach(function(m) { renderReactions(m.id); });
+  startCountdowns();
 }
 
 const pendingPreds = {};
@@ -1718,6 +1727,7 @@ async function scoreSampion(winnerTeam) {
 
   await loadAll();
   renderLeaderboard();
+  startRealtime();
 
   if (winners.length > 0) {
     let msg = 'Sampiyonlar: ';
@@ -1874,10 +1884,10 @@ function adminConfirm(btn) {
 
 
 
-function autoFillPred(mid) {
+function autoFillPred(mid, newH, newA) {
   const pred = pendingPreds[mid] || {};
-  const h = parseInt(pred.home_score);
-  const a = parseInt(pred.away_score);
+  const h = parseInt(newH !== null && newH !== undefined ? newH : pred.home_score);
+  const a = parseInt(newA !== null && newA !== undefined ? newA : pred.away_score);
   if (isNaN(h) || isNaN(a)) return;
 
   // Auto MS
@@ -2615,6 +2625,18 @@ async function renderProfilTab() {
     histEl.innerHTML = '<div class="empty-state">Henüz biten maç yok.</div>';
     return;
   }
+  // Add best/worst + chart - build from finishedPreds
+  const finishedMatchObjs = finishedPreds.map(function(fp) { return fp.match || matches.find(function(m2) { return m2.id === fp.pred.match_id; }); }).filter(Boolean);
+  const myPredMap2 = {};
+  if (Array.isArray(myPreds)) myPreds.forEach(function(p) { myPredMap2[p.match_id] = p; });
+  const bwHtml = addBestWorstToProfile(matches.filter(function(m2) { return resultsMap[m2.id] && resultsMap[m2.id].home_score !== null; }), myPredMap2, resultsMap);
+  if (bwHtml) {
+    const bwEl = document.createElement('div');
+    bwEl.innerHTML = bwHtml;
+    const profC = document.getElementById('profil-content');
+    if (profC) profC.insertAdjacentHTML('beforeend', bwHtml);
+  }
+
   histEl.innerHTML = finishedPreds.reverse().map(({pred, res, m, pts}) => {
     const matchName = m ? (m.home + ' — ' + m.away) : 'Maç #' + pred.match_id;
     const predScore = (pred.home_score !== null ? pred.home_score : '?') + ' - ' + (pred.away_score !== null ? pred.away_score : '?');
@@ -2630,6 +2652,32 @@ async function renderProfilTab() {
       '<div style="margin-top:8px;text-align:right"><span class="' + (pts > 0 ? 'pts-earned' : 'pts-zero') + '">+' + pts + ' puan</span></div>' +
       '</div>';
   }).join('');
+}
+
+// ============ BEST WORST MATCH HELPER ============
+function addBestWorstToProfile(finishedMatches, myPreds, allResults) {
+  const matchHistory = [];
+  let bestMatch = null, worstMatch = null, bestPts = -1, worstPts = 999;
+  finishedMatches.forEach(function(m) {
+    const pred = myPreds[m.id];
+    const res = allResults[m.id];
+    if (!pred || !res || res.home_score === null) return;
+    const earned = calcPredPts(pred, res) || 0;
+    matchHistory.push({match: m, pts: earned});
+    if (earned > bestPts) { bestPts = earned; bestMatch = m; }
+    if (earned < worstPts) { worstPts = earned; worstMatch = m; }
+  });
+
+  let html = '';
+  if (bestMatch || worstMatch) {
+    html += '<div class="section-label">En İyi / En Kötü Maç</div>';
+    html += '<div class="lb-card">';
+    if (bestMatch) html += '<div class="lb-row"><span style="font-size:16px">🏆</span><span class="lb-name">' + bestMatch.home + ' — ' + bestMatch.away + '</span><span style="color:var(--green);font-weight:700">+' + bestPts + '</span></div>';
+    if (worstMatch && (!bestMatch || worstMatch.id !== bestMatch.id)) html += '<div class="lb-row"><span style="font-size:16px">😔</span><span class="lb-name">' + worstMatch.home + ' — ' + worstMatch.away + '</span><span style="color:var(--muted);font-weight:700">+' + worstPts + '</span></div>';
+    html += '</div>';
+  }
+  if (matchHistory.length >= 2) html += buildTrendChart(matchHistory);
+  return html;
 }
 
 // ============ HAFTALIK EN IYI ============
@@ -3148,6 +3196,170 @@ function shareProfileCard() {
   } else {
     copyToClipboard(text);
   }
+}
+
+
+
+// ============ SUPABASE REALTIME ============
+let realtimeChannel = null;
+
+function startRealtime() {
+  if (realtimeChannel) return; // already running
+
+  // Use Supabase Realtime via websocket
+  const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_KEY + '&vsn=1.0.0';
+  const socket = new WebSocket(wsUrl);
+  realtimeChannel = socket;
+
+  socket.onopen = function() {
+    // Join changes channel
+    socket.send(JSON.stringify({
+      topic: 'realtime:public:match_results',
+      event: 'phx_join',
+      payload: {},
+      ref: '1'
+    }));
+    socket.send(JSON.stringify({
+      topic: 'realtime:public:players',
+      event: 'phx_join',
+      payload: {},
+      ref: '2'
+    }));
+    socket.send(JSON.stringify({
+      topic: 'realtime:public:comments',
+      event: 'phx_join',
+      payload: {},
+      ref: '3'
+    }));
+    console.log('Realtime connected');
+  };
+
+  socket.onmessage = function(e) {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.event === 'phx_reply') return;
+
+      const topic = msg.topic || '';
+
+      if (topic.includes('match_results')) {
+        // Reload matches and re-render
+        loadMatches().then(function() {
+          buildFilterBar();
+          renderMatches();
+        });
+      }
+
+      if (topic.includes('players')) {
+        // Reload players and update leaderboard if visible
+        loadPlayers().then(function() {
+          const lbTab = document.getElementById('tab-puan');
+          if (lbTab && lbTab.classList.contains('active')) {
+            renderLeaderboard();
+          }
+          // Update user badge pts
+          const me = players.find(function(p) { return p.name === currentUser; });
+          if (me) {
+            const badge = document.getElementById('user-badge');
+            if (badge) badge.textContent = currentUser + ' · ' + me.pts + 'p';
+          }
+        });
+      }
+
+      if (topic.includes('comments')) {
+        // Find open comment section and reload
+        document.querySelectorAll('[id^="cm-body-"]').forEach(function(el) {
+          if (el.style.display !== 'none') {
+            const mid = parseInt(el.id.replace('cm-body-', ''));
+            if (mid) loadComments(mid);
+          }
+        });
+      }
+    } catch(err) {}
+  };
+
+  socket.onclose = function() {
+    realtimeChannel = null;
+    // Reconnect after 5 seconds
+    setTimeout(startRealtime, 5000);
+  };
+
+  socket.onerror = function() {
+    socket.close();
+  };
+
+  // Heartbeat every 30 seconds
+  setInterval(function() {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb'}));
+    }
+  }, 30000);
+}
+
+// ============ COUNTDOWN ============
+function startCountdowns() {
+  setInterval(function() {
+    matches.forEach(function(m) {
+      if (!m.lock) return;
+      const el = document.getElementById('cd-' + m.id);
+      if (!el) return;
+      const diff = new Date(m.lock) - new Date();
+      if (diff <= 0) { el.textContent = ''; return; }
+      const h = Math.floor(diff / 3600000);
+      const min = Math.floor((diff % 3600000) / 60000);
+      const urgent = diff < 3600000; // less than 1 hour
+      el.className = 'countdown ' + (urgent ? 'countdown-urgent' : 'countdown-normal');
+      el.textContent = h > 0 ? h + 's ' + min + 'dk' : min + 'dk';
+    });
+  }, 30000); // update every 30 seconds
+
+  // Also run immediately
+  matches.forEach(function(m) {
+    if (!m.lock) return;
+    const el = document.getElementById('cd-' + m.id);
+    if (!el) return;
+    const diff = new Date(m.lock) - new Date();
+    if (diff <= 0) return;
+    const h = Math.floor(diff / 3600000);
+    const min = Math.floor((diff % 3600000) / 60000);
+    const urgent = diff < 3600000;
+    el.className = 'countdown ' + (urgent ? 'countdown-urgent' : 'countdown-normal');
+    el.textContent = h > 0 ? h + 's ' + min + 'dk' : min + 'dk';
+  });
+}
+
+// ============ TREND CHART ============
+function buildTrendChart(matchHistory) {
+  if (!matchHistory || matchHistory.length < 2) return '';
+  
+  const pts = matchHistory.map(function(m) { return m.pts || 0; });
+  let cumulative = 0;
+  const cumulativePts = pts.map(function(p) { cumulative += p; return cumulative; });
+  
+  const maxPts = Math.max(...cumulativePts, 1);
+  const W = 300, H = 80;
+  const padX = 10, padY = 10;
+  
+  const points = cumulativePts.map(function(p, i) {
+    const x = padX + (i / (cumulativePts.length - 1)) * (W - padX * 2);
+    const y = H - padY - ((p / maxPts) * (H - padY * 2));
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  });
+
+  const dots = cumulativePts.map(function(p, i) {
+    const x = padX + (i / (cumulativePts.length - 1)) * (W - padX * 2);
+    const y = H - padY - ((p / maxPts) * (H - padY * 2));
+    return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" class="chart-dot"/>';
+  }).join('');
+
+  return '<div class="trend-chart">' +
+    '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">📈 Puan Seyri</div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="overflow:visible">' +
+    '<polyline points="' + points.join(' ') + '" class="chart-line"/>' +
+    dots +
+    '</svg>' +
+    '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px">' +
+    '<span>İlk Maç</span><span>Son Maç</span>' +
+    '</div></div>';
 }
 
 // ============ SHARE LEADERBOARD ============
