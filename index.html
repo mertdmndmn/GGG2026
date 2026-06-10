@@ -1478,7 +1478,11 @@ function buildPredsTable(m, preds) {
     // Find most common
     let maxCount = 0, maxVal = null;
     Object.keys(counts).forEach(function(k) { if (counts[k] > maxCount) { maxCount = counts[k]; maxVal = k; } });
-    majority[f.key] = {val: maxVal, count: maxCount, total: preds.filter(function(p) { const v = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key]; return !!v; }).length};
+    const fieldTotal = preds.filter(function(p) {
+      if (f.key === 'score') return p.home_score !== null && p.away_score !== null;
+      return f.isCustom ? !!(p.custom && p.custom[f.key]) : !!p[f.key];
+    }).length;
+    majority[f.key] = {val: maxVal, count: maxCount, total: fieldTotal, counts: counts};
   });
 
   preds.forEach(function(p) {
@@ -1499,7 +1503,8 @@ function buildPredsTable(m, preds) {
       }
       val = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
       if (!val) { html += '<td>—</td>'; return; }
-      const isLone = majority[f.key].total > 1 && majority[f.key].count < majority[f.key].total && val !== majority[f.key].val;
+      const myCount = (majority[f.key].counts && majority[f.key].counts[val]) || 0;
+      const isLone = majority[f.key].total > 1 && myCount === 1;
       const bonusHtml = isLone ? '<span class="bonus-badge">+1?</span>' : '';
       html += '<td><span class="' + tagClass(f.key, val) + (isLone ? ' bold-pick' : '') + '">' + val + '</span>' + bonusHtml + '</td>';
     });
