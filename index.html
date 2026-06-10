@@ -3234,22 +3234,16 @@ function startRealtime() {
   socket.onopen = function() {
     // Join changes channel
     socket.send(JSON.stringify({
-      topic: 'realtime:public:match_results',
+      topic: 'realtime:public:players',
       event: 'phx_join',
       payload: {},
       ref: '1'
     }));
     socket.send(JSON.stringify({
-      topic: 'realtime:public:players',
-      event: 'phx_join',
-      payload: {},
-      ref: '2'
-    }));
-    socket.send(JSON.stringify({
       topic: 'realtime:public:comments',
       event: 'phx_join',
       payload: {},
-      ref: '3'
+      ref: '2'
     }));
     console.log('Realtime connected');
   };
@@ -3261,16 +3255,7 @@ function startRealtime() {
 
       const topic = msg.topic || '';
 
-      if (topic.includes('match_results')) {
-        if (!window._selfSaving) {
-          loadMatches().then(function() {
-            buildFilterBar();
-            renderMatches();
-          });
-        }
-      }
-
-      if (topic.includes('predictions')) return; // ignore own prediction saves
+      if (topic.includes('predictions')) return;
 
       if (topic.includes('players')) {
         // Reload players and update leaderboard if visible
