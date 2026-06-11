@@ -1571,7 +1571,19 @@ function buildPredsTable(m, preds) {
       const myCount = (majority[f.key].counts && majority[f.key].counts[val]) || 0;
       const isLone = majority[f.key].total > 1 && myCount === 1;
       const bonusHtml = isLone ? '<span class="bonus-badge">+1?</span>' : '';
-      html += '<td><span class="' + tagClass(f.key, val) + (isLone ? ' bold-pick' : '') + '">' + val + '</span>' + bonusHtml + '</td>';
+      
+      // Check if correct when match is finished
+      let cellStyle = '';
+      if (isFinished && res) {
+        const resVal = f.isCustom ? (res.custom && res.custom[f.key]) : res[f.key];
+        if (resVal && val === resVal) {
+          cellStyle = 'background:#e8f5ee;border-radius:6px;padding:2px 6px;color:#1a7a3c;font-weight:600;';
+        } else if (resVal) {
+          cellStyle = 'background:#fef2f2;border-radius:6px;padding:2px 4px;color:#c0392b;';
+        }
+      }
+      
+      html += '<td><span class="' + tagClass(f.key, val) + (isLone ? ' bold-pick' : '') + '" style="' + cellStyle + '">' + val + '</span>' + bonusHtml + '</td>';
     });
     if (isFinished) {
       const pts = calcPredPts(p, res);
@@ -2665,7 +2677,7 @@ async function renderProfilTab() {
       totalPreds++;
       let pts = 0;
       if (pred.hy && pred.hy === res.hy) { correctHY++; pts += 1; }
-      if (pred.ms && pred.ms === res.ms) { correctMS++; pts += 2; }
+      if (pred.ms && pred.ms === res.ms) { correctMS++; pts += 1; }
       if (pred.home_score !== null && pred.away_score !== null &&
           pred.home_score === res.home_score && pred.away_score === res.away_score) { exactScore++; pts += 3; }
       if (pred.kg && pred.kg === res.kg) { correctKG++; pts += 1; }
