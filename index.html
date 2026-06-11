@@ -639,6 +639,8 @@ async function doLogin() {
   GROUP_ID = group.id;
   ADMIN_PASS = group.admin_pass;
   localStorage.setItem('ggg_group_pass', groupPass);
+  localStorage.setItem('ggg_group_name', group.name || '');
+  isMasterAdmin = groupPass === 'ggg2026';
   enterApp(name, pin);
 }
 
@@ -831,7 +833,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (saved && savedPin && savedGroup) {
     GROUP_ID = savedGroup;
     ADMIN_PASS = savedAdminPass;
-    isMasterAdmin = (localStorage.getItem('ggg_group_pass') || '') === 'ggg2026';
+    // Fetch group pass from Supabase to set isMasterAdmin
+    const savedGroupPass = localStorage.getItem('ggg_group_pass') || '';
+    isMasterAdmin = savedGroupPass === 'ggg2026';
+    console.log('Auto-login isMasterAdmin:', isMasterAdmin, 'groupPass:', savedGroupPass);
     const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(saved) + '&group_id=eq.' + GROUP_ID);
     if (Array.isArray(rows) && rows.length > 0 && rows[0].pin === savedPin) {
       enterApp(saved, savedPin);
