@@ -1396,12 +1396,11 @@ async function saveLineup(mid) {
   const homeEl = document.getElementById('lu-home-' + mid);
   const awayEl = document.getElementById('lu-away-' + mid);
   function normalizeLineup(val) {
-    if (!val) return '';
-    // Split by comma or newline, trim each, rejoin with newline
+    if (!val || typeof val !== 'string') return '';
     return val.split(/[,\n]/).map(function(p) { return p.trim(); }).filter(Boolean).join('\n');
   }
-  const lineupHome = normalizeLineup(homeEl ? homeEl.value : '');
-  const lineupAway = normalizeLineup(awayEl ? awayEl.value : '');
+  const lineupHome = normalizeLineup(homeEl ? (homeEl.value || '') : '');
+  const lineupAway = normalizeLineup(awayEl ? (awayEl.value || '') : '');
 
   if (!lineupHome && !lineupAway) { showToast('Kadro gir!'); return; }
 
