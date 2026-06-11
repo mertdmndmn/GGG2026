@@ -984,9 +984,9 @@ async function renderMatches() {
         </div>
       </div>` : ''}
       <div class="score-inputs">
-        <input class="score-inp" type="number" min="0" max="20" value="${hS}" placeholder="0" ${locked?'disabled':''} oninput="setPred(${m.id},'home_score',this.value);autoFillPred(${m.id},this.value,null)">
+        <input class="score-inp" type="number" min="0" max="20" value="${hS || ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'home_score',this.value);autoFillPred(${m.id},this.value,null)">
         <span class="score-dash">—</span>
-        <input class="score-inp" type="number" min="0" max="20" value="${aS}" placeholder="0" ${locked?'disabled':''} oninput="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id},null,this.value)">
+        <input class="score-inp" type="number" min="0" max="20" value="${aS || ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id},null,this.value)">
       </div>
       <div class="bets-section">
         <div class="bets-title">Bahisler</div>
@@ -1402,6 +1402,7 @@ async function saveLineup(mid) {
   const lineupHome = normalizeLineup(homeEl ? (homeEl.value || '') : '');
   const lineupAway = normalizeLineup(awayEl ? (awayEl.value || '') : '');
 
+  console.log('saveLineup mid:', mid, 'home:', lineupHome, 'away:', lineupAway);
   if (!lineupHome && !lineupAway) { showToast('Kadro gir!'); return; }
 
   // Save globally (no group_id)
@@ -1876,7 +1877,7 @@ function renderAdminMatches() {
       '<textarea id="admin-lu-home-' + m.id + '" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:12px;height:110px;resize:none;background:#fff;margin-bottom:8px">' + (m.lineup_home || '') + '</textarea>' +
       '<div style="font-size:12px;font-weight:500;color:var(--dark);margin-bottom:4px">' + away.name + '</div>' +
       '<textarea id="admin-lu-away-' + m.id + '" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:12px;height:110px;resize:none;background:#fff;margin-bottom:8px">' + (m.lineup_away || '') + '</textarea>' +
-      '<button onclick="saveLineup(' + m.id + ')" style="width:100%;padding:9px;background:#1a7a3c;color:#fff;border:none;border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer">📋 Kadroyu Kaydet</button>' +
+      '<button onclick="saveLineup(parseInt(' + m.id + '))" style="width:100%;padding:9px;background:#1a7a3c;color:#fff;border:none;border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer">📋 Kadroyu Kaydet</button>' +
       '</div>' +
       '<button class="confirm-btn" data-mid="' + m.id + '" onclick="adminConfirm(this)">✓ Sonucu Onayla & Puanları Güncelle</button>' +
     '</div>';
