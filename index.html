@@ -984,9 +984,9 @@ async function renderMatches() {
         </div>
       </div>` : ''}
       <div class="score-inputs">
-        <input class="score-inp" type="number" min="0" max="20" value="${hS || ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'home_score',this.value);autoFillPred(${m.id},this.value,null)">
+        <input class="score-inp" type="number" min="0" max="20" value="${hS !== null && hS !== undefined && hS !== '' ? hS : ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'home_score',this.value);autoFillPred(${m.id},this.value,null)">
         <span class="score-dash">—</span>
-        <input class="score-inp" type="number" min="0" max="20" value="${aS || ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id},null,this.value)">
+        <input class="score-inp" type="number" min="0" max="20" value="${aS !== null && aS !== undefined && aS !== '' ? aS : ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id},null,this.value)">
       </div>
       <div class="bets-section">
         <div class="bets-title">Bahisler</div>
