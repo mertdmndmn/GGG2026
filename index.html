@@ -850,7 +850,20 @@ function showTab(tab, btn) {
   document.getElementById('tab-' + tab).classList.add('active');
   btn.classList.add('active');
   window.scrollTo({top:0, behavior:'smooth'});
-  if (tab === 'puan') { loadPlayers().then(async () => { renderLeaderboard(); const wk = await renderWeeklyBest(); const c = document.getElementById('lb-container'); if (wk && c) c.insertAdjacentHTML('beforebegin', wk); }); }
+  if (tab === 'puan') { loadPlayers().then(async () => {
+    renderLeaderboard();
+    // Remove old weekly best before adding new
+    const oldWk = document.getElementById('weekly-best-section');
+    if (oldWk) oldWk.remove();
+    const wk = await renderWeeklyBest();
+    const c = document.getElementById('lb-container');
+    if (wk && c) {
+      const div = document.createElement('div');
+      div.id = 'weekly-best-section';
+      div.innerHTML = wk;
+      c.parentNode.insertBefore(div, c);
+    }
+  }); }
   if (tab === 'admin' && isAdmin) renderAdminMatches();
   if (tab === 'turnuva') renderTurnuvaFull();
   if (tab === 'profil') { loadPlayers().then(() => renderProfilTab()); }
@@ -2637,7 +2650,7 @@ async function renderProfilTab() {
 
   // Load my predictions
   const myPreds = await sbGet('predictions', 'player_name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID);
-  const allResults = await sbGet('match_results', 'select=*&group_id=eq.' + GROUP_ID);
+  const allResults = await sbGet('match_results', 'select=*&group_id=is.null');
   const resultsMap = {};
   if (Array.isArray(allResults)) allResults.forEach(r => { resultsMap[r.match_id] = r; });
 
@@ -2688,13 +2701,21 @@ async function renderProfilTab() {
   const myPredMap2 = {};
   if (Array.isArray(myPreds)) myPreds.forEach(function(p) { myPredMap2[p.match_id] = p; });
   const bwHtml = addBestWorstToProfile(matches.filter(function(m2) { return resultsMap[m2.id] && resultsMap[m2.id].home_score !== null; }), myPredMap2, resultsMap);
+  // Remove old best/worst section if exists
+  const oldBw = document.getElementById('bw-section');
+  if (oldBw) oldBw.remove();
   if (bwHtml) {
-    const bwEl = document.createElement('div');
-    bwEl.innerHTML = bwHtml;
     const profC = document.getElementById('profil-content');
-    if (profC) profC.insertAdjacentHTML('beforeend', bwHtml);
+    if (profC) {
+      const bwDiv = document.createElement('div');
+      bwDiv.id = 'bw-section';
+      bwDiv.innerHTML = bwHtml;
+      profC.appendChild(bwDiv);
+    }
   }
 
+  // Clear history before filling
+  histEl.innerHTML = '';
   histEl.innerHTML = finishedPreds.reverse().map(({pred, res, m, pts}) => {
     const matchName = m ? (m.home + ' — ' + m.away) : 'Maç #' + pred.match_id;
     const predScore = (pred.home_score !== null ? pred.home_score : '?') + ' - ' + (pred.away_score !== null ? pred.away_score : '?');
