@@ -354,7 +354,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       </div>
       <div id="admin-panel" style="display:none">
         <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none">
-          <button class="filter-btn active" id="atab-maclar" onclick="setAdminSubTab('maclar',this)">⚽ Maçlar</button>
+          <button class="filter-btn active" id="atab-maclar" onclick="setAdminSubTab('maclar',this)" id="btn-atab-maclar">⚽ Maçlar</button>
           <button class="filter-btn" id="atab-turnuva" onclick="setAdminSubTab('turnuva',this)">🏆 Turnuva</button>
           <button class="filter-btn" id="atab-ayarlar" onclick="setAdminSubTab('ayarlar',this)">⚙️ Ayarlar</button>
         </div>
@@ -600,6 +600,7 @@ const ALL_MATCHES = [
 let currentUser = null;
 let currentFilter = 'Tümü';
 let isAdmin = false;
+let isMasterAdmin = false;
 let matches = [];
 let myPredictions = {};
 let players = [];
@@ -637,6 +638,7 @@ async function doLogin() {
 
   GROUP_ID = group.id;
   ADMIN_PASS = group.admin_pass;
+  localStorage.setItem('ggg_group_pass', groupPass);
   enterApp(name, pin);
 }
 
@@ -665,6 +667,7 @@ async function doRegister() {
 
   GROUP_ID = group.id;
   ADMIN_PASS = group.admin_pass;
+  localStorage.setItem('ggg_group_pass', groupPass);
   await sbPost('players', {name, pts:0, trend:0, pin, sampion:null, group_id:GROUP_ID});
   enterApp(name, pin);
 }
@@ -828,6 +831,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (saved && savedPin && savedGroup) {
     GROUP_ID = savedGroup;
     ADMIN_PASS = savedAdminPass;
+    isMasterAdmin = (localStorage.getItem('ggg_group_pass') || '') === 'ggg2026';
     const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(saved) + '&group_id=eq.' + GROUP_ID);
     if (Array.isArray(rows) && rows.length > 0 && rows[0].pin === savedPin) {
       enterApp(saved, savedPin);
@@ -849,11 +853,20 @@ function showTab(tab, btn) {
 
 async function checkAdmin() {
   if (ADMIN_PASS && document.getElementById('admin-pass-input').value === ADMIN_PASS) {
+    const groupPass = localStorage.getItem('ggg_group_pass') || '';
+    isMasterAdmin = groupPass === 'ggg2026';
     isAdmin = true;
     document.getElementById('admin-gate-box').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'block';
     await loadMatches();
-    setAdminSubTab('maclar', document.getElementById('atab-maclar'));
+    if (isMasterAdmin) {
+      setAdminSubTab('maclar', document.getElementById('atab-maclar'));
+    } else {
+      // Hide maclar tab button for non-master
+      var maclarBtn = document.getElementById('atab-maclar');
+      if (maclarBtn) maclarBtn.style.display = 'none';
+      setAdminSubTab('turnuva', document.getElementById('atab-turnuva'));
+    }
     populateCustomBetSelect();
     populateEditMatchSelect();
     renderAdminTurnuvaResults();
@@ -1794,6 +1807,11 @@ function setAdminTab(tab, btn) {
 
 
 function setAdminSubTab(tab, btn) {
+  // Non-master admins cannot access maclar tab
+  if (tab === 'maclar' && !isMasterAdmin) {
+    showToast('Sadece GGG admini sonuç girebilir!');
+    return;
+  }
   document.querySelectorAll('[id^="asec-"]').forEach(function(el) { el.style.display = 'none'; });
   document.querySelectorAll('[id^="atab-"]').forEach(function(b) { b.classList.remove('active'); });
   var sec = document.getElementById('asec-' + tab);
@@ -2043,10 +2061,12 @@ async function confirmResult(mid) {
   const a = parseInt(document.getElementById('ra-'+mid).value);
   if (isNaN(h)||isNaN(a)) { showToast('Skoru gir!'); return; }
 
-  // Prevent double scoring - check if already scored with same result
-  const existingCheck = results[mid];
-  if (existingCheck && existingCheck.home_score === h && existingCheck.away_score === a) {
-    showToast('Bu skor zaten girilmis! Puan tekrar hesaplanmadi.');
+  // Prevent double scoring - fetch fresh from Supabase
+  const freshCheck = await sbGet('match_results', 'match_id=eq.' + mid + '&group_id=is.null');
+  if (Array.isArray(freshCheck) && freshCheck.length > 0 && freshCheck[0].home_score !== null) {
+    showToast('Bu mac icin skor zaten girilmis! Puan tekrar hesaplanmadi.');
+    await loadAll();
+    renderAdminMatches();
     return;
   }
 
