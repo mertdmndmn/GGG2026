@@ -2031,6 +2031,14 @@ async function confirmResult(mid) {
   const h = parseInt(document.getElementById('rh-'+mid).value);
   const a = parseInt(document.getElementById('ra-'+mid).value);
   if (isNaN(h)||isNaN(a)) { showToast('Skoru gir!'); return; }
+
+  // Prevent double scoring - check if already scored with same result
+  const existingCheck = results[mid];
+  if (existingCheck && existingCheck.home_score === h && existingCheck.away_score === a) {
+    showToast('Bu skor zaten girilmis! Puan tekrar hesaplanmadi.');
+    return;
+  }
+
   const ap = adminPending[mid] || {};
   const existingRes = results[mid] || {};
   const ms = h>a?'1':h===a?'X':'2';
