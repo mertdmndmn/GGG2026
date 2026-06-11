@@ -1864,18 +1864,7 @@ function renderAdminMatches() {
       customHtml += '<div class="bet-row"><span class="bet-label">' + cb.question + '</span><div class="bet-options">' + opts + '</div></div>';
     });
 
-    // If already scored, show read-only version
-    if (isFinished) {
-      return '<div class="admin-card" style="opacity:0.7;border-left:4px solid var(--green)">' +
-        '<div class="admin-card-title">' + home.flag + ' ' + home.name + ' — ' + away.flag + ' ' + away.name +
-          '<small>' + m.group + ' · ' + timeStr + '</small>' +
-        '</div>' +
-        '<div style="text-align:center;font-size:32px;font-weight:700;color:var(--green);margin:8px 0">' + res.home_score + ' — ' + res.away_score + '</div>' +
-        '<div style="text-align:center;font-size:12px;color:var(--muted);padding-bottom:10px">✅ Sonuç girildi — değiştirilemez</div>' +
-        '</div>';
-    }
-
-    return '<div class="admin-card">' +
+    return '<div class="admin-card" style="' + (isFinished ? 'border-left:4px solid var(--green);' : '') + '">' +
       '<div class="admin-card-title">' + home.flag + ' ' + home.name + ' — ' + away.flag + ' ' + away.name +
         '<small>' + m.group + ' · ' + timeStr + '</small>' +
       '</div>' +
