@@ -1393,8 +1393,8 @@ async function sendComment(mid) {
 
 
 async function saveLineup(mid) {
-  const homeEl = document.getElementById('lu-home-' + mid);
-  const awayEl = document.getElementById('lu-away-' + mid);
+  const homeEl = document.getElementById('admin-lu-home-' + mid);
+  const awayEl = document.getElementById('admin-lu-away-' + mid);
   function normalizeLineup(val) {
     if (!val || typeof val !== 'string') return '';
     return val.split(/[,\n]/).map(function(p) { return p.trim(); }).filter(Boolean).join('\n');
@@ -1873,9 +1873,9 @@ function renderAdminMatches() {
       '<div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:12px">' +
       '<div style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:8px">📋 İlk 11</div>' +
       '<div style="font-size:12px;font-weight:500;color:var(--dark);margin-bottom:4px">' + home.name + '</div>' +
-      '<textarea id="lu-home-' + m.id + '" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:12px;height:110px;resize:none;background:#fff;margin-bottom:8px">' + (m.lineup_home || '') + '</textarea>' +
+      '<textarea id="admin-lu-home-' + m.id + '" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:12px;height:110px;resize:none;background:#fff;margin-bottom:8px">' + (m.lineup_home || '') + '</textarea>' +
       '<div style="font-size:12px;font-weight:500;color:var(--dark);margin-bottom:4px">' + away.name + '</div>' +
-      '<textarea id="lu-away-' + m.id + '" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:12px;height:110px;resize:none;background:#fff;margin-bottom:8px">' + (m.lineup_away || '') + '</textarea>' +
+      '<textarea id="admin-lu-away-' + m.id + '" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:12px;height:110px;resize:none;background:#fff;margin-bottom:8px">' + (m.lineup_away || '') + '</textarea>' +
       '<button onclick="saveLineup(' + m.id + ')" style="width:100%;padding:9px;background:#1a7a3c;color:#fff;border:none;border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer">📋 Kadroyu Kaydet</button>' +
       '</div>' +
       '<button class="confirm-btn" data-mid="' + m.id + '" onclick="adminConfirm(this)">✓ Sonucu Onayla & Puanları Güncelle</button>' +
@@ -2040,8 +2040,8 @@ async function confirmResult(mid) {
   const m = matches.find(x => x.id === mid);
   if (m) newCustom.bets = m.customBets;
 
-  const luHome = document.getElementById('lu-home-' + mid);
-  const luAway = document.getElementById('lu-away-' + mid);
+  const luHome = document.getElementById('admin-lu-home-' + mid);
+  const luAway = document.getElementById('admin-lu-away-' + mid);
   if (luHome && luHome.value.trim()) {
     const m2 = matches.find(function(x) { return x.id === mid; });
     if (m2) { m2.lineup_home = luHome.value.trim(); m2.lineup_away = luAway ? luAway.value.trim() : ''; }
