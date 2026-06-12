@@ -331,8 +331,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <span id="prof-streak" style="font-size:13px;color:var(--muted)"></span>
       </div>
       <button class="share-btn" onclick="shareProfileCard()" style="margin-bottom:14px">📤 Profil Kartımı Paylaş</button>
-      <div class="section-label">İstatistiklerim</div>
-      <div class="lb-card" id="prof-stats"></div>
+      <div id="prof-stats" style="display:none"></div>
       <div class="section-label" style="margin-top:20px">Tahmin Geçmişim</div>
       <div id="prof-history"><div class="loading">Yükleniyor...</div></div>
     </div>
@@ -1575,11 +1574,11 @@ function buildPredsTable(m, preds) {
       // Check if correct when match is finished
       let cellStyle = '';
       if (isFinished && res) {
-        const resVal = f.isCustom ? (res.custom && res.custom[f.key]) : res[f.key];
+        const resVal = f.isCustom ? (res.custom && res.custom[f.key]) : (f.key === 'ms' ? res.ms : res[f.key]);
         if (resVal && val === resVal) {
           cellStyle = 'background:#e8f5ee;border-radius:6px;padding:2px 6px;color:#1a7a3c;font-weight:600;';
         } else if (resVal) {
-          cellStyle = 'background:#fef2f2;border-radius:6px;padding:2px 4px;color:#c0392b;';
+          cellStyle = 'background:#f0f0f0;border-radius:6px;padding:2px 4px;color:#888;text-decoration:line-through;';
         }
       }
       
@@ -2688,19 +2687,9 @@ async function renderProfilTab() {
     });
   }
 
-  // Render stats
+  // Stats hidden - not useful enough
   const statsEl = document.getElementById('prof-stats');
-  statsEl.innerHTML = '<div class="stat-grid">' +
-    '<div class="stat-box"><div class="stat-val">' + totalPreds + '</div><div class="stat-lbl">Tahmin edilen maç</div></div>' +
-    '<div class="stat-box"><div class="stat-val">' + exactScore + '</div><div class="stat-lbl">Tam skor</div></div>' +
-    '<div class="stat-box"><div class="stat-val">' + correctMS + '</div><div class="stat-lbl">Doğru sonuç</div></div>' +
-    '<div class="stat-box"><div class="stat-val">' + (totalPreds > 0 ? Math.round(correctMS/totalPreds*100) : 0) + '%</div><div class="stat-lbl">Sonuç doğruluk</div></div>' +
-    '</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
-    '<div class="stat-box"><div class="stat-val" style="font-size:20px">' + correctHY + '</div><div class="stat-lbl">İlk yarı</div></div>' +
-    '<div class="stat-box"><div class="stat-val" style="font-size:20px">' + correctKG + '</div><div class="stat-lbl">KG</div></div>' +
-    '<div class="stat-box"><div class="stat-val" style="font-size:20px">' + correctKK + '</div><div class="stat-lbl">Kırmızı kart</div></div>' +
-    '</div>';
+  statsEl.innerHTML = '';
 
   // Render history
   const histEl = document.getElementById('prof-history');
