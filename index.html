@@ -1549,13 +1549,23 @@ function buildPredsTable(m, preds) {
     majority[f.key] = {val: maxVal, count: maxCount, total: fieldTotal, counts: counts};
   });
 
-  preds.forEach(function(p) {
+  // Add empty rows for players who haven't predicted
+  const predPlayerNames = preds.map(function(p) { return p.player_name; });
+  const allPlayerRows = [...preds];
+  players.forEach(function(pl) {
+    if (!predPlayerNames.includes(pl.name)) {
+      allPlayerRows.push({player_name: pl.name, _empty: true});
+    }
+  });
+
+  allPlayerRows.forEach(function(p) {
     const isMe = p.player_name === currentUser;
-    html += '<tr>';
+    html += '<tr' + (p._empty ? ' style="opacity:0.4"' : '') + '>';
     html += '<td class="' + (isMe ? 'me-cell' : '') + '">' + p.player_name + (isMe ? ' ★' : '') + '</td>';
     fields.forEach(function(f) {
       let val;
       if (f.key === 'score') {
+        if (p._empty) { html += '<td>—</td>'; return; }
         val = (p.home_score !== null && p.home_score !== undefined && p.away_score !== null && p.away_score !== undefined)
           ? p.home_score + ' - ' + p.away_score : null;
         if (!val) { html += '<td>—</td>'; return; }
@@ -1565,6 +1575,7 @@ function buildPredsTable(m, preds) {
         html += '<td><span style="font-weight:600;color:' + (exactMatch ? 'var(--green)' : 'var(--dark)') + '">' + val + (exactMatch ? ' ✅' : '') + '</span></td>';
         return;
       }
+      if (p._empty) { html += '<td>—</td>'; return; }
       val = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
       if (!val) { html += '<td>—</td>'; return; }
       const myCount = (majority[f.key].counts && majority[f.key].counts[val]) || 0;
@@ -1585,9 +1596,11 @@ function buildPredsTable(m, preds) {
       html += '<td><span class="' + tagClass(f.key, val) + (isLone ? ' bold-pick' : '') + '" style="' + cellStyle + '">' + val + '</span>' + bonusHtml + '</td>';
     });
     if (isFinished) {
-      const pts = calcPredPts(p, res);
-      const bonusCheck = pts !== null;
-      html += '<td style="font-weight:700;color:' + (pts > 0 ? 'var(--green)' : 'var(--muted)') + '">+' + (pts || 0) + '</td>';
+      if (p._empty) { html += '<td style="color:var(--muted)">—</td>'; }
+      else {
+        const pts = calcPredPts(p, res);
+        html += '<td style="font-weight:700;color:' + (pts > 0 ? 'var(--green)' : 'var(--muted)') + '">+' + (pts || 0) + '</td>';
+      }
     }
     html += '</tr>';
   });
