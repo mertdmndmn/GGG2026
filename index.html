@@ -2751,8 +2751,6 @@ async function renderProfilTab() {
     if (me.streak >= 3) {
       streakEl.innerHTML = '🔥 <strong>' + me.streak + ' maclik seri!</strong> Devam et!';
       streakEl.style.color = 'var(--red)';
-    } else if (me.streak > 0) {
-      streakEl.textContent = me.streak + ' dogru tahmin serisi';
     } else {
       streakEl.textContent = '';
     }
