@@ -299,6 +299,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <button class="filter-btn active" id="status-btn-upcoming" onclick="setStatusFilter('upcoming',this)">📅 Yaklaşan</button>
         <button class="filter-btn" id="status-btn-finished" onclick="setStatusFilter('finished',this)">✅ Biten</button>
         <button class="filter-btn" id="status-btn-all" onclick="setStatusFilter('all',this)">Tümü</button>
+        <button class="filter-btn" id="status-btn-today" onclick="setStatusFilter('today',this)">📆 Bugün</button>
+        <button class="filter-btn" id="status-btn-tomorrow" onclick="setStatusFilter('tomorrow',this)">⏭️ Yarın</button>
       </div>
       <div class="filter-bar" id="filter-bar"></div>
       <div id="matches-container"><div class="loading">Maçlar yükleniyor...</div></div>
@@ -930,7 +932,15 @@ async function renderMatches() {
   c.innerHTML = '<div class="loading">Yükleniyor...</div>';
   const now = new Date();
   let filtered = currentFilter === 'Tümü' ? matches : matches.filter(m => m.group === currentFilter);
-  if (statusFilter === 'upcoming') filtered = filtered.filter(m => m.result === null || m.result.home_score === null);
+  // Date filters
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart.getTime() + 86400000);
+  const tomorrowEnd = new Date(todayStart.getTime() + 2 * 86400000);
+
+  if (statusFilter === 'upcoming') filtered = filtered.filter(m => !results[m.id] || results[m.id].home_score === null);
+  else if (statusFilter === 'finished') filtered = filtered.filter(m => results[m.id] && results[m.id].home_score !== null);
+  else if (statusFilter === 'today') filtered = filtered.filter(m => { if (!m.lock) return false; const d = new Date(m.lock); return d >= todayStart && d < todayEnd; });
+  else if (statusFilter === 'tomorrow') filtered = filtered.filter(m => { if (!m.lock) return false; const d = new Date(m.lock); return d >= todayEnd && d < tomorrowEnd; });
   else if (statusFilter === 'finished') filtered = filtered.filter(m => m.result !== null && m.result.home_score !== null);
   if (!filtered.length) { c.innerHTML = '<div class="empty-state">Bu grupta maç yok.</div>'; return; }
 
@@ -2270,8 +2280,9 @@ function populateCustomBetSelect() {
 function populateEditMatchSelect() {
   const sel = document.getElementById("edit-match-select");
   if (!sel) return;
+  const upcomingEdit = matches.filter(function(m) { return !results[m.id] || results[m.id].home_score === null; });
   sel.innerHTML = '<option value="">— Maç seç —</option>' +
-    matches.map(m => '<option value="' + m.id + '">' + m.group + ': ' + m.home + ' vs ' + m.away + '</option>').join('');
+    upcomingEdit.map(m => '<option value="' + m.id + '">' + m.group + ': ' + m.home + ' vs ' + m.away + '</option>').join('');
 }
 
 function loadEditMatch() {
@@ -2320,6 +2331,7 @@ function renderExistingBets() {
   let html = '';
   matches.forEach(function(m) {
     if (!m.customBets || !m.customBets.length) return;
+    if (results[m.id] && results[m.id].home_score !== null) return; // skip finished
     html += '<div style="background:var(--surface);border-radius:10px;padding:10px 12px;margin-bottom:8px">';
     html += '<div style="font-size:12px;font-weight:600;color:var(--dark);margin-bottom:6px">' + m.home + ' — ' + m.away + '</div>';
     m.customBets.forEach(function(cb, ci) {
