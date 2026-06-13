@@ -2331,7 +2331,7 @@ function renderExistingBets() {
   let html = '';
   matches.forEach(function(m) {
     if (!m.customBets || !m.customBets.length) return;
-    if (results[m.id] && results[m.id].home_score !== null) return; // skip finished
+    if (m.result && m.result.home_score !== null) return; // skip finished
     html += '<div style="background:var(--surface);border-radius:10px;padding:10px 12px;margin-bottom:8px">';
     html += '<div style="font-size:12px;font-weight:600;color:var(--dark);margin-bottom:6px">' + m.home + ' — ' + m.away + '</div>';
     m.customBets.forEach(function(cb, ci) {
