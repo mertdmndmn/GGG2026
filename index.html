@@ -2285,6 +2285,9 @@ async function confirmResult(mid) {
   } else {
     showToast('Sonuç onaylandı, puanlar güncellendi!');
   }
+  // Reload results and refresh admin matches
+  await loadResults();
+  renderAdminMatches();
 }
 
 function populateCustomBetSelect() {
