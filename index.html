@@ -392,6 +392,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           <label>Seçenek Tipi</label>
           <select id="custom-bet-type" onchange="toggleCustomOpts()">
             <option value="yesno">Var / Yok</option>
+            <option value="altust">Alt / Üst</option>
             <option value="1x2">1 / X / 2</option>
             <option value="custom">Özel seçenekler</option>
           </select>
@@ -401,6 +402,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
           </div>
           <button class="add-bet-btn" onclick="addCustomBet()">+ Bahis Ekle</button>
         </div>
+        <div class="section-label" style="margin-top:20px">Mevcut Özel Bahisler</div>
+        <div id="existing-bets-list" style="margin-bottom:16px"></div>
         <div class="section-label" id="sec-duzenle" style="margin-top:20px">Maç Düzenle (Takım İsmini Güncelle)</div>
         <div class="custom-bet-box">
           <label>Maç Seç</label>
@@ -1861,6 +1864,7 @@ function setAdminSubTab(tab, btn) {
   if (btn) btn.classList.add('active');
   if (tab === 'maclar') renderAdminMatches();
   if (tab === 'turnuva') renderAdminTurnuvaResults();
+  if (tab === 'ayarlar') renderExistingBets();
 }
 
 function renderAdminMatches() {
@@ -2308,6 +2312,69 @@ function toggleCustomOpts() {
     document.getElementById('custom-bet-type').value === 'custom' ? 'block' : 'none';
 }
 
+
+function renderExistingBets() {
+  const el = document.getElementById('existing-bets-list');
+  if (!el) return;
+
+  let html = '';
+  matches.forEach(function(m) {
+    if (!m.customBets || !m.customBets.length) return;
+    html += '<div style="background:var(--surface);border-radius:10px;padding:10px 12px;margin-bottom:8px">';
+    html += '<div style="font-size:12px;font-weight:600;color:var(--dark);margin-bottom:6px">' + m.home + ' — ' + m.away + '</div>';
+    m.customBets.forEach(function(cb, ci) {
+      const opts = cb.options ? cb.options.join(' / ') : (cb.type === 'yesno' ? 'Var / Yok' : '1 / X / 2');
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">' +
+        '<span style="font-size:12px;color:var(--dark)">' + cb.question + ' <small style="color:var(--muted)">(' + opts + ')</small></span>' +
+        '<div style="display:flex;gap:6px">' +
+        '<button onclick="editCustomBet(' + m.id + ',' + ci + ')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer">✏️</button>' +
+        '<button onclick="deleteCustomBet(' + m.id + ',' + ci + ')" style="font-size:11px;padding:3px 8px;border:1px solid var(--red);border-radius:6px;background:#fff;color:var(--red);cursor:pointer">🗑️</button>' +
+        '</div></div>';
+    });
+    html += '</div>';
+  });
+
+  el.innerHTML = html || '<div style="font-size:13px;color:var(--muted);padding:8px">Henüz özel bahis yok</div>';
+}
+
+async function deleteCustomBet(mid, ci) {
+  if (!confirm('Bu bahisi sil?')) return;
+  const m = matches.find(function(x) { return x.id === mid; });
+  if (!m || !m.customBets) return;
+  m.customBets.splice(ci, 1);
+  const existing = results[mid] || {};
+  const customData = {...(existing.custom||{}), bets: m.customBets};
+  await sbUpsert('match_results', {match_id: mid, custom: customData}, 'match_id');
+  results[mid] = {...existing, custom: customData};
+  renderMatches();
+  renderAdminMatches();
+  renderExistingBets();
+  showToast('Bahis silindi!');
+}
+
+function editCustomBet(mid, ci) {
+  const m = matches.find(function(x) { return x.id === mid; });
+  if (!m || !m.customBets || !m.customBets[ci]) return;
+  const cb = m.customBets[ci];
+
+  // Pre-fill the form
+  document.getElementById('custom-bet-match').value = mid;
+  document.getElementById('custom-bet-q').value = cb.question;
+
+  // Set type
+  const typeEl = document.getElementById('custom-bet-type');
+  if (cb.options && cb.options[0] === 'Alt') typeEl.value = 'altust';
+  else if (cb.options && cb.options[0] === 'Var') typeEl.value = 'yesno';
+  else if (cb.type === '1x2') typeEl.value = '1x2';
+  else { typeEl.value = 'custom'; document.getElementById('custom-options-text').value = (cb.options||[]).join(', '); }
+  toggleCustomOpts();
+
+  // Delete old bet and re-add on save
+  m.customBets.splice(ci, 1);
+  showToast("Formu güncelleyip Bahis Ekle'ye bas");
+  renderExistingBets();
+}
+
 async function addCustomBet() {
   const mid = parseInt(document.getElementById('custom-bet-match').value);
   const q = document.getElementById('custom-bet-q').value.trim();
@@ -2319,6 +2386,12 @@ async function addCustomBet() {
   if (type === 'custom') {
     bet.options = document.getElementById('custom-options-text').value.split(',').map(o=>o.trim()).filter(Boolean);
     if (bet.options.length < 2) { showToast('En az 2 seçenek gir!'); return; }
+  } else if (type === 'altust') {
+    bet.options = ['Alt', 'Üst'];
+    bet.type = 'custom';
+  } else if (type === 'yesno') {
+    bet.options = ['Var', 'Yok'];
+    bet.type = 'custom';
   }
   m.customBets = m.customBets || [];
   m.customBets.push(bet);
@@ -2329,6 +2402,7 @@ async function addCustomBet() {
   results[mid] = {...existing, custom: customData};
   renderMatches();
   renderAdminMatches();
+  renderExistingBets();
   document.getElementById('custom-bet-q').value = '';
   document.getElementById('custom-options-text').value = '';
   showToast('Bahis eklendi!');
