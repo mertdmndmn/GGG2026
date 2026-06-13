@@ -2375,7 +2375,6 @@ async function deleteCustomBet(mid, ci) {
   const customData = {...(existing.custom||{}), bets: m.customBets};
   await sbUpsert('match_results', {match_id: mid, custom: customData}, 'match_id');
   results[mid] = {...existing, custom: customData};
-  renderMatches();
   renderAdminMatches();
   renderExistingBets();
   showToast('Bahis silindi!');
