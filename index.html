@@ -2130,8 +2130,8 @@ async function confirmResult(mid) {
   if (isNaN(h)||isNaN(a)) { showToast('Skoru gir!'); return; }
 
   // Prevent double scoring - fetch fresh from Supabase
-  const freshCheck = await sbGet('match_results', 'match_id=eq.' + mid + '&group_id=is.null');
-  if (Array.isArray(freshCheck) && freshCheck.length > 0 && freshCheck[0].home_score !== null) {
+  const freshCheck = await sbGet('match_results', 'match_id=eq.' + mid + '&home_score=not.is.null');
+  if (Array.isArray(freshCheck) && freshCheck.length > 0) {
     showToast('Bu mac icin skor zaten girilmis! Puan tekrar hesaplanmadi.');
     await loadAll();
     renderAdminMatches();
@@ -2231,7 +2231,7 @@ async function confirmResult(mid) {
         if (pred.hy && pred.hy === resultPayload.hy) pts += 1;
         if (pred.ms && pred.ms === ms) pts += 1;
         if (pred.home_score !== null && pred.away_score !== null &&
-            pred.home_score === h && pred.away_score === a) pts += 5;
+            parseInt(pred.home_score) === h && parseInt(pred.away_score) === a) pts += 5;
         if (pred.kg && pred.kg === resultPayload.kg) pts += 1;
         if (pred.gol && pred.gol === resultPayload.gol) pts += 1;
         if (pred.kk && pred.kk === resultPayload.kk) pts += 1;
