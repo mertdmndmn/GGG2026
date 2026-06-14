@@ -2129,6 +2129,7 @@ async function confirmResult(mid) {
   if (isNaN(h)||isNaN(a)) { showToast('Skoru gir!'); return; }
   const ap_check = adminPending[mid] || {};
   if (!ap_check.hy) { showToast('İlk yarı sonucunu seç!'); return; }
+  if (!ap_check.kk) { showToast('Kırmızı kart sonucunu seç!'); return; }
 
   // Prevent double scoring - check local results object
   if (results[mid] && results[mid].home_score !== null && results[mid].home_score !== undefined) {
@@ -2241,7 +2242,8 @@ async function confirmResult(mid) {
         let bonusPts = 0;
         fields.forEach(function(f) {
           const predVal = pred[f];
-          const resVal = resultPayload[f];
+          // For ms, use the calculated ms variable directly
+          const resVal = (f === 'ms') ? ms : resultPayload[f];
           if (!predVal || !resVal || predVal !== resVal) return;
           const totalVotes = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
           if (totalVotes > 1 && voteCounts[f][predVal] === 1) bonusPts += 1;
