@@ -2487,11 +2487,18 @@ async function addCustomBet() {
     const existingBets = (existing.custom && existing.custom.bets) || [];
     existingBets.push(bet);
     const customData = {...(existing.custom||{}), bets: existingBets};
-    await fetch(SUPABASE_URL + '/rest/v1/match_results?on_conflict=match_id,group_id', {
-      method: 'POST',
-      headers: {...HEADERS, 'Prefer': 'resolution=merge-duplicates'},
-      body: JSON.stringify({match_id: mid, group_id: targetGroup, custom: customData})
-    });
+    // Check if record exists for this group
+    if (existing.match_id) {
+      // Update existing record
+      await sbPatch('match_results', 'match_id=eq.' + mid + '&group_id=eq.' + targetGroup, {custom: customData});
+    } else {
+      // Insert new record
+      await fetch(SUPABASE_URL + '/rest/v1/match_results', {
+        method: 'POST',
+        headers: {...HEADERS, 'Prefer': 'return=representation'},
+        body: JSON.stringify({match_id: mid, group_id: targetGroup, custom: customData})
+      });
+    }
   }
   renderMatches();
   renderAdminMatches();
