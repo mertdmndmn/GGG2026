@@ -863,8 +863,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Fetch group pass from Supabase to set isMasterAdmin
     const savedGroupPass = localStorage.getItem('ggg_group_pass') || '';
     isMasterAdmin = savedGroupPass === 'ggg2026';
-    console.log('Auto-login isMasterAdmin:', isMasterAdmin, 'groupPass:', savedGroupPass);
-    const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(saved) + '&group_id=eq.' + GROUP_ID);
+      const rows = await sbGet('players', 'name=eq.' + encodeURIComponent(saved) + '&group_id=eq.' + GROUP_ID);
     if (Array.isArray(rows) && rows.length > 0 && rows[0].pin === savedPin) {
       enterApp(saved, savedPin);
     }
@@ -1468,7 +1467,6 @@ async function saveLineup(mid) {
   const lineupHome = normalizeLineup(homeEl ? (homeEl.value || '') : '');
   const lineupAway = normalizeLineup(awayEl ? (awayEl.value || '') : '');
 
-  console.log('saveLineup mid:', mid, 'home:', lineupHome, 'away:', lineupAway);
   if (!lineupHome && !lineupAway) { showToast('Kadro gir!'); return; }
 
   // Save globally (no group_id)
@@ -1837,7 +1835,7 @@ async function scoreSampion(winnerTeam) {
         normalizedWinner.includes(normalizedPick) ||
         normalizedPick.includes(normalizedWinner)) {
       const pts = getTierPts(player.sampion);
-      await sbPatch('players', 'name=eq.' + encodeURIComponent(player.name),
+      await sbPatch('players', 'name=eq.' + encodeURIComponent(player.name) + '&group_id=eq.' + GROUP_ID,
         {pts: (player.pts || 0) + pts, trend: pts});
       winners.push({name: player.name, pts});
     }
@@ -1845,7 +1843,6 @@ async function scoreSampion(winnerTeam) {
 
   await loadAll();
   renderLeaderboard();
-  startRealtime();
 
   if (winners.length > 0) {
     let msg = 'Sampiyonlar: ';
@@ -2130,6 +2127,8 @@ async function confirmResult(mid) {
   const h = parseInt(document.getElementById('rh-'+mid).value);
   const a = parseInt(document.getElementById('ra-'+mid).value);
   if (isNaN(h)||isNaN(a)) { showToast('Skoru gir!'); return; }
+  const ap_check = adminPending[mid] || {};
+  if (!ap_check.hy) { showToast('İlk yarı sonucunu seç!'); return; }
 
   // Prevent double scoring - check local results object
   if (results[mid] && results[mid].home_score !== null && results[mid].home_score !== undefined) {
@@ -2156,7 +2155,6 @@ async function confirmResult(mid) {
 
   const resultPayload = {
     match_id: mid,
-    group_id: GROUP_ID,
     home_score: h, away_score: a, ms,
     lineup_home: (matches.find(function(x){return x.id===mid;})||{}).lineup_home || null,
     lineup_away: (matches.find(function(x){return x.id===mid;})||{}).lineup_away || null,
@@ -2166,8 +2164,8 @@ async function confirmResult(mid) {
     kk: ap.kk || existingRes.kk || null,
     custom: newCustom
   };
-  // Save score globally (all groups see the same score)
-  await sbUpsert('match_results', {
+  // Save score globally (group_id=null)
+  const globalPayload = {
     match_id: mid,
     home_score: h,
     away_score: a,
@@ -2176,12 +2174,11 @@ async function confirmResult(mid) {
     kg: resultPayload.kg || null,
     gol: resultPayload.gol || null,
     kk: resultPayload.kk || null,
-  }, 'match_id');
-  // Save custom bets globally too
-  if (resultPayload.custom) {
-    await sbUpsert('match_results', {match_id: mid, custom: resultPayload.custom}, 'match_id');
-  }
-  results[mid] = resultPayload;
+    custom: resultPayload.custom || null,
+  };
+  await sbUpsert('match_results', globalPayload, 'match_id');
+  // Store in results without group_id
+  results[mid] = {...globalPayload, group_id: null};
 
   // calculate & update points for ALL groups
   const allPreds = await sbGet('predictions', 'match_id=eq.' + mid);
@@ -2258,7 +2255,7 @@ async function confirmResult(mid) {
         });
 
         const totalPts = pts + bonusPts;
-        if (totalPts > 0) {
+        if (totalPts > 0 || bonusPts > 0) {
           const currentPts = groupPlayersMap[pred.player_name] ? (groupPlayersMap[pred.player_name].pts || 0) : 0;
           await sbPatch('players', 'name=eq.' + encodeURIComponent(pred.player_name) + '&group_id=eq.' + gid,
             {pts: currentPts + totalPts, trend: totalPts});
