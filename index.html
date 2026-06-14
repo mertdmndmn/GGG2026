@@ -779,17 +779,18 @@ async function loadMatches() {
     customBets: (customMap[m.id] && customMap[m.id].bets) ? customMap[m.id].bets : []
   }));
   // overlay results
-  const resRows = await sbGet('match_results', 'select=*&group_id=is.null');
+  // Load all results - prefer global (group_id=null), fallback to any
+  const resRows = await sbGet('match_results', 'select=*&home_score=not.is.null&order=group_id.nullsfirst');
   if (Array.isArray(resRows)) {
     resRows.forEach(r => {
       const m = matches.find(x => x.id === r.match_id);
       if (m) {
-        if (r.home_score !== null && r.away_score !== null) {
+        if (r.home_score !== null && r.away_score !== null && !m.result) {
           m.result = r;
         }
-        if (r.custom && r.custom.bets) m.customBets = r.custom.bets;
-        if (r.lineup_home) m.lineup_home = r.lineup_home;
-        if (r.lineup_away) m.lineup_away = r.lineup_away;
+        if (r.custom && r.custom.bets && !m.customBets) m.customBets = r.custom.bets;
+        if (r.lineup_home && !m.lineup_home) m.lineup_home = r.lineup_home;
+        if (r.lineup_away && !m.lineup_away) m.lineup_away = r.lineup_away;
       }
     });
   }
@@ -809,10 +810,15 @@ async function loadPlayers() {
 }
 
 async function loadResults() {
-  // Load global results (group_id is null = global)
-  const rows = await sbGet('match_results', 'select=*&group_id=is.null');
+  // Load all results, prefer global (group_id=null)
+  const rows = await sbGet('match_results', 'select=*&home_score=not.is.null&order=group_id.nullsfirst');
   results = {};
-  if (Array.isArray(rows)) rows.forEach(r => { results[r.match_id] = r; });
+  if (Array.isArray(rows)) {
+    rows.forEach(r => {
+      // Only set if not already set by a global record
+      if (!results[r.match_id]) results[r.match_id] = r;
+    });
+  }
 }
 
 window.addEventListener('keydown', function(e) {
@@ -2285,8 +2291,8 @@ async function confirmResult(mid) {
   } else {
     showToast('Sonuç onaylandı, puanlar güncellendi!');
   }
-  // Reload results and refresh admin matches
-  await loadResults();
+  // Reload everything and refresh
+  await loadAll();
   renderAdminMatches();
 }
 
