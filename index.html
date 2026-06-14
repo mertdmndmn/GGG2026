@@ -2129,12 +2129,9 @@ async function confirmResult(mid) {
   const a = parseInt(document.getElementById('ra-'+mid).value);
   if (isNaN(h)||isNaN(a)) { showToast('Skoru gir!'); return; }
 
-  // Prevent double scoring - fetch fresh from Supabase
-  const freshCheck = await sbGet('match_results', 'match_id=eq.' + mid + '&home_score=not.is.null');
-  if (Array.isArray(freshCheck) && freshCheck.length > 0) {
+  // Prevent double scoring - check local results object
+  if (results[mid] && results[mid].home_score !== null && results[mid].home_score !== undefined) {
     showToast('Bu mac icin skor zaten girilmis! Puan tekrar hesaplanmadi.');
-    await loadAll();
-    renderAdminMatches();
     return;
   }
 
