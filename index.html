@@ -1656,8 +1656,22 @@ function buildPredsTable(m, preds) {
 
   // If finished, show sorted summary at top
   if (isFinished) {
+    const summaryFields = ['ms','hy','kg','gol','kk'];
+    const summaryVotes = {};
+    summaryFields.forEach(function(f) {
+      summaryVotes[f] = {};
+      preds.forEach(function(p) { if (p[f]) summaryVotes[f][p[f]] = (summaryVotes[f][p[f]] || 0) + 1; });
+    });
     const sorted = [...preds].map(function(p) {
-      return {name: p.player_name, pts: calcPredPts(p, res) || 0};
+      let base = calcPredPts(p, res) || 0;
+      let bonus = 0;
+      summaryFields.forEach(function(f) {
+        const pv = p[f]; const rv = (f === 'ms') ? res.ms : res[f];
+        if (!pv || !rv || pv !== rv) return;
+        const total = Object.values(summaryVotes[f]).reduce(function(a,b){return a+b;},0);
+        if (total > 1 && summaryVotes[f][pv] === 1) bonus += 1;
+      });
+      return {name: p.player_name, pts: base + bonus};
     }).sort(function(a,b) { return b.pts - a.pts; });
 
     let summary = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
