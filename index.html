@@ -2833,7 +2833,7 @@ async function renderProfilTab() {
       if (pred.hy && pred.hy === res.hy) { correctHY++; pts += 1; }
       if (pred.ms && pred.ms === res.ms) { correctMS++; pts += 1; }
       if (pred.home_score !== null && pred.away_score !== null &&
-          pred.home_score === res.home_score && pred.away_score === res.away_score) { exactScore++; pts += 3; }
+          parseInt(pred.home_score) === parseInt(res.home_score) && parseInt(pred.away_score) === parseInt(res.away_score)) { exactScore++; pts += 5; }
       if (pred.kg && pred.kg === res.kg) { correctKG++; pts += 1; }
       if (pred.gol && pred.gol === res.gol) { correctGol++; pts += 1; }
       if (pred.kk && pred.kk === res.kk) { correctKK++; pts += 1; }
