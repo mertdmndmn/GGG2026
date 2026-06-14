@@ -1005,7 +1005,7 @@ async function renderMatches() {
     const aS = pred.away_score !== undefined && pred.away_score !== null ? pred.away_score : '';
     const custom = pred.custom || {};
 
-    const customHtml = (m.customBets || []).map((cb, ci) => {
+    const customHtml = (GROUP_ID === 'd9e6ad5f-3a87-4682-acc9-bd60d58e1023' ? [] : (m.customBets || [])).map((cb, ci) => {
       const v = custom['c'+ci] || '';
       let opts = '';
       if (cb.type === 'yesno') {
