@@ -3428,9 +3428,7 @@ async function updateAllStreaks() {
         if (pred.ms && pred.ms === ms) streak++;
         else break;
       }
-      if (streak > 0) {
-        await sbPatch('players', 'name=eq.' + encodeURIComponent(playerName) + '&group_id=eq.' + gid, {streak: streak});
-      }
+      await sbPatch('players', 'name=eq.' + encodeURIComponent(playerName) + '&group_id=eq.' + gid, {streak: streak});
     }
   }
 }
