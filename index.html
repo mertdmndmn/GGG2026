@@ -1588,12 +1588,13 @@ function buildPredsTable(m, preds) {
   // Add empty rows for players who haven't predicted
   const predPlayerNames = preds.map(function(p) { return p.player_name; });
   const allPlayerRows = [...preds];
-  players.forEach(function(pl) {
+  players.filter(function(pl) { return pl.group_id === GROUP_ID; }).forEach(function(pl) {
     if (!predPlayerNames.includes(pl.name)) {
       allPlayerRows.push({player_name: pl.name, _empty: true});
     }
   });
 
+  // voteCounts only for real preds (not empty rows)
   allPlayerRows.forEach(function(p) {
     const isMe = p.player_name === currentUser;
     html += '<tr' + (p._empty ? ' style="opacity:0.4"' : '') + '>';
@@ -1633,6 +1634,7 @@ function buildPredsTable(m, preds) {
     });
     if (isFinished) {
       if (p._empty) { html += '<td style="color:var(--muted)">—</td>'; }
+      else if (!isFinished) { html += '<td>—</td>'; }
       else {
         const pts = calcPredPts(p, res);
         // Add cesaret bonus
