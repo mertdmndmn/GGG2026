@@ -1886,7 +1886,7 @@ function renderLeaderboard() {
   const sorted = [...players].sort((a,b) => b.pts - a.pts);
   lb.innerHTML = sorted.map((p,i) => {
     const rc = i===0?'gold':i===1?'silver':i===2?'bronze':'';
-    const tr = p.trend>0?`<span class="lb-trend up">+${p.trend}</span>`:p.trend<0?`<span class="lb-trend down">${p.trend}</span>`:`<span class="lb-trend flat">—</span>`;
+    const tr = '';
     const isMe = p.name === currentUser;
     const streakBadge = p.streak >= 3 ? ` <span style="font-size:11px">🔥${p.streak}</span>` : '';
     return `<div class="lb-row ${isMe?'me':''}">
@@ -3632,8 +3632,7 @@ function shareLeaderboard() {
 
   sorted.forEach(function(p, i) {
     const medal = medals[i] || (i+1) + '.';
-    const trend = p.trend > 0 ? ' (+' + p.trend + ')' : '';
-    text += medal + ' ' + p.name + '   *' + p.pts + ' puan*' + trend + '\n';
+    text += medal + ' ' + p.name + '   *' + p.pts + ' puan*\n';
   });
 
   text += '─────────────────\n';
