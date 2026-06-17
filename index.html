@@ -312,7 +312,11 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       </div>
       <div class="lb-header"><span>#</span><span>Oyuncu</span><span>Puan</span><span>+/-</span></div>
       <div class="lb-card" id="lb-container"><div class="loading">Yükleniyor...</div></div>
-      <div id="puan-grafik-container" style="margin-top:12px"></div>
+      <div style="margin-top:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📊 Maç İstatistikleri</div>
+        <select id="mac-stats-select" onchange="renderMacStats()" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;background:#fff;margin-bottom:10px"></select>
+        <div id="mac-stats-container"></div>
+      </div>
       <div class="section-label" style="margin-top:20px">Puan Sistemi</div>
       <div class="pts-card">
         <div class="pts-row"><span>İlk yarı sonucu doğru</span><span>1 puan</span></div>
@@ -1938,7 +1942,7 @@ function renderAdminMatches() {
       const bTime = b.lock ? new Date(b.lock) : new Date('2099-01-01');
       return aTime - bTime;
     });
-  const finished = matches.filter(function(m) { return results[m.id] && results[m.id].home_score !== null && results[m.id].home_score !== undefined; });
+  const finished = matches.filter(function(m) { return results[m.id] && results[m.id].home_score !== null && results[m.id].home_score !== undefined; }).reverse();
 
   function buildMatchCard(m) {
     const res = results[m.id] || {};
@@ -3617,175 +3621,116 @@ function buildTrendChart(matchHistory) {
 }
 
 
-// ============ PUAN GRAFİĞİ ============
+// ============ MAÇ İSTATİSTİKLERİ ============
 async function renderPuanGrafik() {
-  const container = document.getElementById('puan-grafik-container');
-  if (!container) return;
-  container.innerHTML = '<div class="loading">Grafik yükleniyor...</div>';
-  
-  // Get finished matches in order
+  const sel = document.getElementById('mac-stats-select');
+  if (!sel) return;
+
   const finishedMatches = matches.filter(function(m) {
     return results[m.id] && results[m.id].home_score !== null;
-  }).sort(function(a,b) { return a.id - b.id; });
-  
-  if (finishedMatches.length < 2) {
-    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">Yeterli maç yok</div>';
+  }).sort(function(a,b) { return b.id - a.id; }); // en son önce
+
+  if (!finishedMatches.length) {
+    document.getElementById('mac-stats-container').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">Henüz biten maç yok</div>';
     return;
   }
-  
-  // Get all predictions for finished matches
-  const matchIds = finishedMatches.map(function(m) { return m.id; }).join(',');
-  const allPreds = await sbGet('predictions', 'match_id=in.(' + matchIds + ')&group_id=eq.' + GROUP_ID);
-  if (!Array.isArray(allPreds)) return;
-  
-  // Build per-player per-match pts
-  const playerMatchPts = {};
-  const playerNames = players.filter(function(p) { return p.group_id === GROUP_ID; }).map(function(p) { return p.name; });
-  
-  playerNames.forEach(function(name) { playerMatchPts[name] = []; });
-  
-  finishedMatches.forEach(function(m) {
-    const res = results[m.id];
-    const matchPreds = allPreds.filter(function(p) { return p.match_id === m.id; });
-    
-    // voteCounts for cesaret bonus
-    const fields = ['ms','hy','kg','gol','kk'];
-    const voteCounts = {};
-    fields.forEach(function(f) {
-      voteCounts[f] = {};
-      matchPreds.forEach(function(p) { if (p[f]) voteCounts[f][p[f]] = (voteCounts[f][p[f]]||0)+1; });
-    });
-    
-    playerNames.forEach(function(name) {
-      const pred = matchPreds.find(function(p) { return p.player_name === name; });
-      if (!pred) { playerMatchPts[name].push(0); return; }
-      
-      let pts = 0;
-      if (pred.hy && pred.hy === res.hy) pts += 1;
-      if (pred.ms && pred.ms === res.ms) pts += 1;
-      if (pred.home_score !== null && pred.away_score !== null &&
-          parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
-      if (pred.kg && pred.kg === res.kg) pts += 1;
-      if (pred.gol && pred.gol === res.gol) pts += 1;
-      if (pred.kk && pred.kk === res.kk) pts += 1;
-      
-      let bonus = 0;
-      fields.forEach(function(f) {
-        const pv = pred[f]; const rv = (f==='ms') ? res.ms : res[f];
-        if (!pv || !rv || pv !== rv) return;
-        const total = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
-        if (total > 1 && voteCounts[f][pv] === 1) bonus += 1;
-      });
-      
-      playerMatchPts[name].push(pts + bonus);
-    });
-  });
-  
-  // Build cumulative
-  const cumulativePts = {};
-  playerNames.forEach(function(name) {
-    let cum = 0;
-    cumulativePts[name] = playerMatchPts[name].map(function(p) { cum += p; return cum; });
-  });
-  
-  // Sort by final pts
-  const sortedNames = [...playerNames].sort(function(a,b) {
-    const la = cumulativePts[a], lb = cumulativePts[b];
-    return (lb[lb.length-1]||0) - (la[la.length-1]||0);
-  });
-  
-  // Draw SVG chart
-  const W = 340, H = 220, padL = 30, padR = 10, padT = 10, padB = 30;
-  const maxPts = Math.max(...sortedNames.map(function(n) { return Math.max(...cumulativePts[n]); }), 1);
-  const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e','#e91e63','#00bcd4','#8bc34a'];
-  
-  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="overflow:visible">';
-  
-  // Grid lines
-  for (let i=0; i<=4; i++) {
-    const y = padT + (H-padT-padB) * (1 - i/4);
-    const val = Math.round(maxPts * i/4);
-    svg += '<line x1="' + padL + '" y1="' + y.toFixed(0) + '" x2="' + (W-padR) + '" y2="' + y.toFixed(0) + '" stroke="#eee" stroke-width="1"/>';
-    svg += '<text x="' + (padL-4) + '" y="' + (y+4).toFixed(0) + '" text-anchor="end" font-size="9" fill="#aaa">' + val + '</text>';
-  }
-  
-  // X axis labels (maç numbers)
-  finishedMatches.forEach(function(m, i) {
-    const x = padL + (i / (finishedMatches.length-1)) * (W-padL-padR);
-    svg += '<text x="' + x.toFixed(0) + '" y="' + (H-padB+12) + '" text-anchor="middle" font-size="9" fill="#aaa">' + m.id + '</text>';
-  });
-  
-  // Lines
-  sortedNames.slice(0, 10).forEach(function(name, ni) {
-    const color = colors[ni % colors.length];
-    const pts = cumulativePts[name];
-    const points = pts.map(function(p, i) {
-      const x = padL + (i / (finishedMatches.length-1)) * (W-padL-padR);
-      const y = padT + (H-padT-padB) * (1 - p/maxPts);
-      return x.toFixed(1) + ',' + y.toFixed(1);
-    }).join(' ');
-    svg += '<polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="2"/>';
-    // Last point label
-    const lastX = padL + (W-padL-padR);
-    const lastY = padT + (H-padT-padB) * (1 - pts[pts.length-1]/maxPts);
-    svg += '<text x="' + (lastX+2) + '" y="' + (lastY+4).toFixed(0) + '" font-size="9" fill="' + color + '">' + name.split(' ')[0] + '</text>';
-  });
-  
-  svg += '</svg>';
-  
-  // Legend
-  let legend = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">';
-  sortedNames.slice(0, 10).forEach(function(name, ni) {
-    const color = colors[ni % colors.length];
-    legend += '<span style="font-size:11px;display:flex;align-items:center;gap:3px"><span style="width:12px;height:3px;background:' + color + ';display:inline-block;border-radius:2px"></span>' + name + '</span>';
-  });
-  legend += '</div>';
-  
-  // Per-match bar chart
-  const W2 = W, H2 = 160;
-  const maxPerMatch = Math.max(...sortedNames.slice(0,10).map(function(n) {
-    return Math.max(...playerMatchPts[n]);
-  }), 1);
-  
-  const barW = (W2 - padL - padR) / finishedMatches.length;
-  const playerBarW = barW / Math.min(sortedNames.length, 10) - 1;
-  
-  let svg2 = '<svg viewBox="0 0 ' + W2 + ' ' + H2 + '" width="100%" style="overflow:visible;margin-top:4px">';
-  
-  // Grid
-  for (let i=0; i<=3; i++) {
-    const y = padT + (H2-padT-padB) * (1 - i/3);
-    const val = Math.round(maxPerMatch * i/3);
-    svg2 += '<line x1="' + padL + '" y1="' + y.toFixed(0) + '" x2="' + (W2-padR) + '" y2="' + y.toFixed(0) + '" stroke="#eee" stroke-width="1"/>';
-    svg2 += '<text x="' + (padL-4) + '" y="' + (y+4).toFixed(0) + '" text-anchor="end" font-size="9" fill="#aaa">' + val + '</text>';
-  }
-  
-  // X labels
-  finishedMatches.forEach(function(m, i) {
-    const x = padL + i * barW + barW/2;
-    svg2 += '<text x="' + x.toFixed(0) + '" y="' + (H2-padB+12) + '" text-anchor="middle" font-size="9" fill="#aaa">' + m.id + '</text>';
-  });
-  
-  // Bars
-  sortedNames.slice(0, 10).forEach(function(name, ni) {
-    const color = colors[ni % colors.length];
-    playerMatchPts[name].forEach(function(p, mi) {
-      if (p === 0) return;
-      const x = padL + mi * barW + ni * playerBarW;
-      const barH = (p / maxPerMatch) * (H2-padT-padB);
-      const y = padT + (H2-padT-padB) - barH;
-      svg2 += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + playerBarW.toFixed(1) + '" height="' + barH.toFixed(1) + '" fill="' + color + '" opacity="0.8" rx="1"/>';
-    });
-  });
-  
-  svg2 += '</svg>';
 
-  container.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:12px">' +
-    '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase">📈 Kümülatif Puan Seyri</div>' +
-    svg + legend +
-    '<div style="font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 8px;text-transform:uppercase">📊 Maç Başına Puan</div>' +
-    svg2 +
-    '</div>';
+  // Populate select
+  const currentVal = sel.value;
+  sel.innerHTML = finishedMatches.map(function(m) {
+    return '<option value="' + m.id + '">' + m.home + ' — ' + m.away + ' (' + (results[m.id].home_score + '-' + results[m.id].away_score) + ')</option>';
+  }).join('');
+
+  // Default: last match or keep current selection
+  if (currentVal && finishedMatches.find(function(m) { return m.id == currentVal; })) {
+    sel.value = currentVal;
+  }
+
+  renderMacStats();
+}
+
+async function renderMacStats() {
+  const sel = document.getElementById('mac-stats-select');
+  const container = document.getElementById('mac-stats-container');
+  if (!sel || !container) return;
+
+  const mid = parseInt(sel.value);
+  if (!mid) return;
+
+  container.innerHTML = '<div class="loading">Yükleniyor...</div>';
+
+  const res = results[mid];
+  const preds = await sbGet('predictions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
+  if (!Array.isArray(preds)) return;
+
+  const fields = ['ms','hy','kg','gol','kk'];
+  const voteCounts = {};
+  fields.forEach(function(f) {
+    voteCounts[f] = {};
+    preds.forEach(function(p) { if (p[f]) voteCounts[f][p[f]] = (voteCounts[f][p[f]]||0)+1; });
+  });
+
+  const rows = preds.map(function(pred) {
+    let pts = 0;
+    if (pred.hy && pred.hy === res.hy) pts += 1;
+    if (pred.ms && pred.ms === res.ms) pts += 1;
+    if (pred.home_score !== null && pred.away_score !== null &&
+        parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
+    if (pred.kg && pred.kg === res.kg) pts += 1;
+    if (pred.gol && pred.gol === res.gol) pts += 1;
+    if (pred.kk && pred.kk === res.kk) pts += 1;
+
+    // Custom bets
+    const pCustom = pred.custom || {};
+    const rCustom = res.custom || {};
+    Object.keys(pCustom).forEach(function(k) {
+      if (k.startsWith('c') && pCustom[k] && rCustom[k] && pCustom[k] === rCustom[k]) pts += 1;
+    });
+
+    let bonus = 0;
+    fields.forEach(function(f) {
+      const pv = pred[f]; const rv = (f==='ms') ? res.ms : res[f];
+      if (!pv || !rv || pv !== rv) return;
+      const total = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
+      if (total > 1 && voteCounts[f][pv] === 1) bonus += 1;
+    });
+
+    return {name: pred.player_name, pts: pts + bonus, bonus};
+  }).sort(function(a,b) { return b.pts - a.pts; });
+
+  // Also add players who didn't predict
+  const predNames = preds.map(function(p) { return p.player_name; });
+  players.filter(function(p) { return p.group_id === GROUP_ID && !predNames.includes(p.name); }).forEach(function(p) {
+    rows.push({name: p.name, pts: 0, bonus: 0, empty: true});
+  });
+
+  // Draw bar chart
+  const maxPts = Math.max(...rows.map(function(r) { return r.pts; }), 1);
+  const W = 320, H = 180, padL = 80, padR = 40, padT = 10, padB = 10;
+  const barH = Math.floor((H - padT - padB) / rows.length) - 2;
+
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%">';
+
+  rows.forEach(function(r, i) {
+    const y = padT + i * (barH + 2);
+    const barW = r.pts > 0 ? (r.pts / maxPts) * (W - padL - padR) : 0;
+    const color = r.empty ? '#ddd' : r.pts >= maxPts ? '#e74c3c' : r.pts >= maxPts * 0.7 ? '#f39c12' : '#3498db';
+
+    // Name
+    svg += '<text x="' + (padL - 4) + '" y="' + (y + barH/2 + 4) + '" text-anchor="end" font-size="10" fill="' + (r.empty ? '#ccc' : '#333') + '">' + r.name.split(' ')[0] + '</text>';
+    
+    // Bar
+    if (barW > 0) {
+      svg += '<rect x="' + padL + '" y="' + y + '" width="' + barW.toFixed(1) + '" height="' + barH + '" fill="' + color + '" rx="3"/>';
+    }
+    
+    // Value
+    const bonusStr = r.bonus > 0 ? '+' + r.pts + '(🎯)' : '+' + r.pts;
+    svg += '<text x="' + (padL + barW + 4) + '" y="' + (y + barH/2 + 4) + '" font-size="10" fill="' + (r.pts > 0 ? color : '#ccc') + '">' + bonusStr + '</text>';
+  });
+
+  svg += '</svg>';
+  container.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:12px">' + svg + '</div>';
 }
 
 // ============ SHARE LEADERBOARD ============
