@@ -3913,7 +3913,7 @@ async function toggleFinishedCard(mid) {
   });
   
   // Build pred table using existing buildPredsTable
-  const predHtml = buildPredsTable(preds, res, m);
+  const predHtml = buildPredsTable(m, preds);
   body.innerHTML = predHtml;
 }
 
