@@ -1888,7 +1888,7 @@ function renderLeaderboard() {
     const rc = i===0?'gold':i===1?'silver':i===2?'bronze':'';
     const tr = '';
     const isMe = p.name === currentUser;
-    const streakBadge = p.streak >= 3 ? ` <span style="font-size:11px">🔥${p.streak}</span>` : '';
+    const streakBadge = '';
     return `<div class="lb-row ${isMe?'me':''}">
       <span class="lb-rank ${rc}">${i+1}</span>
       <span class="lb-name">${p.name}${streakBadge}${isMe?' <small>sen</small>':''}</span>
@@ -2839,8 +2839,7 @@ async function renderProfilTab() {
   const streakEl = document.getElementById('prof-streak');
   if (streakEl && me) {
     if (me.streak >= 3) {
-      streakEl.innerHTML = '🔥 <strong>' + me.streak + ' maclik seri!</strong> Devam et!';
-      streakEl.style.color = 'var(--red)';
+      streakEl.innerHTML = '';
     } else {
       streakEl.textContent = '';
     }
@@ -3442,7 +3441,7 @@ function shareProfileCard() {
   if (!me) { showToast('Profil yuklenemedi!'); return; }
 
   const streak = me.streak || 0;
-  const streakText = streak >= 3 ? '\n🔥 ' + streak + ' maclik seri!' : '';
+  const streakText = '';
 
   // Calculate accuracy from profile stats
   const correct = parseInt(document.getElementById('prof-pts') ? document.getElementById('prof-pts').textContent : 0);
