@@ -3741,9 +3741,51 @@ async function renderPuanGrafik() {
   });
   legend += '</div>';
   
+  // Per-match bar chart
+  const W2 = W, H2 = 160;
+  const maxPerMatch = Math.max(...sortedNames.slice(0,10).map(function(n) {
+    return Math.max(...playerMatchPts[n]);
+  }), 1);
+  
+  const barW = (W2 - padL - padR) / finishedMatches.length;
+  const playerBarW = barW / Math.min(sortedNames.length, 10) - 1;
+  
+  let svg2 = '<svg viewBox="0 0 ' + W2 + ' ' + H2 + '" width="100%" style="overflow:visible;margin-top:4px">';
+  
+  // Grid
+  for (let i=0; i<=3; i++) {
+    const y = padT + (H2-padT-padB) * (1 - i/3);
+    const val = Math.round(maxPerMatch * i/3);
+    svg2 += '<line x1="' + padL + '" y1="' + y.toFixed(0) + '" x2="' + (W2-padR) + '" y2="' + y.toFixed(0) + '" stroke="#eee" stroke-width="1"/>';
+    svg2 += '<text x="' + (padL-4) + '" y="' + (y+4).toFixed(0) + '" text-anchor="end" font-size="9" fill="#aaa">' + val + '</text>';
+  }
+  
+  // X labels
+  finishedMatches.forEach(function(m, i) {
+    const x = padL + i * barW + barW/2;
+    svg2 += '<text x="' + x.toFixed(0) + '" y="' + (H2-padB+12) + '" text-anchor="middle" font-size="9" fill="#aaa">' + m.id + '</text>';
+  });
+  
+  // Bars
+  sortedNames.slice(0, 10).forEach(function(name, ni) {
+    const color = colors[ni % colors.length];
+    playerMatchPts[name].forEach(function(p, mi) {
+      if (p === 0) return;
+      const x = padL + mi * barW + ni * playerBarW;
+      const barH = (p / maxPerMatch) * (H2-padT-padB);
+      const y = padT + (H2-padT-padB) - barH;
+      svg2 += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + playerBarW.toFixed(1) + '" height="' + barH.toFixed(1) + '" fill="' + color + '" opacity="0.8" rx="1"/>';
+    });
+  });
+  
+  svg2 += '</svg>';
+
   container.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:12px">' +
     '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase">📈 Kümülatif Puan Seyri</div>' +
-    svg + legend + '</div>';
+    svg + legend +
+    '<div style="font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 8px;text-transform:uppercase">📊 Maç Başına Puan</div>' +
+    svg2 +
+    '</div>';
 }
 
 // ============ SHARE LEADERBOARD ============
