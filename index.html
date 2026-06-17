@@ -1003,6 +1003,33 @@ async function renderMatches() {
   }
 
   c.innerHTML = '';
+
+  // Biten maçlar: kompakt accordion
+  if (statusFilter === 'finished') {
+    filtered.forEach(m => {
+      const res = results[m.id] || {};
+      const home = splitTeam(m.home), away = splitTeam(m.away);
+      const myPred = myPredictions[m.id];
+      const div = document.createElement('div');
+      div.style.cssText = 'border:1px solid var(--border);border-radius:12px;margin-bottom:6px;overflow:hidden;background:var(--card)';
+      div.innerHTML = `
+        <div onclick="toggleFinishedCard(${m.id})" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;font-weight:600">${m.home} — ${m.away}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px;font-weight:700;color:var(--dark)">${res.home_score ?? '?'} - ${res.away_score ?? '?'}</span>
+            <span id="fc-arrow-${m.id}" style="color:var(--muted);font-size:12px">▼</span>
+          </div>
+        </div>
+        <div id="fc-body-${m.id}" style="display:none;border-top:1px solid var(--border);padding:12px 14px"></div>
+      `;
+      c.appendChild(div);
+    });
+    startCountdowns();
+    return;
+  }
+
   filtered.forEach(m => {
     const matchPreds = allPredsMap[m.id] || [];
     const pred = myPredictions[m.id] || {};
@@ -3821,6 +3848,73 @@ async function renderMacStats() {
 
   svg += '</svg>';
   container.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:12px">' + svg + '</div>';
+}
+
+
+async function toggleFinishedCard(mid) {
+  const body = document.getElementById('fc-body-' + mid);
+  const arrow = document.getElementById('fc-arrow-' + mid);
+  if (!body) return;
+
+  if (body.style.display !== 'none') {
+    body.style.display = 'none';
+    if (arrow) arrow.textContent = '▼';
+    return;
+  }
+
+  body.style.display = 'block';
+  if (arrow) arrow.textContent = '▲';
+
+  if (body.innerHTML.trim()) return; // already loaded
+
+  body.innerHTML = '<div class="loading">Yükleniyor...</div>';
+
+  const m = matches.find(function(x) { return x.id === mid; });
+  const res = results[mid] || {};
+  const preds = await sbGet('predictions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
+
+  if (!Array.isArray(preds) || !m) { body.innerHTML = 'Hata'; return; }
+
+  // Build mini pred table
+  const fields = ['ms','hy','kg','gol','kk'];
+  const voteCounts = {};
+  fields.forEach(function(f) {
+    voteCounts[f] = {};
+    preds.forEach(function(p) { if (p[f]) voteCounts[f][p[f]] = (voteCounts[f][p[f]]||0)+1; });
+  });
+
+  const rows = preds.map(function(pred) {
+    let pts = 0;
+    if (pred.hy && pred.hy === res.hy) pts += 1;
+    if (pred.ms && pred.ms === res.ms) pts += 1;
+    if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
+    if (pred.kg && pred.kg === res.kg) pts += 1;
+    if (pred.gol && pred.gol === res.gol) pts += 1;
+    if (pred.kk && pred.kk === res.kk) pts += 1;
+    const pCustom = (GROUP_ID !== 'd9e6ad5f-3a87-4682-acc9-bd60d58e1023') ? (pred.custom || {}) : {};
+    const rCustom = res.custom || {};
+    Object.keys(pCustom).forEach(function(k) { if (k.startsWith('c') && pCustom[k] && rCustom[k] && pCustom[k] === rCustom[k]) pts += 1; });
+    let bonus = 0;
+    fields.forEach(function(f) {
+      const pv = pred[f]; const rv = (f==='ms') ? res.ms : res[f];
+      if (!pv || !rv || pv !== rv) return;
+      const total = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
+      if (total > 1 && voteCounts[f][pv] === 1) bonus += 1;
+    });
+    return {name: pred.player_name, pts: pts+bonus, skor: (pred.home_score !== null ? pred.home_score+'-'+pred.away_score : '—')};
+  }).sort(function(a,b) { return b.pts - a.pts; });
+
+  let html = '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+  rows.forEach(function(r) {
+    const isMe = r.name === currentUser;
+    html += '<div style="background:var(--surface);border-radius:8px;padding:6px 10px;font-size:12px;' + (isMe ? 'border:1.5px solid var(--red);' : '') + '">' +
+      '<span style="font-weight:600">' + r.name + '</span> ' +
+      '<span style="color:var(--muted)">' + r.skor + '</span> ' +
+      '<span style="color:var(--green);font-weight:700">+' + r.pts + '</span>' +
+      '</div>';
+  });
+  html += '</div>';
+  body.innerHTML = html;
 }
 
 // ============ SHARE LEADERBOARD ============
