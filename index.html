@@ -313,7 +313,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div class="lb-header"><span>#</span><span>Oyuncu</span><span>Puan</span><span>+/-</span></div>
       <div class="lb-card" id="lb-container"><div class="loading">Yükleniyor...</div></div>
       <div style="margin-top:14px">
-        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📈 Kümülatif Puan Seyri</div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📊 Ortalama Puan / Maç</div>
         <div id="kumülatif-grafik-container"></div>
         <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin:14px 0 8px">📊 Maç İstatistikleri</div>
         <select id="mac-stats-select" onchange="renderMacStats()" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;background:#fff;margin-bottom:10px"></select>
@@ -3685,7 +3685,7 @@ async function renderPuanGrafik() {
 
 async function renderKumulatifGrafik(finishedMatches) {
   const container = document.getElementById('kumülatif-grafik-container');
-  if (!container || finishedMatches.length < 2) return;
+  if (!container || !finishedMatches.length) return;
 
   const matchIds = finishedMatches.map(function(m) { return m.id; }).join(',');
   const allPreds = await sbGet('predictions', 'match_id=in.(' + matchIds + ')&group_id=eq.' + GROUP_ID);
@@ -3695,8 +3695,9 @@ async function renderKumulatifGrafik(finishedMatches) {
   const sortedMatches = [...finishedMatches].sort(function(a,b) { return a.id - b.id; });
   const fields = ['ms','hy','kg','gol','kk'];
 
-  const cumulativePts = {};
-  playerNames.forEach(function(name) { cumulativePts[name] = []; });
+  // Calculate per-player per-match pts
+  const playerMatchPts = {};
+  playerNames.forEach(function(name) { playerMatchPts[name] = []; });
 
   sortedMatches.forEach(function(m) {
     const res = results[m.id];
@@ -3707,9 +3708,8 @@ async function renderKumulatifGrafik(finishedMatches) {
       matchPreds.forEach(function(p) { if (p[f]) voteCounts[f][p[f]] = (voteCounts[f][p[f]]||0)+1; });
     });
     playerNames.forEach(function(name) {
-      const prev = cumulativePts[name].length ? cumulativePts[name][cumulativePts[name].length-1] : 0;
       const pred = matchPreds.find(function(p) { return p.player_name === name; });
-      if (!pred) { cumulativePts[name].push(prev); return; }
+      if (!pred) { playerMatchPts[name].push(null); return; } // null = no pred
       let pts = 0;
       if (pred.hy && pred.hy === res.hy) pts += 1;
       if (pred.ms && pred.ms === res.ms) pts += 1;
@@ -3724,48 +3724,47 @@ async function renderKumulatifGrafik(finishedMatches) {
         const total = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
         if (total > 1 && voteCounts[f][pv] === 1) bonus += 1;
       });
-      cumulativePts[name].push(prev + pts + bonus);
+      playerMatchPts[name].push(pts + bonus);
     });
   });
 
-  const sortedNames = [...playerNames].sort(function(a,b) {
-    return (cumulativePts[b][cumulativePts[b].length-1]||0) - (cumulativePts[a][cumulativePts[a].length-1]||0);
+  // Calculate average (excluding null/no-pred matches)
+  const avgPts = {};
+  playerNames.forEach(function(name) {
+    const validPts = playerMatchPts[name].filter(function(p) { return p !== null; });
+    avgPts[name] = validPts.length ? (validPts.reduce(function(a,b){return a+b;},0) / validPts.length) : 0;
   });
 
-  const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e','#e91e63','#00bcd4'];
-  const W = 340, H = 220, padL = 30, padR = 60, padT = 10, padB = 25;
-  const maxPts = Math.max(...sortedNames.map(function(n) { return Math.max(...cumulativePts[n]); }), 1);
+  // Sort by average
+  const sortedNames = [...playerNames].sort(function(a,b) { return avgPts[b] - avgPts[a]; });
+
+  // Draw horizontal bar chart
+  const maxAvg = Math.max(...sortedNames.map(function(n) { return avgPts[n]; }), 1);
+  const W = 320, padL = 75, padR = 45, barH = 16, gap = 6;
+  const H = sortedNames.length * (barH + gap) + 20;
+  const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e','#e91e63','#00bcd4','#8bc34a'];
 
   let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%">';
 
-  for (let i=0; i<=4; i++) {
-    const y = padT + (H-padT-padB) * (1 - i/4);
-    svg += '<line x1="' + padL + '" y1="' + y.toFixed(0) + '" x2="' + (W-padR) + '" y2="' + y.toFixed(0) + '" stroke="#eee" stroke-width="1"/>';
-    svg += '<text x="' + (padL-4) + '" y="' + (y+4).toFixed(0) + '" text-anchor="end" font-size="9" fill="#aaa">' + Math.round(maxPts*i/4) + '</text>';
-  }
+  sortedNames.forEach(function(name, i) {
+    const y = 10 + i * (barH + gap);
+    const avg = avgPts[name];
+    const barW = (avg / maxAvg) * (W - padL - padR);
+    const color = colors[i % colors.length];
+    const isMe = name === currentUser;
 
-  sortedMatches.forEach(function(m, i) {
-    const x = padL + (i/(sortedMatches.length-1||1)) * (W-padL-padR);
-    svg += '<text x="' + x.toFixed(0) + '" y="' + (H-padB+12) + '" text-anchor="middle" font-size="9" fill="#aaa">' + m.id + '</text>';
-  });
-
-  sortedNames.slice(0,10).forEach(function(name, ni) {
-    const color = colors[ni % colors.length];
-    const pts = cumulativePts[name];
-    const points = pts.map(function(p, i) {
-      const x = padL + (i/(sortedMatches.length-1||1)) * (W-padL-padR);
-      const y = padT + (H-padT-padB) * (1 - p/maxPts);
-      return x.toFixed(1) + ',' + y.toFixed(1);
-    }).join(' ');
-    svg += '<polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="2"/>';
-    const lastX = padL + (W-padL-padR);
-    const lastY = padT + (H-padT-padB) * (1 - pts[pts.length-1]/maxPts);
-    svg += '<text x="' + (lastX+3) + '" y="' + (lastY+4).toFixed(0) + '" font-size="9" fill="' + color + '">' + name.split(' ')[0] + '</text>';
+    svg += '<text x="' + (padL-4) + '" y="' + (y+barH/2+4) + '" text-anchor="end" font-size="10" fill="' + (isMe ? 'var(--red)' : '#333') + '" font-weight="' + (isMe ? '700' : '400') + '">' + name.split(' ')[0] + '</text>';
+    svg += '<rect x="' + padL + '" y="' + y + '" width="' + Math.max(barW, 2).toFixed(1) + '" height="' + barH + '" fill="' + color + '" rx="4" opacity="0.85"/>';
+    svg += '<text x="' + (padL + barW + 5) + '" y="' + (y+barH/2+4) + '" font-size="10" fill="' + color + '">' + avg.toFixed(1) + '</text>';
   });
 
   svg += '</svg>';
-  container.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:12px">' + svg + '</div>';
+
+  container.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:12px">' +
+    '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px;text-transform:uppercase">📊 Maç Başına Ortalama Puan</div>' +
+    svg + '</div>';
 }
+
 
 async function renderMacStats() {
   const sel = document.getElementById('mac-stats-select');
