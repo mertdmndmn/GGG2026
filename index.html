@@ -2359,8 +2359,9 @@ async function confirmResult(mid) {
 function populateCustomBetSelect() {
   const sel = document.getElementById('custom-bet-match');
   if (!sel) return;
+  const upcoming = matches.filter(function(m) { return !results[m.id] || results[m.id].home_score === null; });
   sel.innerHTML = '<option value="">— Maç seç —</option>' +
-    matches.map(m => `<option value="${m.id}">${m.home} — ${m.away} (${m.time})</option>`).join('');
+    upcoming.map(m => `<option value="${m.id}">${m.home} — ${m.away} (${m.time})</option>`).join('');
 }
 
 function populateEditMatchSelect() {
@@ -3904,17 +3905,16 @@ async function toggleFinishedCard(mid) {
     return {name: pred.player_name, pts: pts+bonus, skor: (pred.home_score !== null ? pred.home_score+'-'+pred.away_score : '—')};
   }).sort(function(a,b) { return b.pts - a.pts; });
 
-  let html = '<div style="display:flex;flex-wrap:wrap;gap:6px">';
-  rows.forEach(function(r) {
-    const isMe = r.name === currentUser;
-    html += '<div style="background:var(--surface);border-radius:8px;padding:6px 10px;font-size:12px;' + (isMe ? 'border:1.5px solid var(--red);' : '') + '">' +
-      '<span style="font-weight:600">' + r.name + '</span> ' +
-      '<span style="color:var(--muted)">' + r.skor + '</span> ' +
-      '<span style="color:var(--green);font-weight:700">+' + r.pts + '</span>' +
-      '</div>';
+  // Render full match card content
+  const allPredsMap = {};
+  preds.forEach(function(p) {
+    if (!allPredsMap[p.match_id]) allPredsMap[p.match_id] = [];
+    allPredsMap[p.match_id].push(p);
   });
-  html += '</div>';
-  body.innerHTML = html;
+  
+  // Build pred table using existing buildPredsTable
+  const predHtml = buildPredsTable(preds, res, m);
+  body.innerHTML = predHtml;
 }
 
 // ============ SHARE LEADERBOARD ============
