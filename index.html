@@ -3694,11 +3694,11 @@ async function renderKumulatifGrafik(finishedMatches) {
   const container = document.getElementById('kumülatif-grafik-container');
   if (!container || !finishedMatches.length) return;
 
-  const recentMatches = finishedMatches.slice(0, 48);
-  const matchIds = recentMatches.map(function(m) { return m.id; }).join(',');
-  const allPreds = await sbGet('predictions', 'match_id=in.(' + matchIds + ')&group_id=eq.' + GROUP_ID);
-  if (!Array.isArray(allPreds)) return;
-
+  let allPreds;
+  try { allPreds = await sbGet('predictions', 'group_id=eq.' + GROUP_ID + '&limit=2000'); } catch(e) { allPreds = []; }
+  if (!Array.isArray(allPreds)) allPreds = [];
+  const finishedIds = new Set(finishedMatches.map(function(m){return m.id;}));
+  allPreds = allPreds.filter(function(p){return finishedIds.has(p.match_id);});
   const playerNames = players.filter(function(p) { return p.group_id === GROUP_ID; }).map(function(p) { return p.name; });
   const sortedMatches = [...finishedMatches].sort(function(a,b) { return a.id - b.id; });
   const fields = ['ms','hy','kg','gol','kk'];
@@ -4025,7 +4025,7 @@ async function renderIstatistik() {
       '<span class="stat-arrow" style="color:var(--muted)">▼</span>' +
     '</div>' +
     '<div class="stat-body" style="display:none;padding:0 14px 14px">' + bodyContent +
-      '<button onclick="shareStatSection(' + JSON.stringify(sec.title) + ', this)" style="width:100%;margin-top:10px;padding:8px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;cursor:pointer;color:var(--dark)">📤 Paylaş</button>' +
+      '<button onclick="shareStatSection(this)" style="width:100%;margin-top:10px;padding:8px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;cursor:pointer;color:var(--dark)">📤 Paylaş</button>' +
     '</div>';
     container.appendChild(div);
   });
@@ -4062,8 +4062,10 @@ async function toggleFinishedCard(mid) {
 }
 
 
-function shareStatSection(title, btn) {
+function shareStatSection(btn) {
   const body = btn.closest('.stat-body');
+  const header = body ? body.previousElementSibling : null;
+  const title = header ? header.querySelector('div > div:first-child').textContent.trim() : '';
   if (!body) return;
   const rows = body.querySelectorAll('.lb-row');
   let text = title + '\n';
