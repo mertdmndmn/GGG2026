@@ -4024,7 +4024,9 @@ async function renderIstatistik() {
       '</div>' +
       '<span class="stat-arrow" style="color:var(--muted)">▼</span>' +
     '</div>' +
-    '<div class="stat-body" style="display:none;padding:0 14px 14px">' + bodyContent + '</div>';
+    '<div class="stat-body" style="display:none;padding:0 14px 14px">' + bodyContent +
+      '<button onclick="shareStatSection(' + JSON.stringify(sec.title) + ', this)" style="width:100%;margin-top:10px;padding:8px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;cursor:pointer;color:var(--dark)">📤 Paylaş</button>' +
+    '</div>';
     container.appendChild(div);
   });
 }
@@ -4057,6 +4059,27 @@ async function toggleFinishedCard(mid) {
   const preds = await sbGet('predictions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
   if (!Array.isArray(preds) || !m) { body.innerHTML = 'Hata'; return; }
   body.innerHTML = buildPredsTable(m, preds);
+}
+
+
+function shareStatSection(title, btn) {
+  const body = btn.closest('.stat-body');
+  if (!body) return;
+  const rows = body.querySelectorAll('.lb-row');
+  let text = title + '\n';
+  rows.forEach(function(row, i) {
+    const rank = row.querySelector('.lb-rank');
+    const name = row.querySelector('.lb-name');
+    if (name) text += (rank ? rank.textContent + ' ' : (i+1) + '. ') + row.textContent.trim().replace(/\s+/g,' ') + '\n';
+  });
+  if (navigator.share) {
+    navigator.share({text: text});
+  } else {
+    navigator.clipboard.writeText(text).then(function() {
+      btn.textContent = '✅ Kopyalandı!';
+      setTimeout(function() { btn.textContent = '📤 Paylaş'; }, 2000);
+    });
+  }
 }
 
 // ============ SHARE LEADERBOARD ============
