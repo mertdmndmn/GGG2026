@@ -19,8 +19,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .logo{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--red);letter-spacing:2px;line-height:1;}
 .logo span{color:#fff;font-size:12px;font-family:'IBM Plex Sans',sans-serif;font-weight:500;display:block;margin-top:2px;}
 .header-badge{background:var(--red);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;}
-.nav{display:flex;border-top:1px solid rgba(255,255,255,0.08);}
-.nav-btn{flex:1;background:transparent;border:none;color:rgba(255,255,255,0.45);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;padding:11px 4px;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;}
+.nav{display:flex;border-top:1px solid rgba(255,255,255,0.08);overflow-x:auto;scrollbar-width:none;}.nav::-webkit-scrollbar{display:none;}
+.nav-btn{flex-shrink:0;background:transparent;border:none;color:rgba(255,255,255,0.45);font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;padding:11px 10px;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;}
 .nav-btn.active{color:#fff;border-bottom-color:var(--red);}
 .main{padding:16px;}
 .section{display:none;}.section.active{display:block;}
@@ -284,6 +284,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
     <div class="nav">
       <button class="nav-btn active" onclick="showTab('tahmin',this)">Tahmin</button>
       <button class="nav-btn" onclick="showTab('puan',this)">Puan</button>
+      <button class="nav-btn" onclick="showTab('istatistik',this)">📊</button>
+      <button class="nav-btn" onclick="showTab('istatistik',this)">📊</button>
       <button class="nav-btn" onclick="showTab('turnuva',this)">Turnuva</button>
       <button class="nav-btn" onclick="showTab('profil',this)">Profil</button>
       <button class="nav-btn" onclick="showTab('admin',this)">Admin</button>
@@ -343,6 +345,11 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div id="prof-stats" style="display:none"></div>
       <div class="section-label" style="margin-top:20px">Tahmin Geçmişim</div>
       <div id="prof-history"><div class="loading">Yükleniyor...</div></div>
+    </div>
+
+    <div id="tab-istatistik" class="section">
+      <div class="section-label">İstatistikler</div>
+      <div id="istatistik-container"></div>
     </div>
 
         <div id="tab-turnuva" class="section">
@@ -883,6 +890,7 @@ function showTab(tab, btn) {
   document.getElementById('tab-' + tab).classList.add('active');
   btn.classList.add('active');
   window.scrollTo({top:0, behavior:'smooth'});
+  if (tab === 'istatistik') { loadPlayers().then(async () => { renderIstatistik(); }); }
   if (tab === 'puan') { loadPlayers().then(async () => {
     renderLeaderboard();
     // Remove old weekly best before adding new
@@ -3914,6 +3922,184 @@ async function toggleFinishedCard(mid) {
   // Build pred table using existing buildPredsTable
   const predHtml = buildPredsTable(m, preds);
   body.innerHTML = predHtml;
+}
+
+
+// ============ İSTATİSTİKLER ============
+async function renderIstatistik() {
+  const container = document.getElementById('istatistik-container');
+  if (!container) return;
+  container.innerHTML = '<div class="loading">Hesaplanıyor...</div>';
+
+  const finishedMatches = matches.filter(function(m) {
+    return results[m.id] && results[m.id].home_score !== null;
+  }).sort(function(a,b) { return a.id - b.id; });
+
+  if (!finishedMatches.length) {
+    container.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center">Henüz biten maç yok</div>';
+    return;
+  }
+
+  const matchIds = finishedMatches.map(function(m) { return m.id; }).join(',');
+  const allPreds = await sbGet('predictions', 'match_id=in.(' + matchIds + ')&group_id=eq.' + GROUP_ID);
+  if (!Array.isArray(allPreds)) return;
+
+  const playerNames = players.filter(function(p) { return p.group_id === GROUP_ID; }).map(function(p) { return p.name; });
+  const fields = ['ms','hy','kg','gol','kk'];
+
+  // Per player per match data
+  const data = {};
+  playerNames.forEach(function(name) {
+    data[name] = { pts: [], cesaret: 0, closeCall: [], predCount: 0 };
+  });
+
+  finishedMatches.forEach(function(m) {
+    const res = results[m.id];
+    const matchPreds = allPreds.filter(function(p) { return p.match_id === m.id; });
+    const voteCounts = {};
+    fields.forEach(function(f) {
+      voteCounts[f] = {};
+      matchPreds.forEach(function(p) { if (p[f]) voteCounts[f][p[f]] = (voteCounts[f][p[f]]||0)+1; });
+    });
+
+    playerNames.forEach(function(name) {
+      const pred = matchPreds.find(function(p) { return p.player_name === name; });
+      if (!pred) { data[name].pts.push(null); return; }
+      data[name].predCount++;
+      let pts = 0;
+      if (pred.hy && pred.hy === res.hy) pts += 1;
+      if (pred.ms && pred.ms === res.ms) pts += 1;
+      if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
+      if (pred.kg && pred.kg === res.kg) pts += 1;
+      if (pred.gol && pred.gol === res.gol) pts += 1;
+      if (pred.kk && pred.kk === res.kk) pts += 1;
+      let bonus = 0;
+      fields.forEach(function(f) {
+        const pv = pred[f]; const rv = (f==='ms') ? res.ms : res[f];
+        if (!pv || !rv || pv !== rv) return;
+        const total = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
+        if (total > 1 && voteCounts[f][pv] === 1) bonus += 1;
+      });
+      data[name].cesaret += bonus;
+      data[name].pts.push(pts + bonus);
+
+      // Close call: correct MS but wrong exact score by 1 goal diff
+      if (pred.ms && pred.ms === res.ms && pred.home_score !== null && pred.away_score !== null) {
+        const diff = Math.abs(parseInt(pred.home_score) - res.home_score) + Math.abs(parseInt(pred.away_score) - res.away_score);
+        if (diff === 1) data[name].closeCall.push({match: m.home + ' - ' + m.away, pred: pred.home_score+'-'+pred.away_score, real: res.home_score+'-'+res.away_score});
+      }
+    });
+  });
+
+  // Calculate stats
+  const stats = playerNames.map(function(name) {
+    const d = data[name];
+    const validPts = d.pts.filter(function(p) { return p !== null; });
+    const avg = validPts.length ? (validPts.reduce(function(a,b){return a+b;},0) / validPts.length) : 0;
+    const last3 = d.pts.filter(function(p) { return p !== null; }).slice(-3);
+    const formTrend = last3.length >= 2 ? (last3[last3.length-1] - last3[0]) : 0;
+    const totalPts = validPts.reduce(function(a,b){return a+b;},0);
+    const efficiency = d.predCount > 0 ? (totalPts / d.predCount) : 0;
+    return { name, avg, cesaret: d.cesaret, closeCall: d.closeCall, last3, formTrend, totalPts, predCount: d.predCount, efficiency };
+  }).filter(function(s) { return s.predCount > 0; });
+
+  // Build accordions
+  const sections = [
+    {
+      id: 'avg-stat',
+      emoji: '📊',
+      title: 'Maç Başına Ortalama Puan',
+      subtitle: 'Her maçta ortalama kaç puan alıyorsun?',
+      render: function() {
+        const sorted = [...stats].sort(function(a,b) { return b.avg - a.avg; });
+        return sorted.map(function(s, i) {
+          const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+          return '<div class="lb-row"><span class="lb-rank">' + (medal||i+1) + '</span><span class="lb-name">' + s.name + '</span><span style="font-weight:700;color:var(--green)">' + s.avg.toFixed(1) + ' puan/maç</span></div>';
+        }).join('');
+      }
+    },
+    {
+      id: 'cesaret-stat',
+      emoji: '🎯',
+      title: 'Cesaret Şampiyonu',
+      subtitle: 'Grupta tek doğru tahmin yapan kimdi?',
+      render: function() {
+        const sorted = [...stats].sort(function(a,b) { return b.cesaret - a.cesaret; });
+        return sorted.map(function(s, i) {
+          const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+          return '<div class="lb-row"><span class="lb-rank">' + (medal||i+1) + '</span><span class="lb-name">' + s.name + '</span><span style="font-weight:700;color:var(--green)">+' + s.cesaret + ' 🎯</span></div>';
+        }).join('');
+      }
+    },
+    {
+      id: 'close-stat',
+      emoji: '😬',
+      title: 'En Yakın Kaçıranlar',
+      subtitle: 'Tam skoru 1 golle kaçıranlar',
+      render: function() {
+        const allClose = [];
+        stats.forEach(function(s) {
+          s.closeCall.forEach(function(c) { allClose.push({name: s.name, ...c}); });
+        });
+        if (!allClose.length) return '<div style="color:var(--muted);padding:10px;text-align:center">Henüz yok</div>';
+        return allClose.map(function(c) {
+          return '<div class="lb-row"><span class="lb-name">' + c.name + '</span><span style="font-size:12px;color:var(--muted)">' + c.match + '</span><span style="font-size:12px">🎯 ' + c.pred + ' → ' + c.real + '</span></div>';
+        }).join('');
+      }
+    },
+    {
+      id: 'form-stat',
+      emoji: '📈',
+      title: 'Form Durumu',
+      subtitle: 'Son 3 maçtaki puan trendi',
+      render: function() {
+        const sorted = [...stats].sort(function(a,b) { return b.formTrend - a.formTrend; });
+        return sorted.map(function(s, i) {
+          const arrow = s.formTrend > 0 ? '⬆️' : s.formTrend < 0 ? '⬇️' : '➡️';
+          const last3str = s.last3.join(' → ');
+          return '<div class="lb-row"><span class="lb-rank">' + arrow + '</span><span class="lb-name">' + s.name + '</span><span style="font-size:12px;color:var(--muted)">' + last3str + '</span></div>';
+        }).join('');
+      }
+    },
+    {
+      id: 'sansli-stat',
+      emoji: '🍀',
+      title: 'Şans Faktörü',
+      subtitle: 'En az tahminle en çok puan',
+      render: function() {
+        const sorted = [...stats].sort(function(a,b) { return b.efficiency - a.efficiency; });
+        return sorted.map(function(s, i) {
+          const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+          return '<div class="lb-row"><span class="lb-rank">' + (medal||i+1) + '</span><span class="lb-name">' + s.name + '</span><span style="font-size:12px;color:var(--muted)">' + s.totalPts + ' puan / ' + s.predCount + ' maç</span></div>';
+        }).join('');
+      }
+    }
+  ];
+
+  let html = '';
+  sections.forEach(function(sec) {
+    const bodyContent = '<div class="lb-card">' + sec.render() + '</div>';
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--card);border-radius:14px;margin-bottom:10px;overflow:hidden';
+    div.innerHTML = '<div onclick="toggleStatSection(this)" style="display:flex;align-items:center;justify-content:space-between;padding:14px;cursor:pointer" data-id="' + sec.id + '">' +
+      '<div>' +
+        '<div style="font-size:15px;font-weight:700">' + sec.emoji + ' ' + sec.title + '</div>' +
+        '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + sec.subtitle + '</div>' +
+      '</div>' +
+      '<span class="stat-arrow" style="color:var(--muted)">▼</span>' +
+    '</div>' +
+    '<div class="stat-body" style="display:none;padding:0 14px 14px">' + bodyContent + '</div>';
+    container.appendChild(div);
+  });
+}
+
+function toggleStatSection(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.stat-arrow');
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
 }
 
 // ============ SHARE LEADERBOARD ============
