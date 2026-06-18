@@ -315,7 +315,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div class="lb-card" id="lb-container"><div class="loading">Yükleniyor...</div></div>
       <div style="margin-top:14px">
         
-        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin:14px 0 8px">📊 Maç İstatistikleri</div>
+        
       </div>
       <div class="section-label" style="margin-top:20px">Puan Sistemi</div>
       <div class="pts-card">
@@ -346,6 +346,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
     <div id="tab-istatistik" class="section">
       <div class="section-label">İstatistikler</div>
       <div style="margin-bottom:12px">
+        <select id="mac-stats-select" onchange="renderMacStatsFromSelect()" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;background:#fff;margin-bottom:8px"></select>
         <div id="mac-stats-container"></div>
       </div>
       <div id="istatistik-container"></div>
@@ -3446,7 +3447,7 @@ async function updateAllStreaks() {
 
   // Get ALL predictions across all groups
   const allPreds = await sbGet('predictions', 'match_id=in.(' + finishedMatches.map(function(m){return m.id;}).join(',') + ')');
-  if (!Array.isArray(allPreds)) return;
+  if (!Array.isArray(allPreds)) { container.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center">Veri yüklenemedi</div>'; return; }
 
   // Group by group_id then player_name
   const byGroup = {};
@@ -3775,7 +3776,22 @@ async function renderKumulatifGrafik(finishedMatches) {
 async function renderMacStatsAuto() {
   const finished = matches.filter(function(m) { return results[m.id] && results[m.id].home_score !== null; }).sort(function(a,b){return b.id-a.id;});
   if (!finished.length) return;
+  const sel = document.getElementById('mac-stats-select');
+  if (sel) {
+    sel.innerHTML = finished.map(function(m) {
+      const res = results[m.id];
+      return '<option value="' + m.id + '">' + m.home + ' — ' + m.away + ' (' + res.home_score + '-' + res.away_score + ')</option>';
+    }).join('');
+  }
   await renderMacStatsForMatch(finished[0]);
+}
+
+async function renderMacStatsFromSelect() {
+  const sel = document.getElementById('mac-stats-select');
+  if (!sel) return;
+  const mid = parseInt(sel.value);
+  const m = matches.find(function(x) { return x.id === mid; });
+  if (m) await renderMacStatsForMatch(m);
 }
 
 async function renderMacStats() {}
