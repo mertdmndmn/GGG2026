@@ -3694,7 +3694,8 @@ async function renderKumulatifGrafik(finishedMatches) {
   const container = document.getElementById('kumülatif-grafik-container');
   if (!container || !finishedMatches.length) return;
 
-  const matchIds = finishedMatches.map(function(m) { return m.id; }).join(',');
+  const recentMatches = finishedMatches.slice(0, 48);
+  const matchIds = recentMatches.map(function(m) { return m.id; }).join(',');
   const allPreds = await sbGet('predictions', 'match_id=in.(' + matchIds + ')&group_id=eq.' + GROUP_ID);
   if (!Array.isArray(allPreds)) return;
 
@@ -3747,7 +3748,7 @@ async function renderKumulatifGrafik(finishedMatches) {
 
   // Draw horizontal bar chart
   const maxAvg = Math.max(...sortedNames.map(function(n) { return avgPts[n]; }), 1);
-  const W = 320, padL = 75, padR = 45, barH = 16, gap = 6;
+  const W = 320, padL = 90, padR = 50, barH = 16, gap = 6;
   const H = sortedNames.length * (barH + gap) + 20;
   const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e','#e91e63','#00bcd4','#8bc34a'];
 
@@ -3835,7 +3836,7 @@ async function renderMacStatsForMatch(m) {
   }).sort(function(a,b) { return b.pts - a.pts; });
 
   const maxPts = Math.max(...rows.map(function(r){return r.pts;}), 1);
-  const W = 320, padL = 75, padR = 45, barH = 16, gap = 5;
+  const W = 320, padL = 90, padR = 50, barH = 16, gap = 6;
   const H = rows.length * (barH + gap) + 20;
   const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e','#e91e63','#00bcd4'];
 
@@ -3974,7 +3975,11 @@ async function renderIstatistik() {
         });
         if (!allClose.length) return '<div style="color:var(--muted);padding:10px;text-align:center">Henüz yok</div>';
         return allClose.map(function(c) {
-          return '<div class="lb-row"><span class="lb-name">' + c.name + '</span><span style="font-size:12px;color:var(--muted)">' + c.match + '</span><span style="font-size:12px">🎯 ' + c.pred + ' → ' + c.real + '</span></div>';
+          return '<div class="lb-row" style="flex-wrap:wrap;gap:4px">' +
+            '<span class="lb-name" style="width:100%">' + c.name + '</span>' +
+            '<span style="font-size:12px;color:var(--muted);flex:1">' + c.match + '</span>' +
+            '<span style="font-size:12px;font-weight:600">🎯 ' + c.pred + ' → ' + c.real + '</span>' +
+            '</div>';
         }).join('');
       }
     },
@@ -4031,6 +4036,27 @@ function toggleStatSection(header) {
   const isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
   if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+}
+
+
+async function toggleFinishedCard(mid) {
+  const body = document.getElementById('fc-body-' + mid);
+  const arrow = document.getElementById('fc-arrow-' + mid);
+  if (!body) return;
+  if (body.style.display !== 'none') {
+    body.style.display = 'none';
+    if (arrow) arrow.textContent = '▼';
+    return;
+  }
+  body.style.display = 'block';
+  if (arrow) arrow.textContent = '▲';
+  if (body.innerHTML.trim()) return;
+  body.innerHTML = '<div class="loading">Yükleniyor...</div>';
+  const m = matches.find(function(x) { return x.id === mid; });
+  const res = results[mid] || {};
+  const preds = await sbGet('predictions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
+  if (!Array.isArray(preds) || !m) { body.innerHTML = 'Hata'; return; }
+  body.innerHTML = buildPredsTable(m, preds);
 }
 
 // ============ SHARE LEADERBOARD ============
