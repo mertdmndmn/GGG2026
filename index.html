@@ -4086,14 +4086,17 @@ async function toggleFinishedCard(mid) {
 function shareStatSection(btn) {
   const body = btn.closest('.stat-body');
   const header = body ? body.previousElementSibling : null;
-  const title = header ? header.querySelector('div > div:first-child').textContent.trim() : '';
+  const titleEl = header ? header.querySelector('div > div:first-child') : null;
+  const title = titleEl ? titleEl.textContent.trim() : '';
   if (!body) return;
   const rows = body.querySelectorAll('.lb-row');
-  let text = title + '\n';
-  rows.forEach(function(row, i) {
-    const rank = row.querySelector('.lb-rank');
-    const name = row.querySelector('.lb-name');
-    if (name) text += (rank ? rank.textContent + ' ' : (i+1) + '. ') + row.textContent.trim().replace(/\s+/g,' ') + '\n';
+  let text = '🏆 ' + title + '\n\n';
+  const items = body.querySelectorAll('[style*="border-radius:10px"]');
+  items.forEach(function(item) {
+    const spans = item.querySelectorAll('span, div');
+    const parts = [];
+    spans.forEach(function(s) { const t = s.textContent.trim(); if (t && !parts.includes(t)) parts.push(t); });
+    if (parts.length) text += parts.join(' ') + '\n';
   });
   if (navigator.share) {
     navigator.share({text: text});
