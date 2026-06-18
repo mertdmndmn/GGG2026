@@ -285,7 +285,6 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <button class="nav-btn active" onclick="showTab('tahmin',this)">Tahmin</button>
       <button class="nav-btn" onclick="showTab('puan',this)">Puan</button>
       <button class="nav-btn" onclick="showTab('istatistik',this)">📊</button>
-      <button class="nav-btn" onclick="showTab('istatistik',this)">📊</button>
       <button class="nav-btn" onclick="showTab('turnuva',this)">Turnuva</button>
       <button class="nav-btn" onclick="showTab('profil',this)">Profil</button>
       <button class="nav-btn" onclick="showTab('admin',this)">Admin</button>
@@ -315,8 +314,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div class="lb-header"><span>#</span><span>Oyuncu</span><span>Puan</span><span>+/-</span></div>
       <div class="lb-card" id="lb-container"><div class="loading">Yükleniyor...</div></div>
       <div style="margin-top:14px">
-        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📊 Ortalama Puan / Maç</div>
-        <div id="kumülatif-grafik-container"></div>
+        
         <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin:14px 0 8px">📊 Maç İstatistikleri</div>
         <select id="mac-stats-select" onchange="renderMacStats()" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;background:#fff;margin-bottom:10px"></select>
         <div id="mac-stats-container"></div>
@@ -349,6 +347,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 
     <div id="tab-istatistik" class="section">
       <div class="section-label">İstatistikler</div>
+      <div style="margin-bottom:12px">
+        <select id="mac-stats-select" onchange="renderMacStats()" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;background:#fff;margin-bottom:8px"></select>
+        <div id="mac-stats-container"></div>
+      </div>
       <div id="istatistik-container"></div>
     </div>
 
@@ -890,7 +892,7 @@ function showTab(tab, btn) {
   document.getElementById('tab-' + tab).classList.add('active');
   btn.classList.add('active');
   window.scrollTo({top:0, behavior:'smooth'});
-  if (tab === 'istatistik') { loadPlayers().then(async () => { renderIstatistik(); }); }
+  if (tab === 'istatistik') { loadPlayers().then(async () => { renderPuanGrafik(); renderIstatistik(); }); }
   if (tab === 'puan') { loadPlayers().then(async () => {
     renderLeaderboard();
     // Remove old weekly best before adding new
@@ -904,7 +906,6 @@ function showTab(tab, btn) {
       div.innerHTML = wk;
       c.parentNode.insertBefore(div, c);
     }
-    renderPuanGrafik();
   }); }
   if (tab === 'admin' && isAdmin) renderAdminMatches();
   if (tab === 'turnuva') renderTurnuvaFull();
