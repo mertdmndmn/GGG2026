@@ -2946,7 +2946,7 @@ async function renderProfilTab() {
 
   // Clear history before filling
   histEl.innerHTML = '';
-  histEl.innerHTML = finishedPreds.reverse().map(({pred, res, m, pts}) => {
+  histEl.innerHTML = finishedPreds.sort(function(a,b){return b.pred.match_id - a.pred.match_id;}).map(({pred, res, m, pts}) => {
     const matchName = m ? (m.home + ' — ' + m.away) : 'Maç #' + pred.match_id;
     const predScore = (pred.home_score !== null ? pred.home_score : '?') + ' - ' + (pred.away_score !== null ? pred.away_score : '?');
     const realScore = res.home_score + ' - ' + res.away_score;
