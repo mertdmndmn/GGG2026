@@ -20,7 +20,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .logo span{color:#fff;font-size:12px;font-family:'IBM Plex Sans',sans-serif;font-weight:500;display:block;margin-top:2px;}
 .header-badge{background:var(--red);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;}
 .nav{display:flex;border-top:1px solid rgba(255,255,255,0.08);overflow-x:auto;scrollbar-width:none;}.nav::-webkit-scrollbar{display:none;}
-.nav-btn{flex-shrink:0;background:transparent;border:none;color:rgba(255,255,255,0.45);font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;padding:11px 10px;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;}
+.nav-btn{flex:1;min-width:fit-content;background:transparent;border:none;color:rgba(255,255,255,0.45);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;padding:11px 6px;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;}
 .nav-btn.active{color:#fff;border-bottom-color:var(--red);}
 .main{padding:16px;}
 .section{display:none;}.section.active{display:block;}
@@ -296,7 +296,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <div class="score-bar-left">Toplam Puanım<strong id="my-total-pts">0</strong></div>
         <div class="score-bar-right">Sıralama<strong id="my-rank">—</strong></div>
       </div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;">
         <button class="filter-btn active" id="status-btn-upcoming" onclick="setStatusFilter('upcoming',this)">📅 Yaklaşan</button>
         <button class="filter-btn" id="status-btn-finished" onclick="setStatusFilter('finished',this)">✅ Biten</button>
         <button class="filter-btn" id="status-btn-all" onclick="setStatusFilter('all',this)">Tümü</button>
@@ -316,8 +316,6 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div style="margin-top:14px">
         
         <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin:14px 0 8px">📊 Maç İstatistikleri</div>
-        <select id="mac-stats-select" onchange="renderMacStats()" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;background:#fff;margin-bottom:10px"></select>
-        <div id="mac-stats-container"></div>
       </div>
       <div class="section-label" style="margin-top:20px">Puan Sistemi</div>
       <div class="pts-card">
@@ -348,7 +346,6 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
     <div id="tab-istatistik" class="section">
       <div class="section-label">İstatistikler</div>
       <div style="margin-bottom:12px">
-        <select id="mac-stats-select" onchange="renderMacStats()" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:13px;background:#fff;margin-bottom:8px"></select>
         <div id="mac-stats-container"></div>
       </div>
       <div id="istatistik-container"></div>
@@ -892,7 +889,7 @@ function showTab(tab, btn) {
   document.getElementById('tab-' + tab).classList.add('active');
   btn.classList.add('active');
   window.scrollTo({top:0, behavior:'smooth'});
-  if (tab === 'istatistik') { loadPlayers().then(async () => { renderPuanGrafik(); renderIstatistik(); }); }
+  if (tab === 'istatistik') { loadPlayers().then(async () => { renderMacStatsAuto(); renderIstatistik(); }); }
   if (tab === 'puan') { loadPlayers().then(async () => {
     renderLeaderboard();
     // Remove old weekly best before adding new
@@ -3775,116 +3772,24 @@ async function renderKumulatifGrafik(finishedMatches) {
 }
 
 
-async function renderMacStats() {
-  const sel = document.getElementById('mac-stats-select');
+async function renderMacStatsAuto() {
+  const finished = matches.filter(function(m) { return results[m.id] && results[m.id].home_score !== null; }).sort(function(a,b){return b.id-a.id;});
+  if (!finished.length) return;
+  await renderMacStatsForMatch(finished[0]);
+}
+
+async function renderMacStats() {}
+
+async function renderMacStatsForMatch(m) {
   const container = document.getElementById('mac-stats-container');
-  if (!sel || !container) return;
-
-  const mid = parseInt(sel.value);
-  if (!mid) return;
-
-  container.innerHTML = '<div class="loading">Yükleniyor...</div>';
-
+  if (!container || !m) return;
+  const mid = m.id;
   const res = results[mid];
+  container.innerHTML = '<div style="font-size:13px;font-weight:600;margin-bottom:8px">📊 ' + m.home + ' — ' + m.away + ' (' + res.home_score + '-' + res.away_score + ')</div><div class=\"loading\">Yükleniyor...</div>';
+
   const preds = await sbGet('predictions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
   if (!Array.isArray(preds)) return;
 
-  const fields = ['ms','hy','kg','gol','kk'];
-  const voteCounts = {};
-  fields.forEach(function(f) {
-    voteCounts[f] = {};
-    preds.forEach(function(p) { if (p[f]) voteCounts[f][p[f]] = (voteCounts[f][p[f]]||0)+1; });
-  });
-
-  const rows = preds.map(function(pred) {
-    let pts = 0;
-    if (pred.hy && pred.hy === res.hy) pts += 1;
-    if (pred.ms && pred.ms === res.ms) pts += 1;
-    if (pred.home_score !== null && pred.away_score !== null &&
-        parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
-    if (pred.kg && pred.kg === res.kg) pts += 1;
-    if (pred.gol && pred.gol === res.gol) pts += 1;
-    if (pred.kk && pred.kk === res.kk) pts += 1;
-
-    // Custom bets
-    const pCustom = pred.custom || {};
-    const rCustom = res.custom || {};
-    Object.keys(pCustom).forEach(function(k) {
-      if (k.startsWith('c') && pCustom[k] && rCustom[k] && pCustom[k] === rCustom[k]) pts += 1;
-    });
-
-    let bonus = 0;
-    fields.forEach(function(f) {
-      const pv = pred[f]; const rv = (f==='ms') ? res.ms : res[f];
-      if (!pv || !rv || pv !== rv) return;
-      const total = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
-      if (total > 1 && voteCounts[f][pv] === 1) bonus += 1;
-    });
-
-    return {name: pred.player_name, pts: pts + bonus, bonus};
-  }).sort(function(a,b) { return b.pts - a.pts; });
-
-  // Also add players who didn't predict
-  const predNames = preds.map(function(p) { return p.player_name; });
-  players.filter(function(p) { return p.group_id === GROUP_ID && !predNames.includes(p.name); }).forEach(function(p) {
-    rows.push({name: p.name, pts: 0, bonus: 0, empty: true});
-  });
-
-  // Draw bar chart
-  const maxPts = Math.max(...rows.map(function(r) { return r.pts; }), 1);
-  const W = 320, H = 180, padL = 80, padR = 40, padT = 10, padB = 10;
-  const barH = Math.floor((H - padT - padB) / rows.length) - 2;
-
-  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%">';
-
-  rows.forEach(function(r, i) {
-    const y = padT + i * (barH + 2);
-    const barW = r.pts > 0 ? (r.pts / maxPts) * (W - padL - padR) : 0;
-    const color = r.empty ? '#ddd' : r.pts >= maxPts ? '#e74c3c' : r.pts >= maxPts * 0.7 ? '#f39c12' : '#3498db';
-
-    // Name
-    svg += '<text x="' + (padL - 4) + '" y="' + (y + barH/2 + 4) + '" text-anchor="end" font-size="10" fill="' + (r.empty ? '#ccc' : '#333') + '">' + r.name.split(' ')[0] + '</text>';
-    
-    // Bar
-    if (barW > 0) {
-      svg += '<rect x="' + padL + '" y="' + y + '" width="' + barW.toFixed(1) + '" height="' + barH + '" fill="' + color + '" rx="3"/>';
-    }
-    
-    // Value
-    const bonusStr = r.bonus > 0 ? '+' + r.pts + '(🎯)' : '+' + r.pts;
-    svg += '<text x="' + (padL + barW + 4) + '" y="' + (y + barH/2 + 4) + '" font-size="10" fill="' + (r.pts > 0 ? color : '#ccc') + '">' + bonusStr + '</text>';
-  });
-
-  svg += '</svg>';
-  container.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:12px">' + svg + '</div>';
-}
-
-
-async function toggleFinishedCard(mid) {
-  const body = document.getElementById('fc-body-' + mid);
-  const arrow = document.getElementById('fc-arrow-' + mid);
-  if (!body) return;
-
-  if (body.style.display !== 'none') {
-    body.style.display = 'none';
-    if (arrow) arrow.textContent = '▼';
-    return;
-  }
-
-  body.style.display = 'block';
-  if (arrow) arrow.textContent = '▲';
-
-  if (body.innerHTML.trim()) return; // already loaded
-
-  body.innerHTML = '<div class="loading">Yükleniyor...</div>';
-
-  const m = matches.find(function(x) { return x.id === mid; });
-  const res = results[mid] || {};
-  const preds = await sbGet('predictions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
-
-  if (!Array.isArray(preds) || !m) { body.innerHTML = 'Hata'; return; }
-
-  // Build mini pred table
   const fields = ['ms','hy','kg','gol','kk'];
   const voteCounts = {};
   fields.forEach(function(f) {
@@ -3910,23 +3815,32 @@ async function toggleFinishedCard(mid) {
       const total = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
       if (total > 1 && voteCounts[f][pv] === 1) bonus += 1;
     });
-    return {name: pred.player_name, pts: pts+bonus, skor: (pred.home_score !== null ? pred.home_score+'-'+pred.away_score : '—')};
+    return {name: pred.player_name, pts: pts+bonus, skor: pred.home_score !== null ? pred.home_score+'-'+pred.away_score : '—'};
   }).sort(function(a,b) { return b.pts - a.pts; });
 
-  // Render full match card content
-  const allPredsMap = {};
-  preds.forEach(function(p) {
-    if (!allPredsMap[p.match_id]) allPredsMap[p.match_id] = [];
-    allPredsMap[p.match_id].push(p);
+  const maxPts = Math.max(...rows.map(function(r){return r.pts;}), 1);
+  const W = 320, padL = 75, padR = 45, barH = 16, gap = 5;
+  const H = rows.length * (barH + gap) + 20;
+  const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e','#e91e63','#00bcd4'];
+
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%">';
+  rows.forEach(function(r, i) {
+    const y = 10 + i * (barH + gap);
+    const bw = r.pts > 0 ? (r.pts/maxPts)*(W-padL-padR) : 2;
+    const color = i === 0 ? '#e74c3c' : colors[i % colors.length];
+    const isMe = r.name === currentUser;
+    svg += '<text x="' + (padL-4) + '" y="' + (y+barH/2+4) + '" text-anchor="end" font-size="10" fill="' + (isMe?'#e74c3c':'#333') + '" font-weight="' + (isMe?'700':'400') + '">' + r.name.split(' ')[0] + '</text>';
+    svg += '<rect x="' + padL + '" y="' + y + '" width="' + bw.toFixed(1) + '" height="' + barH + '" fill="' + color + '" rx="3" opacity="0.85"/>';
+    svg += '<text x="' + (padL+bw+4) + '" y="' + (y+barH/2+4) + '" font-size="10" fill="' + color + '">+' + r.pts + '</text>';
   });
-  
-  // Build pred table using existing buildPredsTable
-  const predHtml = buildPredsTable(m, preds);
-  body.innerHTML = predHtml;
+  svg += '</svg>';
+
+  container.innerHTML = '<div style="background:var(--card);border-radius:14px;padding:12px;margin-bottom:12px">' +
+    '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">' + m.home + ' — ' + m.away + ' &nbsp;' + res.home_score + '-' + res.away_score + '</div>' +
+    svg + '</div>';
 }
 
 
-// ============ İSTATİSTİKLER ============
 async function renderIstatistik() {
   const container = document.getElementById('istatistik-container');
   if (!container) return;
