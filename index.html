@@ -221,6 +221,13 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 .modal-pts.zero{color:var(--muted);}
 .modal-close{width:100%;padding:12px;background:var(--dark);color:#fff;border:none;border-radius:12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;}
 .medal{font-size:18px;margin-right:6px;}
+
+.confetti-container { position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden; }
+.confetti-piece { position:absolute;width:10px;height:10px;top:-10px;opacity:0;animation:confettiFall 2.5s ease-in forwards; }
+@keyframes confettiFall {
+  0% { transform:translateY(0) rotate(0deg); opacity:1; }
+  100% { transform:translateY(100vh) rotate(720deg); opacity:0; }
+}
 </style>
 </head>
 <body>
@@ -1095,6 +1102,9 @@ async function renderMatches() {
         <span class="score-dash">—</span>
         <input class="score-inp" type="number" min="0" max="20" value="${aS !== null && aS !== undefined && aS !== '' ? aS : ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id},null,this.value)">
       </div>
+      ${!locked ? `<div style="text-align:right;margin:4px 0 8px">
+        <button onclick="luckyFill(${m.id})" style="background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:8px;border:1px solid var(--border)">🍀 Şansını Dene</button>
+      </div>` : ''}
       <div class="bets-section">
         <div class="bets-title">Bahisler</div>
         <div class="bet-row"><span class="bet-label">İlk yarı sonucu</span><div class="bet-options">
@@ -2907,7 +2917,7 @@ async function renderProfilTab() {
       if (pred.hy && pred.hy === res.hy) { correctHY++; pts += 1; }
       if (pred.ms && pred.ms === res.ms) { correctMS++; pts += 1; }
       if (pred.home_score !== null && pred.away_score !== null &&
-          parseInt(pred.home_score) === parseInt(res.home_score) && parseInt(pred.away_score) === parseInt(res.away_score)) { exactScore++; pts += 5; }
+          parseInt(pred.home_score) === parseInt(res.home_score) && parseInt(pred.away_score) === parseInt(res.away_score)) { exactScore++; pts += 5; if (pred.player_name === currentUser) setTimeout(launchConfetti, 300); }
       if (pred.kg && pred.kg === res.kg) { correctKG++; pts += 1; }
       if (pred.gol && pred.gol === res.gol) { correctGol++; pts += 1; }
       if (pred.kk && pred.kk === res.kk) { correctKK++; pts += 1; }
@@ -2991,20 +3001,61 @@ function addBestWorstToProfile(finishedMatches, myPreds, allResults) {
 
 // ============ HAFTALIK EN IYI ============
 async function renderWeeklyBest() {
-  // Get players sorted by trend (points earned in last result entry)
-  const rows = await sbGet('players', 'group_id=eq.' + GROUP_ID + '&order=trend.desc&limit=3');
   const c = document.getElementById('lb-container');
   if (!c) return;
 
-  let weekHtml = '';
-  if (Array.isArray(rows) && rows.length > 0 && rows[0].trend > 0) {
-    weekHtml = '<div class="week-winner">' +
-      '<div class="crown">👑</div>' +
-      '<div class="name">' + rows[0].name + '</div>' +
-      '<div class="sub">Son turda en iyi · +' + rows[0].trend + ' puan</div>' +
-      '</div>';
-  }
-  return weekHtml;
+  // Find last finished match
+  const finished = matches.filter(function(m) { return results[m.id] && results[m.id].home_score !== null; }).sort(function(a,b){return b.id-a.id;});
+  if (!finished.length) return null;
+  const lastMatch = finished[0];
+
+  const preds = await sbGet('predictions', 'match_id=eq.' + lastMatch.id + '&group_id=eq.' + GROUP_ID);
+  if (!Array.isArray(preds) || !preds.length) return null;
+
+  const res = results[lastMatch.id];
+  const fields = ['ms','hy','kg','gol','kk'];
+  const voteCounts = {};
+  fields.forEach(function(f) {
+    voteCounts[f] = {};
+    preds.forEach(function(p) { if (p[f]) voteCounts[f][p[f]] = (voteCounts[f][p[f]]||0)+1; });
+  });
+
+  let best = null, bestPts = -1;
+  preds.forEach(function(pred) {
+    let pts = 0;
+    if (pred.hy && pred.hy === res.hy) pts += 1;
+    if (pred.ms && pred.ms === res.ms) pts += 1;
+    if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
+    if (pred.kg && pred.kg === res.kg) pts += 1;
+    if (pred.gol && pred.gol === res.gol) pts += 1;
+    if (pred.kk && pred.kk === res.kk) pts += 1;
+    let bonus = 0;
+    fields.forEach(function(f) {
+      const pv = pred[f]; const rv = (f==='ms') ? res.ms : res[f];
+      if (!pv || !rv || pv !== rv) return;
+      const total = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
+      if (total > 1 && voteCounts[f][pv] === 1) bonus += 1;
+    });
+    const total = pts + bonus;
+    if (total > bestPts) { bestPts = total; best = pred.player_name; }
+  });
+
+  if (!best || bestPts === 0) return null;
+
+  
+  const html = '<div style="background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#fff">' +
+    '<div style="font-size:11px;font-weight:600;opacity:0.8;text-transform:uppercase;margin-bottom:4px">⭐ Son Maçın Kahramanı</div>' +
+    '<div style="font-size:20px;font-weight:700">' + best + '</div>' +
+    '<div style="font-size:13px;opacity:0.85;margin-top:2px">+' + bestPts + ' puan · ' + lastMatch.home.split(' ').pop() + ' - ' + lastMatch.away.split(' ').pop() + '</div>' +
+    '</div>';
+
+  const oldHero = document.getElementById('hero-banner');
+  if (oldHero) oldHero.remove();
+  const div = document.createElement('div');
+  div.id = 'hero-banner';
+  div.innerHTML = html;
+  c.parentNode.insertBefore(div, c);
+  return html;
 }
 
 
@@ -4108,6 +4159,53 @@ function shareStatSection(btn) {
   }
 }
 
+
+function launchConfetti() {
+  const container = document.createElement('div');
+  container.className = 'confetti-container';
+  document.body.appendChild(container);
+  const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22'];
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.cssText = 'left:' + Math.random()*100 + '%;background:' + colors[Math.floor(Math.random()*colors.length)] + ';border-radius:' + (Math.random()>0.5?'50%':'2px') + ';animation-delay:' + Math.random()*0.5 + 's;animation-duration:' + (2+Math.random()) + 's;width:' + (6+Math.random()*8) + 'px;height:' + (6+Math.random()*8) + 'px';
+    container.appendChild(piece);
+  }
+  setTimeout(function() { container.remove(); }, 3500);
+}
+
+function luckyFill(mid) {
+  const opts3 = ['1','X','2'];
+  const optsYN = ['Var','Yok'];
+  const h = Math.floor(Math.random()*4);
+  const a = Math.floor(Math.random()*4);
+
+  // Set score inputs
+  const card = document.querySelector('.match-card[data-mid="' + mid + '"]') || document.body;
+  const inps = card.querySelectorAll ? card.querySelectorAll('input.score-inp') :
+    document.querySelectorAll('input.score-inp');
+  // find the right card's inputs
+  const allInps = document.querySelectorAll('input.score-inp');
+  let found = 0;
+  allInps.forEach(function(inp) {
+    if (inp.oninput && inp.oninput.toString().includes(',' + mid + ',')) {
+      if (found === 0) { inp.value = h; inp.dispatchEvent(new Event('input')); }
+      else { inp.value = a; inp.dispatchEvent(new Event('input')); }
+      found++;
+    }
+  });
+
+  // Click random buttons for hy and kk
+  const hy = opts3[Math.floor(Math.random()*3)];
+  const kk = optsYN[Math.floor(Math.random()*2)];
+  document.querySelectorAll('button').forEach(function(btn) {
+    const oc = btn.getAttribute('onclick') || '';
+    if (oc.includes(mid + ",'hy','" + hy + "'")) btn.click();
+    if (oc.includes(mid + ",'kk','" + kk + "'")) btn.click();
+  });
+
+  showToast('🍀 Şans dolduruldu!');
+}
 // ============ SHARE LEADERBOARD ============
 function shareLeaderboard() {
   const sorted = [...players].sort(function(a,b) { return b.pts - a.pts; });
