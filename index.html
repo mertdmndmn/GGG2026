@@ -4167,34 +4167,41 @@ function launchConfetti() {
 function luckyFill(mid) {
   const opts3 = ['1','X','2'];
   const optsYN = ['Var','Yok'];
-  const h = Math.floor(Math.random()*4);
-  const a = Math.floor(Math.random()*4);
+  const optsGol = ['Üst','Alt'];
 
-  // Set score inputs
-  const card = document.querySelector('.match-card[data-mid="' + mid + '"]') || document.body;
-  const inps = card.querySelectorAll ? card.querySelectorAll('input.score-inp') :
-    document.querySelectorAll('input.score-inp');
-  // find the right card's inputs
+  // Random realistic scores (0-4)
+  const h = Math.floor(Math.random()*5);
+  const a = Math.floor(Math.random()*5);
+
+  // Fill score inputs for this match
   const allInps = document.querySelectorAll('input.score-inp');
-  let found = 0;
+  let filled = 0;
   allInps.forEach(function(inp) {
-    if (inp.oninput && inp.oninput.toString().includes(',' + mid + ',')) {
-      if (found === 0) { inp.value = h; inp.dispatchEvent(new Event('input')); }
-      else { inp.value = a; inp.dispatchEvent(new Event('input')); }
-      found++;
+    const oc = inp.getAttribute('oninput') || '';
+    if (oc.includes(',' + mid + ',') || oc.includes('(' + mid + ',')) {
+      inp.value = (filled === 0) ? h : a;
+      inp.dispatchEvent(new Event('input'));
+      filled++;
     }
   });
 
-  // Click random buttons for hy and kk
-  const hy = opts3[Math.floor(Math.random()*3)];
-  const kk = optsYN[Math.floor(Math.random()*2)];
+  // Click buttons for all fields
+  const fields = {
+    'hy': opts3[Math.floor(Math.random()*3)],
+    'ms': h > a ? '1' : h === a ? 'X' : '2',
+    'kg': (h > 0 && a > 0) ? 'Var' : 'Yok',
+    'gol': (h + a) > 2 ? 'Üst' : 'Alt',
+    'kk': optsYN[Math.floor(Math.random()*2)]
+  };
+
   document.querySelectorAll('button').forEach(function(btn) {
     const oc = btn.getAttribute('onclick') || '';
-    if (oc.includes(mid + ",'hy','" + hy + "'")) btn.click();
-    if (oc.includes(mid + ",'kk','" + kk + "'")) btn.click();
+    Object.keys(fields).forEach(function(f) {
+      if (oc.includes(mid + ",'" + f + "','" + fields[f] + "'")) btn.click();
+    });
   });
 
-  showToast('🍀 Şans dolduruldu!');
+  showToast('🍀 Şansını denedin!');
 }
 // ============ SHARE LEADERBOARD ============
 function shareLeaderboard() {
