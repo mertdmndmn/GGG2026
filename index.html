@@ -4045,7 +4045,7 @@ async function renderIstatistik() {
             items.map(function(c) {
               return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-top:1px solid rgba(243,156,18,0.15)">' +
                 '<span style="color:var(--muted)">' + c.match + '</span>' +
-                '<span style="font-weight:600">😬 ' + c.pred + ' → ' + c.real + '</span>' +
+                '<span style="font-weight:600;color:#f39c12">' + c.pred + ' → ' + c.real + '</span>' +
               '</div>';
             }).join('') +
           '</div>';
