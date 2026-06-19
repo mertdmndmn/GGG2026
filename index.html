@@ -3736,7 +3736,7 @@ async function renderKumulatifGrafik(finishedMatches) {
   if (!container || !finishedMatches.length) return;
 
   let allPreds;
-  try { allPreds = await sbGet('predictions', 'group_id=eq.' + GROUP_ID + '&limit=2000'); } catch(e) { allPreds = []; }
+  try { allPreds = await sbGet('predictions', 'group_id=eq.' + GROUP_ID + '&select=player_name,match_id,home_score,away_score,ms,hy,kg,gol,kk,custom'); } catch(e) { allPreds = []; }
   if (!Array.isArray(allPreds)) allPreds = [];
   const finishedIds = new Set(finishedMatches.map(function(m){return m.id;}));
   allPreds = allPreds.filter(function(p){return finishedIds.has(p.match_id);});
