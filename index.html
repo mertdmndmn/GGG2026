@@ -4071,6 +4071,99 @@ async function renderIstatistik() {
           '</div>';
         }).join('');
       }
+    },
+    {
+      id: 'kirilma-stat',
+      emoji: '💥',
+      title: 'Kırılma Noktası',
+      subtitle: 'Hangi maçtan sonra sıralama en çok değişti?',
+      render: function() {
+        if (sortedMatches.length < 2) return '<div style="color:var(--muted);padding:10px">Yeterli maç yok</div>';
+        // Calculate ranking after each match
+        const rankHistory = {};
+        playerNames.forEach(function(n) { rankHistory[n] = []; });
+        let cumPts = {};
+        playerNames.forEach(function(n) { cumPts[n] = 0; });
+        
+        let maxShift = 0, maxShiftMatch = null;
+        let prevRanks = {};
+        
+        sortedMatches.forEach(function(m, mi) {
+          playerNames.forEach(function(n) {
+            const pts = playerMatchPts[n][mi];
+            if (pts !== null) cumPts[n] = (cumPts[n] || 0) + pts;
+          });
+          const sorted = [...playerNames].sort(function(a,b) { return (cumPts[b]||0)-(cumPts[a]||0); });
+          const newRanks = {};
+          sorted.forEach(function(n, i) { newRanks[n] = i+1; });
+          
+          if (mi > 0) {
+            let totalShift = 0;
+            playerNames.forEach(function(n) {
+              totalShift += Math.abs((prevRanks[n]||0) - (newRanks[n]||0));
+            });
+            if (totalShift > maxShift) { maxShift = totalShift; maxShiftMatch = m; }
+          }
+          prevRanks = newRanks;
+        });
+        
+        if (!maxShiftMatch) return '<div style="color:var(--muted);padding:10px">Veri yok</div>';
+        
+        return '<div style="padding:12px;border-radius:10px;background:rgba(231,76,60,0.06)">' +
+          '<div style="font-size:20px;margin-bottom:6px">💥</div>' +
+          '<div style="font-weight:700;font-size:15px">' + maxShiftMatch.home.split(' ').pop() + ' - ' + maxShiftMatch.away.split(' ').pop() + '</div>' +
+          '<div style="font-size:13px;color:var(--muted);margin-top:4px">Bu maçtan sonra sıralamada toplam ' + maxShift + ' pozisyon değişti</div>' +
+          '</div>';
+      }
+    },
+    {
+      id: 'isi-stat',
+      emoji: '🌡️',
+      title: 'Isı Haritası',
+      subtitle: 'Hangi bahis tipinde daha iyisin?',
+      render: function() {
+        // Per-player accuracy per field
+        const fieldNames = {ms:'Maç Sonucu', hy:'İlk Yarı', kg:'KG', gol:'2.5 Gol', kk:'Kırmızı'};
+        const fieldAccuracy = {};
+        playerNames.forEach(function(name) { fieldAccuracy[name] = {}; });
+        
+        sortedMatches.forEach(function(m, mi) {
+          const res = results[m.id];
+          const matchPreds = allPreds.filter(function(p) { return p.match_id === m.id; });
+          fields.forEach(function(f) {
+            matchPreds.forEach(function(pred) {
+              if (!fieldAccuracy[pred.player_name]) return;
+              if (!fieldAccuracy[pred.player_name][f]) fieldAccuracy[pred.player_name][f] = {correct:0, total:0};
+              if (pred[f]) {
+                fieldAccuracy[pred.player_name][f].total++;
+                const rv = (f==='ms') ? res.ms : res[f];
+                if (pred[f] === rv) fieldAccuracy[pred.player_name][f].correct++;
+              }
+            });
+          });
+        });
+
+        const fieldCols = Object.keys(fieldNames);
+        let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+        html += '<tr><th style="text-align:left;padding:6px 4px;color:var(--muted)">Oyuncu</th>';
+        fieldCols.forEach(function(f) { html += '<th style="padding:6px 4px;color:var(--muted);text-align:center">' + fieldNames[f] + '</th>'; });
+        html += '</tr>';
+        
+        stats.forEach(function(s) {
+          html += '<tr>';
+          html += '<td style="padding:6px 4px;font-weight:600">' + s.name.split(' ')[0] + '</td>';
+          fieldCols.forEach(function(f) {
+            const fa = fieldAccuracy[s.name] && fieldAccuracy[s.name][f];
+            const pct = fa && fa.total > 0 ? Math.round(fa.correct/fa.total*100) : 0;
+            const color = pct >= 70 ? '#2ecc71' : pct >= 50 ? '#f39c12' : '#e74c3c';
+            const bg = pct >= 70 ? 'rgba(46,204,113,0.15)' : pct >= 50 ? 'rgba(243,156,18,0.15)' : 'rgba(231,76,60,0.1)';
+            html += '<td style="text-align:center;padding:6px 4px"><span style="background:' + bg + ';color:' + color + ';font-weight:700;border-radius:6px;padding:2px 6px">' + pct + '%</span></td>';
+          });
+          html += '</tr>';
+        });
+        html += '</table></div>';
+        return html;
+      }
     }
   ];
 
