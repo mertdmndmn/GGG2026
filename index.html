@@ -3741,47 +3741,12 @@ async function renderKumulatifGrafik(finishedMatches) {
   const finishedIds = new Set(finishedMatches.map(function(m){return m.id;}));
   allPreds = allPreds.filter(function(p){return finishedIds.has(p.match_id);});
 
-
-  // Build sortedMatches and playerMatchPts for use in sections
-  var _sm_skip = [...finishedMatches].sort(function(a,b) { return a.id - b.id; });
-  const fields = ['ms','hy','kg','gol','kk'];
-  var _pmp_skip = {};
-  const playerNames2 = players.filter(function(p) { return p.group_id === GROUP_ID; }).map(function(p) { return p.name; });
-  playerNames2.forEach(function(name) { playerMatchPts[name] = []; });
-  sortedMatches.forEach(function(m) {
-    const res = results[m.id];
-    const matchPreds = allPreds.filter(function(p) { return p.match_id === m.id; });
-    const voteCounts = {};
-    fields.forEach(function(f) {
-      voteCounts[f] = {};
-      matchPreds.forEach(function(p) { if (p[f]) voteCounts[f][p[f]] = (voteCounts[f][p[f]]||0)+1; });
-    });
-    playerNames2.forEach(function(name) {
-      const pred = matchPreds.find(function(p) { return p.player_name === name; });
-      if (!pred) { playerMatchPts[name].push(null); return; }
-      let pts = 0;
-      if (pred.hy && pred.hy === res.hy) pts += 1;
-      if (pred.ms && pred.ms === res.ms) pts += 1;
-      if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
-      if (pred.kg && pred.kg === res.kg) pts += 1;
-      if (pred.gol && pred.gol === res.gol) pts += 1;
-      if (pred.kk && pred.kk === res.kk) pts += 1;
-      let bonus = 0;
-      fields.forEach(function(f) {
-        const pv = pred[f]; const rv = (f==='ms') ? res.ms : res[f];
-        if (!pv || !rv || pv !== rv) return;
-        const total = Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
-        if (total > 1 && voteCounts[f][pv] === 1) bonus += 1;
-      });
-      playerMatchPts[name].push(pts + bonus);
-    });
-  });
   const playerNames = players.filter(function(p) { return p.group_id === GROUP_ID; }).map(function(p) { return p.name; });
-  var _sm_skip = [...finishedMatches].sort(function(a,b) { return a.id - b.id; });
-  var _fields_skip = ['ms','hy','kg','gol','kk'];
+  var _unused = [...finishedMatches].sort(function(a,b) { return a.id - b.id; });
+  var _unused2 = ['ms','hy','kg','gol','kk'];
 
   // Calculate per-player per-match pts
-  var _pmp_skip = {};
+  var _unused3 = {};
   playerNames.forEach(function(name) { playerMatchPts[name] = []; });
 
   sortedMatches.forEach(function(m) {
