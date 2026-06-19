@@ -3036,7 +3036,7 @@ async function renderWeeklyBest() {
   const html = '<div style="background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#fff">' +
     '<div style="font-size:11px;font-weight:600;opacity:0.8;text-transform:uppercase;margin-bottom:4px">⭐ Son Maçın Kahramanı</div>' +
     '<div style="font-size:20px;font-weight:700">' + best + '</div>' +
-    '<div style="font-size:13px;opacity:0.85;margin-top:2px">+' + bestPts + ' puan · ' + lastMatch.home.split(' ').pop() + ' - ' + lastMatch.away.split(' ').pop() + '</div>' +
+    '<div style="font-size:13px;opacity:0.85;margin-top:2px">+' + bestPts + ' puan · ' + lastMatch.home.replace(/[^\w\s]/g,'').trim() + ' - ' + lastMatch.away.replace(/[^\w\s]/g,'').trim() + '</div>' +
     '</div>';
 
   const oldHero = document.getElementById('hero-banner');
@@ -3957,8 +3957,8 @@ async function renderIstatistik() {
       data[name].cesaret += bonus;
       data[name].pts.push(pts + bonus);
 
-      // Close call: correct MS but wrong exact score by 1 goal diff
-      if (pred.ms && pred.ms === res.ms && pred.home_score !== null && pred.away_score !== null) {
+      // Close call: score differs by exactly 1 goal total (no MS requirement)
+      if (pred.home_score !== null && pred.away_score !== null) {
         const diff = Math.abs(parseInt(pred.home_score) - res.home_score) + Math.abs(parseInt(pred.away_score) - res.away_score);
         if (diff === 1) data[name].closeCall.push({match: m.home + ' - ' + m.away, pred: pred.home_score+'-'+pred.away_score, real: res.home_score+'-'+res.away_score});
       }
