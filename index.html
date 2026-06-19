@@ -1599,7 +1599,7 @@ function buildPredsTable(m, preds) {
 
   // Add custom bets
   (m.customBets || []).forEach(function(cb, ci) {
-    fields.push({key:'c'+ci, label:cb.question, isCustom:true});
+    fields.push({key:'c'+ci, label:cb.question, isCustom:true, cb:cb});
   });
 
   let html = '<div style="overflow-x:auto"><table class="pred-table"><thead><tr><td><b>Oyuncu</b></td>';
@@ -1657,6 +1657,13 @@ function buildPredsTable(m, preds) {
       if (p._empty) { html += '<td>—</td>'; return; }
       val = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
       if (!val) { html += '<td>—</td>'; return; }
+      // Validate custom bet value matches expected options for this bet type
+      if (f.isCustom && f.cb) {
+        const validOpts = f.cb.type === 'yesno' ? ['Var','Yok'] :
+                          f.cb.type === '1x2' ? ['1','X','2'] :
+                          (f.cb.options || []);
+        if (validOpts.length && !validOpts.includes(val)) { html += '<td>—</td>'; return; }
+      }
       const myCount = (majority[f.key].counts && majority[f.key].counts[val]) || 0;
       const isLone = majority[f.key].total > 1 && myCount === 1;
       const bonusHtml = isLone ? '<span class="bonus-badge">+1?</span>' : '';
