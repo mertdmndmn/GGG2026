@@ -4469,6 +4469,42 @@ async function openPlayerModal(name) {
   const avg = predCount > 0 ? (calcPts / predCount).toFixed(1) : '—';
   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank;
 
+  // Last 5 matches form
+  const last5 = finishedMatches.slice(-5);
+  let formHtml = '';
+  if (Array.isArray(preds)) {
+    formHtml = last5.map(function(m) {
+      const pred = preds.find(function(p){return p.match_id===m.id;});
+      const res = results[m.id];
+      if (!pred) return '<span title="Tahmin yok" style="width:28px;height:28px;border-radius:50%;background:#eee;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#999">—</span>';
+      let pts = 0;
+      if (pred.hy && pred.hy === res.hy) pts += 1;
+      if (pred.ms && pred.ms === res.ms) pts += 1;
+      if (pred.home_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
+      if (pred.kg && pred.kg === res.kg) pts += 1;
+      if (pred.gol && pred.gol === res.gol) pts += 1;
+      if (pred.kk && pred.kk === res.kk) pts += 1;
+      const color = pts >= 7 ? '#2ecc71' : pts >= 4 ? '#f39c12' : pts >= 2 ? '#3498db' : '#e74c3c';
+      const bg = pts >= 7 ? 'rgba(46,204,113,0.15)' : pts >= 4 ? 'rgba(243,156,18,0.15)' : pts >= 2 ? 'rgba(52,152,219,0.15)' : 'rgba(231,76,60,0.1)';
+      return '<span title="' + m.home.split(' ').pop() + ' - ' + m.away.split(' ').pop() + ': +' + pts + '" style="width:32px;height:32px;border-radius:50%;background:' + bg + ';display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:' + color + '">' + pts + '</span>';
+    }).join('');
+  }
+
+  // Auto badges
+  const badges = [];
+  if (exactScores >= 3) badges.push({icon:'🔮', label:'Kahin', desc: exactScores + ' tam skor'});
+  if (predCount === finishedMatches.length) badges.push({icon:'🤖', label:'Tahmin Makinesi', desc:'Her maça tahmin girdi'});
+  const avgNum = predCount > 0 ? calcPts / predCount : 0;
+  if (avgNum >= 4) badges.push({icon:'⭐', label:'Süper Form', desc: avgNum.toFixed(1) + ' puan/maç'});
+  if (rank === 1) badges.push({icon:'👑', label:'Lider', desc:'Şu an 1. sırada'});
+
+  const badgeHtml = badges.length ? 
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">' +
+    badges.map(function(b) {
+      return '<div style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;background:var(--surface);font-size:12px">' +
+        '<span>' + b.icon + '</span><span style="font-weight:600">' + b.label + '</span><span style="color:var(--muted)">· ' + b.desc + '</span></div>';
+    }).join('') + '</div>' : '';
+
   content.innerHTML = 
     '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">' +
       '<div style="width:52px;height:52px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff">' + name[0] + '</div>' +
@@ -4476,6 +4512,8 @@ async function openPlayerModal(name) {
         '<div style="font-size:14px;color:var(--muted);margin-top:2px">' + medal + ' · ' + totalPts + ' puan</div>' +
       '</div>' +
     '</div>' +
+    '<div style="margin-bottom:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">SON 5 MAÇ</div><div style="display:flex;gap:6px">' + formHtml + '</div></div>' +
+    badgeHtml +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
       '<div style="background:var(--surface);border-radius:12px;padding:12px;text-align:center">' +
         '<div style="font-size:22px;font-weight:700;color:var(--green)">' + avg + '</div>' +
