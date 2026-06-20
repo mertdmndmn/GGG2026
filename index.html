@@ -228,6 +228,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
   0% { transform:translateY(0) rotate(0deg); opacity:1; }
   100% { transform:translateY(100vh) rotate(720deg); opacity:0; }
 }
+
+.player-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:flex-end;justify-content:center;}
+.player-modal{background:var(--card);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;}
+.player-modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
 </style>
 </head>
 <body>
@@ -1640,7 +1644,7 @@ function buildPredsTable(m, preds) {
   allPlayerRows.forEach(function(p) {
     const isMe = p.player_name === currentUser;
     html += '<tr' + (p._empty ? ' style="opacity:0.4"' : '') + '>';
-    html += '<td class="' + (isMe ? 'me-cell' : '') + '">' + p.player_name + (isMe ? ' ★' : '') + '</td>';
+    html += '<td class="' + (isMe ? 'me-cell' : '') + '" onclick="openPlayerModal(' + JSON.stringify(p.player_name) + ')" style="cursor:pointer">' + p.player_name + (isMe ? ' ★' : '') + '</td>';
     fields.forEach(function(f) {
       let val;
       if (f.key === 'score') {
@@ -1657,13 +1661,6 @@ function buildPredsTable(m, preds) {
       if (p._empty) { html += '<td>—</td>'; return; }
       val = f.isCustom ? (p.custom && p.custom[f.key]) : p[f.key];
       if (!val) { html += '<td>—</td>'; return; }
-      // Validate custom bet value matches expected options for this bet type
-      if (f.isCustom && f.cb) {
-        const validOpts = f.cb.type === 'yesno' ? ['Var','Yok'] :
-                          f.cb.type === '1x2' ? ['1','X','2'] :
-                          (f.cb.options || []);
-        if (validOpts.length && !validOpts.includes(val)) { html += '<td>—</td>'; return; }
-      }
       const myCount = (majority[f.key].counts && majority[f.key].counts[val]) || 0;
       const isLone = majority[f.key].total > 1 && myCount === 1;
       const bonusHtml = isLone ? '<span class="bonus-badge">+1?</span>' : '';
@@ -4214,6 +4211,38 @@ async function renderIstatistik() {
       }
     },
     {
+      id: 'tamskor-stat',
+      emoji: '🎯',
+      title: 'Tam Skor Şampiyonu',
+      subtitle: 'Kim kaç kere skoru tam bildi?',
+      render: function() {
+        const exactCounts = {};
+        stats.forEach(function(s) { exactCounts[s.name] = 0; });
+        const fMatches = matches.filter(function(m){return results[m.id]&&results[m.id].home_score!==null;});
+        fMatches.forEach(function(m) {
+          const res = results[m.id];
+          const mp = allPreds.filter(function(p){return p.match_id===m.id;});
+          mp.forEach(function(pred) {
+            if (pred.home_score!==null && pred.away_score!==null &&
+                parseInt(pred.home_score)===res.home_score && parseInt(pred.away_score)===res.away_score) {
+              if (exactCounts[pred.player_name] !== undefined) exactCounts[pred.player_name]++;
+            }
+          });
+        });
+        const sorted = Object.keys(exactCounts).sort(function(a,b){return exactCounts[b]-exactCounts[a];});
+        return sorted.map(function(name, i) {
+          const cnt = exactCounts[name];
+          const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+          const bg = i===0?'rgba(231,76,60,0.06)':i===1?'rgba(52,152,219,0.06)':i===2?'rgba(46,204,113,0.06)':'';
+          return '<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;margin:4px 0;border-radius:10px;background:' + bg + '">' +
+            '<span style="font-size:' + (medal?'20':'13') + 'px;width:26px;text-align:center;color:var(--muted);font-weight:600">' + (medal||i+1) + '</span>' +
+            '<span style="flex:1;font-weight:600;font-size:14px">' + name + '</span>' +
+            '<span style="font-weight:700;font-size:16px;color:var(--green)">' + cnt + ' 🎯</span>' +
+          '</div>';
+        }).join('');
+      }
+    },
+    {
       id: 'isi-stat',
       emoji: '🌡️',
       title: 'Isı Haritası',
@@ -4393,6 +4422,69 @@ function luckyFill(mid) {
 
   showToast('🍀 Şansını denedin!');
 }
+
+function closePlayerModal() {
+  document.getElementById('player-modal').style.display = 'none';
+}
+
+async function openPlayerModal(name) {
+  const modal = document.getElementById('player-modal');
+  const content = document.getElementById('player-modal-content');
+  modal.style.display = 'flex';
+  content.innerHTML = '<div class="loading">Yükleniyor...</div>';
+
+  // Get player data
+  const pl = players.find(function(p) { return p.name === name && p.group_id === GROUP_ID; });
+  const rank = [...players].filter(function(p){return p.group_id===GROUP_ID;}).sort(function(a,b){return b.pts-a.pts;}).findIndex(function(p){return p.name===name;}) + 1;
+
+  // Get predictions
+  const preds = await sbGet('predictions', 'player_name=eq.' + encodeURIComponent(name) + '&group_id=eq.' + GROUP_ID);
+  const finishedMatches = matches.filter(function(m){return results[m.id]&&results[m.id].home_score!==null;});
+  
+  let totalPts = pl ? pl.pts : 0;
+  let exactScores = 0, correctMS = 0, predCount = 0;
+
+  if (Array.isArray(preds)) {
+    finishedMatches.forEach(function(m) {
+      const pred = preds.find(function(p){return p.match_id===m.id;});
+      if (!pred) return;
+      predCount++;
+      const res = results[m.id];
+      if (pred.ms && pred.ms === res.ms) correctMS++;
+      if (pred.home_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) exactScores++;
+    });
+  }
+
+  const avg = predCount > 0 ? (totalPts / predCount).toFixed(1) : '—';
+  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank;
+
+  content.innerHTML = 
+    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">' +
+      '<div style="width:52px;height:52px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff">' + name[0] + '</div>' +
+      '<div><div style="font-size:20px;font-weight:700">' + name + '</div>' +
+        '<div style="font-size:14px;color:var(--muted);margin-top:2px">' + medal + ' · ' + totalPts + ' puan</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
+      '<div style="background:var(--surface);border-radius:12px;padding:12px;text-align:center">' +
+        '<div style="font-size:22px;font-weight:700;color:var(--green)">' + avg + '</div>' +
+        '<div style="font-size:12px;color:var(--muted)">puan/maç</div>' +
+      '</div>' +
+      '<div style="background:var(--surface);border-radius:12px;padding:12px;text-align:center">' +
+        '<div style="font-size:22px;font-weight:700;color:var(--red)">' + exactScores + '</div>' +
+        '<div style="font-size:12px;color:var(--muted)">tam skor</div>' +
+      '</div>' +
+      '<div style="background:var(--surface);border-radius:12px;padding:12px;text-align:center">' +
+        '<div style="font-size:22px;font-weight:700">' + predCount + '</div>' +
+        '<div style="font-size:12px;color:var(--muted)">tahmin</div>' +
+      '</div>' +
+      '<div style="background:var(--surface);border-radius:12px;padding:12px;text-align:center">' +
+        '<div style="font-size:22px;font-weight:700;color:#f39c12">' + correctMS + '</div>' +
+        '<div style="font-size:12px;color:var(--muted)">doğru sonuç</div>' +
+      '</div>' +
+    '</div>' +
+    '<button onclick="closePlayerModal()" style="width:100%;padding:12px;background:var(--surface);border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">Kapat</button>';
+}
 // ============ SHARE LEADERBOARD ============
 function shareLeaderboard() {
   const sorted = [...players].sort(function(a,b) { return b.pts - a.pts; });
@@ -4448,5 +4540,5 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 </script>
-</body>
+<div id="player-modal" style="display:none" class="player-modal-overlay" onclick="if(event.target===this)closePlayerModal()"><div class="player-modal"><div class="player-modal-handle"></div><div id="player-modal-content"></div></div></div></body>
 </html>
