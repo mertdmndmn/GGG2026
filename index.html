@@ -1937,7 +1937,7 @@ function renderLeaderboard() {
     const streakBadge = '';
     return `<div class="lb-row ${isMe?'me':''}">
       <span class="lb-rank ${rc}">${i+1}</span>
-      <span class="lb-name">${p.name}${streakBadge}${isMe?' <small>sen</small>':''}</span>
+      <span class="lb-name" onclick="openPlayerModal(this.dataset.name)" data-name="${p.name.replace(/"/g,'&quot;')}" style="cursor:pointer">${p.name}${streakBadge}${isMe?' <small>sen</small>':''}</span>
       <span class="lb-pts">${p.pts}</span>${tr}</div>`;
   }).join('');
   const me = sorted.find(p => p.name === currentUser);
@@ -2802,7 +2802,7 @@ async function renderSampionTab() {
       const pt = p.sampion ? getTier(p.sampion) : null;
       html += '<div class="lb-row">';
       html += '<span class="lb-rank ' + rc + '">' + (i+1) + '</span>';
-      html += '<span class="lb-name">' + p.name + (p.name===currentUser?' <small>sen</small>':'') + '</span>';
+      html += '<span class="lb-name" onclick="openPlayerModal(this.dataset.name)" data-name="' + p.name.replace(/"/g,'&quot;') + '" style="cursor:pointer">' + p.name + (p.name===currentUser?' <small>sen</small>':'') + '</span>';
       html += '<span style="font-size:12px;color:var(--muted)">' + (p.sampion || '—') + '</span>';
       if (pt) html += '<span style="font-size:11px;font-weight:600;color:' + pt.color + '">+' + pt.pts + '</span>';
       html += '</div>';
@@ -2815,7 +2815,7 @@ async function renderSampionTab() {
       const pt = p.sampion ? getTier(p.sampion) : null;
       html += '<div class="lb-row">';
       html += '<span class="lb-rank">—</span>';
-      html += '<span class="lb-name">' + p.name + (p.name===currentUser?' <small>sen</small>':'') + '</span>';
+      html += '<span class="lb-name" onclick="openPlayerModal(this.dataset.name)" data-name="' + p.name.replace(/"/g,'&quot;') + '" style="cursor:pointer">' + p.name + (p.name===currentUser?' <small>sen</small>':'') + '</span>';
       html += '<span style="font-size:12px;color:var(--muted)">' + (p.sampion ? '✅ Seçti' : '⏳ Bekliyor') + '</span>';
       if (pt) html += '<span style="font-size:11px;font-weight:600;color:' + pt.color + '">+' + pt.pts + '</span>';
       html += '</div>';
