@@ -1644,7 +1644,7 @@ function buildPredsTable(m, preds) {
   allPlayerRows.forEach(function(p) {
     const isMe = p.player_name === currentUser;
     html += '<tr' + (p._empty ? ' style="opacity:0.4"' : '') + '>';
-    html += '<td class="' + (isMe ? 'me-cell' : '') + '" onclick="openPlayerModal(' + JSON.stringify(p.player_name) + ')" style="cursor:pointer">' + p.player_name + (isMe ? ' ★' : '') + '</td>';
+    html += '<td class="' + (isMe ? 'me-cell' : '') + '" onclick="openPlayerModal(this.dataset.name)" data-name="' + p.player_name.replace(/"/g,'&quot;') + '" style="cursor:pointer">' + p.player_name + (isMe ? ' ★' : '') + '</td>';
     fields.forEach(function(f) {
       let val;
       if (f.key === 'score') {
