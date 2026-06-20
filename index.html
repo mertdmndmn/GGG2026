@@ -4243,6 +4243,61 @@ async function renderIstatistik() {
       }
     },
     {
+      id: 'efsane-stat',
+      emoji: '🌟',
+      title: 'Efsane Tahmin',
+      subtitle: 'Turnuvada bir maçta alınan en yüksek puan',
+      render: function() {
+        const fMatches = matches.filter(function(m){return results[m.id]&&results[m.id].home_score!==null;});
+        let best = null;
+        fMatches.forEach(function(m) {
+          const res = results[m.id];
+          const mp = allPreds.filter(function(p){return p.match_id===m.id;});
+          const fields = ['ms','hy','kg','gol','kk'];
+          const voteCounts = {};
+          fields.forEach(function(f) {
+            voteCounts[f] = {};
+            mp.forEach(function(p){if(p[f])voteCounts[f][p[f]]=(voteCounts[f][p[f]]||0)+1;});
+          });
+          mp.forEach(function(pred) {
+            let pts = 0;
+            if(pred.hy&&pred.hy===res.hy)pts+=1;
+            if(pred.ms&&pred.ms===res.ms)pts+=1;
+            if(pred.home_score!==null&&parseInt(pred.home_score)===res.home_score&&parseInt(pred.away_score)===res.away_score)pts+=5;
+            if(pred.kg&&pred.kg===res.kg)pts+=1;
+            if(pred.gol&&pred.gol===res.gol)pts+=1;
+            if(pred.kk&&pred.kk===res.kk)pts+=1;
+            let bonus = 0;
+            fields.forEach(function(f){
+              const pv=pred[f],rv=(f==='ms')?res.ms:res[f];
+              if(!pv||!rv||pv!==rv)return;
+              const total=Object.values(voteCounts[f]).reduce(function(a,b){return a+b;},0);
+              if(total>1&&voteCounts[f][pv]===1)bonus+=1;
+            });
+            const total = pts + bonus;
+            if (!best || total > best.pts) {
+              best = {
+                name: pred.player_name,
+                pts: total,
+                bonus: bonus,
+                match: m.home.split(' ').pop() + ' - ' + m.away.split(' ').pop(),
+                score: res.home_score + '-' + res.away_score,
+                pred: pred.home_score + '-' + pred.away_score
+              };
+            }
+          });
+        });
+        if (!best) return '<div style="color:var(--muted);padding:10px">Veri yok</div>';
+        return '<div style="padding:16px;border-radius:12px;background:linear-gradient(135deg,rgba(243,156,18,0.1),rgba(231,76,60,0.1));text-align:center">' +
+          '<div style="font-size:32px;margin-bottom:8px">🌟</div>' +
+          '<div style="font-size:22px;font-weight:700;margin-bottom:4px">' + best.name + '</div>' +
+          '<div style="font-size:36px;font-weight:800;color:var(--green);margin:8px 0">+' + best.pts + '</div>' +
+          '<div style="font-size:13px;color:var(--muted);margin-bottom:4px">' + best.match + ' · ' + best.score + '</div>' +
+          '<div style="font-size:13px;font-weight:600">Tahmini: ' + best.pred + (best.bonus > 0 ? ' + ' + best.bonus + ' 🎯 cesaret' : '') + '</div>' +
+        '</div>';
+      }
+    },
+    {
       id: 'isi-stat',
       emoji: '🌡️',
       title: 'Isı Haritası',
