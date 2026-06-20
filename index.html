@@ -229,8 +229,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
   100% { transform:translateY(100vh) rotate(720deg); opacity:0; }
 }
 
-.player-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:flex-end;justify-content:center;}
-.player-modal{background:var(--card);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;}
+.player-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.player-modal{background:var(--card);border-radius:16px;padding:20px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;}
 .player-modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
 </style>
 </head>
@@ -4444,7 +4444,9 @@ async function openPlayerModal(name) {
   let totalPts = pl ? pl.pts : 0;
   let exactScores = 0, correctMS = 0, predCount = 0;
 
+  let calcPts = 0;
   if (Array.isArray(preds)) {
+    const fields = ['ms','hy','kg','gol','kk'];
     finishedMatches.forEach(function(m) {
       const pred = preds.find(function(p){return p.match_id===m.id;});
       if (!pred) return;
@@ -4452,10 +4454,19 @@ async function openPlayerModal(name) {
       const res = results[m.id];
       if (pred.ms && pred.ms === res.ms) correctMS++;
       if (pred.home_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) exactScores++;
+      // Calculate pts same way as istatistik
+      let pts = 0;
+      if (pred.hy && pred.hy === res.hy) pts += 1;
+      if (pred.ms && pred.ms === res.ms) pts += 1;
+      if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
+      if (pred.kg && pred.kg === res.kg) pts += 1;
+      if (pred.gol && pred.gol === res.gol) pts += 1;
+      if (pred.kk && pred.kk === res.kk) pts += 1;
+      calcPts += pts;
     });
   }
 
-  const avg = predCount > 0 ? (totalPts / predCount).toFixed(1) : '—';
+  const avg = predCount > 0 ? (calcPts / predCount).toFixed(1) : '—';
   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank;
 
   content.innerHTML = 
