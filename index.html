@@ -2894,9 +2894,16 @@ async function renderProfilTab() {
 
   // Load my predictions
   const myPreds = await sbGet('predictions', 'player_name=eq.' + encodeURIComponent(currentUser) + '&group_id=eq.' + GROUP_ID);
-  const allResults = await sbGet('match_results', 'select=*&group_id=is.null');
+  const allResults = await sbGet('match_results', 'select=*&home_score=not.is.null');
   const resultsMap = {};
-  if (Array.isArray(allResults)) allResults.forEach(r => { resultsMap[r.match_id] = r; });
+  if (Array.isArray(allResults)) {
+    // Prefer group_id=null (global), fallback to group-specific
+    allResults.forEach(r => {
+      if (!resultsMap[r.match_id] || r.group_id === null) {
+        resultsMap[r.match_id] = r;
+      }
+    });
+  }
 
   // Stats
   let totalPreds = 0, correctMS = 0, exactScore = 0, correctHY = 0, correctKG = 0, correctGol = 0, correctKK = 0;
