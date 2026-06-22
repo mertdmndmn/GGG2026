@@ -4576,7 +4576,7 @@ function renderBracket() {
     if (res && res.home_team && side === 'home') return res.home_team;
     if (res && res.away_team && side === 'away') return res.away_team;
     // Strip flag emoji and leading junk
-    return raw.replace(/[\u{1F1E0}-\u{1F1FF}]{2}|[\u{1F300}-\u{1F9FF}]|\u{1F3F3}\uFE0F?/gu,'').replace(/^\s*[\d\w]+\.\s*/,'').trim() || 'TBD';
+    return raw.replace(/[\uD83C][\uDDE0-\uDDFF]/g,'').replace(/[\uD83C-\uDBFF][\uDC00-\uDFFF]/g,'').replace(/\uD83C\uDFF3/g,'').replace(/^\s*\S+\s+/,'').trim() || 'TBD';
   }
 
   // Helper: get winner name of a match
