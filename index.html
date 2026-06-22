@@ -4314,6 +4314,24 @@ async function renderIstatistik() {
       }
     },
     {
+      id: 'kotu-stat',
+      emoji: '💩',
+      title: 'Kötü Tahmin Ödülü',
+      subtitle: 'En düşük puan/maç ortalaması',
+      render: function() {
+        const sorted = [...stats].sort(function(a,b) { return a.avg - b.avg; });
+        return sorted.map(function(s, i) {
+          const bg = i===0 ? 'rgba(231,76,60,0.08)' : '';
+          const badge = i===0 ? ' 💩' : '';
+          return '<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;margin:4px 0;border-radius:10px;background:' + bg + '">' +
+            '<span style="width:26px;text-align:center;font-size:13px;color:var(--muted);font-weight:600">' + (i+1) + '</span>' +
+            '<span style="flex:1;font-weight:600;font-size:14px">' + s.name + badge + '</span>' +
+            '<span style="font-weight:700;font-size:16px;color:var(--red)">' + s.avg.toFixed(1) + '</span>' +
+          '</div>';
+        }).join('');
+      }
+    },
+    {
       id: 'isi-stat',
       emoji: '🌡️',
       title: 'Isı Haritası',
