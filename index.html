@@ -4572,16 +4572,12 @@ function renderBracket() {
     var m = matches.find(function(x){return x.id===mid;});
     if (!m) return 'TBD';
     var raw = side==='home' ? m.home : m.away;
-    // strip surrogate pair emojis (flags etc)
     var clean = '';
-    var i = 0;
-    while (i < raw.length) {
-      var code = raw.charCodeAt(i);
-      if (code >= 0xD800 && code <= 0xDBFF) { i += 2; continue; } // skip surrogate pairs
-      clean += raw[i]; i++;
+    for (var i=0; i<raw.length; i++) {
+      if (raw.charCodeAt(i) < 256) clean += raw[i];
     }
-    clean = clean.replace(/^\s*[\w.()\/]+\s+/,'').trim();
-    return clean.substring(0,14) || 'TBD';
+    clean = clean.trim().replace(/^[\w.()\/]+\s+/, '').trim();
+    return clean.substring(0, 14) || 'TBD';
   }
 
   function getWinner(mid) {
