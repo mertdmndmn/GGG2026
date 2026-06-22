@@ -772,6 +772,16 @@ async function enterApp(name, pin) {
   document.getElementById('app').style.display = 'block';
   document.getElementById('user-badge').textContent = name;
   await loadAll();
+  // Restore last active tab (only on fresh login/refresh)
+  try {
+    const savedTab = localStorage.getItem('ggg_tab');
+    if (savedTab && savedTab !== 'tahmin') {
+      setTimeout(function() {
+        const btn = document.querySelector('.nav-btn[onclick*="\'' + savedTab + '\'"]');
+        if (btn) showTab(savedTab, btn);
+      }, 500);
+    }
+  } catch(e) {}
   renderLeaderboard();
   startRealtime();
 }
@@ -780,16 +790,6 @@ async function loadAll() {
   await Promise.all([loadMatches(), loadPredictions(), loadPlayers(), loadResults(), loadTurnuvaBets()]);
   buildFilterBar();
   renderMatches();
-  // Restore last active tab
-  try {
-    const savedTab = localStorage.getItem('ggg_tab');
-    if (savedTab && savedTab !== 'tahmin') {
-      setTimeout(function() {
-        const btn = document.querySelector('.nav-btn[onclick*="\'' + savedTab + '\'"]');
-        showTab(savedTab, btn);
-      }, 300);
-    }
-  } catch(e) {}
   renderLeaderboard();
 }
 
