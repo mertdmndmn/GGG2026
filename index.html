@@ -301,6 +301,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <button class="nav-btn active" onclick="showTab('tahmin',this)">Tahmin</button>
       <button class="nav-btn" onclick="showTab('puan',this)">Puan</button>
       <button class="nav-btn" onclick="showTab('istatistik',this)">📊</button>
+      <button class="nav-btn" onclick="showTab('bracket',this)">🏆</button>
       <button class="nav-btn" onclick="showTab('turnuva',this)">Turnuva</button>
       <button class="nav-btn" onclick="showTab('profil',this)">Profil</button>
       <button class="nav-btn" onclick="showTab('admin',this)">Admin</button>
@@ -366,6 +367,11 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <div id="mac-stats-container"></div>
       </div>
       <div id="istatistik-container"></div>
+    </div>
+
+    <div id="tab-bracket" class="section">
+      <div class="section-label">Nakavt Bracket</div>
+      <div id="bracket-container"></div>
     </div>
 
         <div id="tab-turnuva" class="section">
@@ -917,6 +923,7 @@ function showTab(tab, btn) {
   document.getElementById('tab-' + tab).classList.add('active');
   btn.classList.add('active');
   window.scrollTo({top:0, behavior:'smooth'});
+  if (tab === 'bracket') { renderBracket(); }
   if (tab === 'istatistik') { loadPlayers().then(async () => { renderMacStatsAuto(); renderIstatistik(); }); }
   if (tab === 'puan') { loadPlayers().then(async () => {
     renderLeaderboard();
@@ -4554,6 +4561,43 @@ async function openPlayerModal(name) {
       '</div>' +
     '</div>' +
     '<button onclick="closePlayerModal()" style="width:100%;padding:12px;background:var(--surface);border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">Kapat</button>';
+}
+
+function renderBracket() {
+  const container = document.getElementById('bracket-container');
+  if (!container) return;
+
+  const rounds = ['Son 32','Son 16','Çeyrek Final','Yarı Final','Final'];
+  const allM = [[73, "Son 32", "\ud83c\udff3 A2. vs B2.", "\ud83c\udff3 TBD"], [74, "Son 32", "\ud83c\udff3 E1. vs 3.(A/B/C/D/F)", "\ud83c\udff3 TBD"], [75, "Son 32", "\ud83c\udff3 F1. vs C2.", "\ud83c\udff3 TBD"], [76, "Son 32", "\ud83c\udff3 C1. vs F2.", "\ud83c\udff3 TBD"], [77, "Son 32", "\ud83c\udff3 I1. vs 3.(C/D/F/G/H)", "\ud83c\udff3 TBD"], [78, "Son 32", "\ud83c\udff3 E2. vs I2.", "\ud83c\udff3 TBD"], [79, "Son 32", "\ud83c\udff3 A1. vs 3.(C/E/F/H/I)", "\ud83c\udff3 TBD"], [80, "Son 32", "\ud83c\udff3 L1. vs 3.(E/H/I/J/K)", "\ud83c\udff3 TBD"], [81, "Son 32", "\ud83c\udff3 D1. vs 3.(B/E/F/I/J)", "\ud83c\udff3 TBD"], [82, "Son 32", "\ud83c\udff3 G1. vs 3.(A/E/H/I/J)", "\ud83c\udff3 TBD"], [83, "Son 32", "\ud83c\udff3 K2. vs L2.", "\ud83c\udff3 TBD"], [84, "Son 32", "\ud83c\udff3 H1. vs J2.", "\ud83c\udff3 TBD"], [85, "Son 32", "\ud83c\udff3 B1. vs 3.(E/F/G/I/J)", "\ud83c\udff3 TBD"], [86, "Son 32", "\ud83c\udff3 J1. vs H2.", "\ud83c\udff3 TBD"], [87, "Son 32", "\ud83c\udff3 K1. vs 3.(D/E/I/J/L)", "\ud83c\udff3 TBD"], [88, "Son 32", "\ud83c\udff3 D2. vs G2.", "\ud83c\udff3 TBD"], [89, "Son 16", "\ud83c\udff3 M73 gal. vs M75 gal.", "\ud83c\udff3 TBD"], [90, "Son 16", "\ud83c\udff3 M74 gal. vs M76 gal.", "\ud83c\udff3 TBD"], [91, "Son 16", "\ud83c\udff3 M77 gal. vs M79 gal.", "\ud83c\udff3 TBD"], [92, "Son 16", "\ud83c\udff3 M78 gal. vs M80 gal.", "\ud83c\udff3 TBD"], [93, "Son 16", "\ud83c\udff3 M81 gal. vs M83 gal.", "\ud83c\udff3 TBD"], [94, "Son 16", "\ud83c\udff3 M82 gal. vs M84 gal.", "\ud83c\udff3 TBD"], [95, "Son 16", "\ud83c\udff3 M85 gal. vs M87 gal.", "\ud83c\udff3 TBD"], [96, "Son 16", "\ud83c\udff3 M86 gal. vs M88 gal.", "\ud83c\udff3 TBD"], [97, "\u00c7eyrek Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [98, "\u00c7eyrek Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [99, "\u00c7eyrek Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [100, "\u00c7eyrek Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [101, "Yar\u0131 Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [102, "Yar\u0131 Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [104, "Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"]];
+  const roundMatches = {};
+  rounds.forEach(function(r) { roundMatches[r] = []; });
+  allM.forEach(function(m) {
+    if (roundMatches[m[1]]) roundMatches[m[1]].push({mid:m[0], home:m[2], away:m[3]});
+  });
+
+  let html = '';
+  rounds.forEach(function(round) {
+    const ms = roundMatches[round] || [];
+    if (!ms.length) return;
+    html += '<div style="margin-bottom:16px">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:1px">' + round + '</div>';
+    ms.forEach(function(m) {
+      const res = results[m.mid];
+      const finished = res && res.home_score !== null;
+      const homeClean = m.home.split(' ').filter(function(t){return /[\w\u00C0-\u024F]/.test(t);}).join(' ');
+      const awayClean = m.away.split(' ').filter(function(t){return /[\w\u00C0-\u024F]/.test(t);}).join(' ');
+      const score = finished ? res.home_score + ' - ' + res.away_score : 'vs';
+      const bg = finished ? 'rgba(46,204,113,0.05)' : 'var(--card)';
+      const border = finished ? '1.5px solid var(--green)' : '1px solid var(--border)';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:4px;border-radius:10px;background:' + bg + ';border:' + border + '">' +
+        '<span style="flex:1;font-size:13px;font-weight:' + (finished && res.home_score > res.away_score ? '700' : '400') + '">' + homeClean + '</span>' +
+        '<span style="font-size:13px;font-weight:700;color:' + (finished ? 'var(--green)' : 'var(--muted)') + ';min-width:36px;text-align:center">' + score + '</span>' +
+        '<span style="flex:1;font-size:13px;font-weight:' + (finished && res.away_score > res.home_score ? '700' : '400') + ';text-align:right">' + awayClean + '</span>' +
+      '</div>';
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html || '<div style="color:var(--muted);padding:20px;text-align:center">Nakavt maçları henüz başlamadı</div>';
 }
 // ============ SHARE LEADERBOARD ============
 function shareLeaderboard() {
