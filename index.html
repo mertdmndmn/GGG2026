@@ -4567,37 +4567,217 @@ function renderBracket() {
   const container = document.getElementById('bracket-container');
   if (!container) return;
 
-  const rounds = ['Son 32','Son 16','Çeyrek Final','Yarı Final','Final'];
-  const allM = [[73, "Son 32", "\ud83c\udff3 A2. vs B2.", "\ud83c\udff3 TBD"], [74, "Son 32", "\ud83c\udff3 E1. vs 3.(A/B/C/D/F)", "\ud83c\udff3 TBD"], [75, "Son 32", "\ud83c\udff3 F1. vs C2.", "\ud83c\udff3 TBD"], [76, "Son 32", "\ud83c\udff3 C1. vs F2.", "\ud83c\udff3 TBD"], [77, "Son 32", "\ud83c\udff3 I1. vs 3.(C/D/F/G/H)", "\ud83c\udff3 TBD"], [78, "Son 32", "\ud83c\udff3 E2. vs I2.", "\ud83c\udff3 TBD"], [79, "Son 32", "\ud83c\udff3 A1. vs 3.(C/E/F/H/I)", "\ud83c\udff3 TBD"], [80, "Son 32", "\ud83c\udff3 L1. vs 3.(E/H/I/J/K)", "\ud83c\udff3 TBD"], [81, "Son 32", "\ud83c\udff3 D1. vs 3.(B/E/F/I/J)", "\ud83c\udff3 TBD"], [82, "Son 32", "\ud83c\udff3 G1. vs 3.(A/E/H/I/J)", "\ud83c\udff3 TBD"], [83, "Son 32", "\ud83c\udff3 K2. vs L2.", "\ud83c\udff3 TBD"], [84, "Son 32", "\ud83c\udff3 H1. vs J2.", "\ud83c\udff3 TBD"], [85, "Son 32", "\ud83c\udff3 B1. vs 3.(E/F/G/I/J)", "\ud83c\udff3 TBD"], [86, "Son 32", "\ud83c\udff3 J1. vs H2.", "\ud83c\udff3 TBD"], [87, "Son 32", "\ud83c\udff3 K1. vs 3.(D/E/I/J/L)", "\ud83c\udff3 TBD"], [88, "Son 32", "\ud83c\udff3 D2. vs G2.", "\ud83c\udff3 TBD"], [89, "Son 16", "\ud83c\udff3 M73 gal. vs M75 gal.", "\ud83c\udff3 TBD"], [90, "Son 16", "\ud83c\udff3 M74 gal. vs M76 gal.", "\ud83c\udff3 TBD"], [91, "Son 16", "\ud83c\udff3 M77 gal. vs M79 gal.", "\ud83c\udff3 TBD"], [92, "Son 16", "\ud83c\udff3 M78 gal. vs M80 gal.", "\ud83c\udff3 TBD"], [93, "Son 16", "\ud83c\udff3 M81 gal. vs M83 gal.", "\ud83c\udff3 TBD"], [94, "Son 16", "\ud83c\udff3 M82 gal. vs M84 gal.", "\ud83c\udff3 TBD"], [95, "Son 16", "\ud83c\udff3 M85 gal. vs M87 gal.", "\ud83c\udff3 TBD"], [96, "Son 16", "\ud83c\udff3 M86 gal. vs M88 gal.", "\ud83c\udff3 TBD"], [97, "\u00c7eyrek Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [98, "\u00c7eyrek Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [99, "\u00c7eyrek Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [100, "\u00c7eyrek Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [101, "Yar\u0131 Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [102, "Yar\u0131 Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"], [104, "Final", "\ud83c\udff3 TBD", "\ud83c\udff3 TBD"]];
-  const roundMatches = {};
-  rounds.forEach(function(r) { roundMatches[r] = []; });
-  allM.forEach(function(m) {
-    if (roundMatches[m[1]]) roundMatches[m[1]].push({mid:m[0], home:m[2], away:m[3]});
-  });
+  // Helper: get team name from match object (strips flag emoji prefix junk)
+  function teamName(m, side) {
+    if (!m) return 'TBD';
+    const raw = side === 'home' ? m.home : m.away;
+    // If match has a result and home/away_team fields use those
+    const res = results[m.id];
+    if (res && res.home_team && side === 'home') return res.home_team;
+    if (res && res.away_team && side === 'away') return res.away_team;
+    // Strip flag emoji and leading junk
+    return raw.replace(/[\u{1F1E0}-\u{1F1FF}]{2}|[\u{1F300}-\u{1F9FF}]|\u{1F3F3}\uFE0F?/gu,'').replace(/^\s*[\d\w]+\.\s*/,'').trim() || 'TBD';
+  }
 
-  let html = '';
-  rounds.forEach(function(round) {
-    const ms = roundMatches[round] || [];
-    if (!ms.length) return;
-    html += '<div style="margin-bottom:16px">';
-    html += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:1px">' + round + '</div>';
-    ms.forEach(function(m) {
-      const res = results[m.mid];
-      const finished = res && res.home_score !== null;
-      const homeClean = m.home.split(' ').filter(function(t){return /[\w\u00C0-\u024F]/.test(t);}).join(' ');
-      const awayClean = m.away.split(' ').filter(function(t){return /[\w\u00C0-\u024F]/.test(t);}).join(' ');
-      const score = finished ? res.home_score + ' - ' + res.away_score : 'vs';
-      const bg = finished ? 'rgba(46,204,113,0.05)' : 'var(--card)';
-      const border = finished ? '1.5px solid var(--green)' : '1px solid var(--border)';
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:4px;border-radius:10px;background:' + bg + ';border:' + border + '">' +
-        '<span style="flex:1;font-size:13px;font-weight:' + (finished && res.home_score > res.away_score ? '700' : '400') + '">' + homeClean + '</span>' +
-        '<span style="font-size:13px;font-weight:700;color:' + (finished ? 'var(--green)' : 'var(--muted)') + ';min-width:36px;text-align:center">' + score + '</span>' +
-        '<span style="flex:1;font-size:13px;font-weight:' + (finished && res.away_score > res.home_score ? '700' : '400') + ';text-align:right">' + awayClean + '</span>' +
-      '</div>';
+  // Helper: get winner name of a match
+  function winner(mid) {
+    const m = matches.find(function(x){return x.id===mid;});
+    const res = results[mid];
+    if (!res || res.home_score === null || res.home_score === undefined) return 'TBD';
+    if (res.home_score > res.away_score) return teamName(m,'home');
+    if (res.away_score > res.home_score) return teamName(m,'away');
+    // Draw — check penalties if stored, else TBD
+    return res.pen_home !== undefined ? (res.pen_home > res.pen_away ? teamName(m,'home') : teamName(m,'away')) : teamName(m,'home');
+  }
+
+  // Build a match card HTML
+  function matchCard(mid, forceHome, forceAway) {
+    const m = matches.find(function(x){return x.id===mid;});
+    const res = results[mid];
+    const finished = res && res.home_score !== null && res.home_score !== undefined;
+    const home = forceHome || (m ? teamName(m,'home') : 'TBD');
+    const away = forceAway || (m ? teamName(m,'away') : 'TBD');
+    const homeW = finished && res.home_score > res.away_score;
+    const awayW = finished && res.away_score > res.home_score;
+    const score = finished ? res.home_score + '-' + res.away_score : '';
+    const tbd = home==='TBD'||!home;
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;width:88px;font-size:10px;flex-shrink:0">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border-bottom:1px solid var(--border);background:' + (homeW?'rgba(26,122,60,0.08)':finished?'rgba(0,0,0,0.03)':'transparent') + '">' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:' + (homeW?'600':'400') + ';color:' + (tbd?'var(--muted)':homeW?'var(--green)':'var(--dark)') + '">' + (home||'TBD') + '</span>' +
+        (finished?'<span style="font-size:10px;font-weight:700;color:var(--green);margin-left:4px;flex-shrink:0">'+res.home_score+'</span>':'') +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;background:' + (awayW?'rgba(26,122,60,0.08)':finished?'rgba(0,0,0,0.03)':'transparent') + '">' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:' + (awayW?'600':'400') + ';color:' + (tbd?'var(--muted)':awayW?'var(--green)':'var(--dark)') + '">' + (away||'TBD') + '</span>' +
+        (finished?'<span style="font-size:10px;font-weight:700;color:'+(awayW?'var(--green)':'var(--muted)')+';margin-left:4px;flex-shrink:0">'+res.away_score+'</span>':'') +
+      '</div>' +
+    '</div>';
+  }
+
+  // Connector SVG between columns
+  function connector(pairs, totalH, dir) {
+    // pairs: array of {y1, y2} midpoints to connect to midY
+    var svg = '<svg width="20" height="'+totalH+'" style="flex-shrink:0;overflow:visible">';
+    pairs.forEach(function(p) {
+      var midY = (p.y1 + p.y2) / 2;
+      var x1 = dir==='right' ? 0 : 20;
+      var x2 = dir==='right' ? 20 : 0;
+      svg += '<line x1="'+x1+'" y1="'+p.y1+'" x2="'+x1+'" y2="'+p.y2+'" stroke="var(--border)" stroke-width="1"/>';
+      svg += '<line x1="'+x1+'" y1="'+midY+'" x2="'+x2+'" y2="'+midY+'" stroke="var(--border)" stroke-width="1"/>';
+    });
+    svg += '</svg>';
+    return svg;
+  }
+
+  // Match IDs per round
+  // Left bracket: Son 32 ids 73-80, Son 16 ids 89-92, QF ids 97-98, SF id 101
+  // Right bracket: Son 32 ids 81-88, Son 16 ids 93-96, QF ids 99-100, SF id 102
+  // Final id 104
+
+  var CARD_H = 44; // card height approx
+  var GAP_R32 = 8;
+  var GAP_R16 = CARD_H + GAP_R32;
+
+  // Build left column (Son 32, 8 matches)
+  var leftR32 = [73,74,75,76,77,78,79,80];
+  var rightR32 = [81,82,83,84,85,86,87,88];
+  var leftR16 = [89,90,91,92];
+  var rightR16 = [93,94,95,96];
+  var leftQF = [97,98];
+  var rightQF = [99,100];
+  var leftSF = 101;
+  var rightSF = 102;
+  var finalM = 104;
+
+  function colOf(ids, gapBetween, extraTopPad) {
+    var top = extraTopPad || 0;
+    return ids.map(function(id, i) {
+      return { id: id, top: top + i * (CARD_H + gapBetween) };
+    });
+  }
+
+  // Left side R32: 8 cards, gap = GAP_R32
+  var lR32 = colOf(leftR32, GAP_R32, 0);
+  // Left R16: 4 cards, each pair merges two R32 cards → center between pairs
+  // Pair centers: (lR32[0].top+CARD_H/2 + lR32[1].top+CARD_H/2)/2
+  function pairCenter(col, i) {
+    return (col[i*2].top + CARD_H/2 + col[i*2+1].top + CARD_H/2) / 2 - CARD_H/2;
+  }
+  var lR16 = leftR16.map(function(id,i){ return {id:id, top: pairCenter(lR32,i)}; });
+  var lQF  = leftQF.map(function(id,i){ return {id:id, top: pairCenter(lR16,i)}; });
+  var lSF  = { id: leftSF, top: pairCenter(lQF, 0) };
+  var finalCard = { id: finalM, top: lSF.top }; // same vertical center as SF
+
+  // Right side mirrors
+  var rR32 = colOf(rightR32, GAP_R32, 0);
+  var rR16 = rightR16.map(function(id,i){ return {id:id, top: pairCenter(rR32,i)}; });
+  var rQF  = rightQF.map(function(id,i){ return {id:id, top: pairCenter(rR16,i)}; });
+  var rSF  = { id: rightSF, top: pairCenter(rQF, 0) };
+
+  var totalH = Math.max(
+    lR32[lR32.length-1].top + CARD_H,
+    rR32[rR32.length-1].top + CARD_H
+  ) + 20;
+
+  function absoluteCol(items, extraStyle) {
+    var h = totalH;
+    var html = '<div style="position:relative;flex-shrink:0;width:88px;height:'+h+'px'+(extraStyle||'')+'">';
+    items.forEach(function(item) {
+      html += '<div style="position:absolute;top:'+item.top+'px;left:0">' + matchCard(item.id) + '</div>';
     });
     html += '</div>';
-  });
-  container.innerHTML = html || '<div style="color:var(--muted);padding:20px;text-align:center">Nakavt maçları henüz başlamadı</div>';
+    return html;
+  }
+
+  // Connector between two absolute cols
+  function absConnector(leftItems, rightItems, dir) {
+    var h = totalH;
+    var svg = '<svg width="20" height="'+h+'" style="flex-shrink:0">';
+    // pair consecutive left items into right items
+    for (var i=0; i<rightItems.length; i++) {
+      var a = leftItems[i*2];
+      var b = leftItems[i*2+1];
+      var c = rightItems[i];
+      var y1 = a.top + CARD_H/2;
+      var y2 = b.top + CARD_H/2;
+      var yMid = c.top + CARD_H/2;
+      var x1 = dir==='right' ? 0 : 20;
+      var x2 = dir==='right' ? 20 : 0;
+      svg += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x1+'" y2="'+y2+'" stroke="var(--border)" stroke-width="1"/>';
+      svg += '<line x1="'+x1+'" y1="'+yMid+'" x2="'+x2+'" y2="'+yMid+'" stroke="var(--border)" stroke-width="1"/>';
+    }
+    svg += '</svg>';
+    return svg;
+  }
+
+  // Single connector from one item to next col
+  function singleConnector(fromItem, toItem, dir, color) {
+    var h = totalH;
+    var c = color || 'var(--border)';
+    var x1 = dir==='right' ? 0 : 20;
+    var x2 = dir==='right' ? 20 : 0;
+    var y = fromItem.top + CARD_H/2;
+    return '<svg width="20" height="'+h+'" style="flex-shrink:0"><line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" y2="'+y+'" stroke="'+c+'" stroke-width="1.5"/></svg>';
+  }
+
+  // label row
+  function labelRow(labels, widths) {
+    var html = '<div style="display:flex;align-items:center;margin-bottom:6px">';
+    labels.forEach(function(l, i) {
+      html += '<div style="width:'+(widths[i]||88)+'px;flex-shrink:0;font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;text-align:center">' + l + '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // Champion box
+  var finRes = results[finalM];
+  var finFinished = finRes && finRes.home_score !== null && finRes.home_score !== undefined;
+  var champName = finFinished ? winner(finalM) : '';
+  var champBox = champName ?
+    '<div style="text-align:center;margin-top:8px"><div style="display:inline-block;border:1.5px solid var(--green);border-radius:10px;padding:6px 12px;background:rgba(26,122,60,0.07)"><div style="font-size:9px;font-weight:600;color:var(--green);letter-spacing:0.8px;text-transform:uppercase">🏆 Şampiyon</div><div style="font-size:13px;font-weight:700;color:var(--green);margin-top:2px">'+champName+'</div></div></div>' : '';
+
+  // Assemble
+  var labels = labelRow(
+    ['Son 32','','Son 16','','Ç.F','','Y.F','','Final','','Y.F','','Ç.F','','Son 16','','Son 32'],
+    [88,20,88,20,88,20,88,20,100,20,88,20,88,20,88,20,88]
+  );
+
+  var html = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px">';
+  html += labels;
+  html += '<div style="display:flex;align-items:flex-start">';
+
+  // LEFT SIDE: R32 → R16 → QF → SF
+  html += absoluteCol(lR32);
+  html += absConnector(lR32, lR16, 'right');
+  html += absoluteCol(lR16);
+  html += absConnector(lR16, lQF, 'right');
+  html += absoluteCol(lQF);
+  html += absConnector(lQF, [lSF], 'right');
+  html += absoluteCol([lSF]);
+  html += singleConnector(lSF, finalCard, 'right', 'var(--red)');
+
+  // CENTER: Final
+  var fH = totalH;
+  html += '<div style="position:relative;flex-shrink:0;width:100px;height:'+fH+'px">';
+  html += '<div style="position:absolute;top:'+finalCard.top+'px;left:6px">' + matchCard(finalM) + '</div>';
+  html += '</div>';
+
+  html += singleConnector(rSF, finalCard, 'left', 'var(--red)');
+
+  // RIGHT SIDE: SF → QF → R16 → R32 (mirrored)
+  html += absoluteCol([rSF]);
+  html += absConnector(rQF, [rSF], 'left');
+  html += absoluteCol(rQF);
+  html += absConnector(rR16, rQF, 'left');
+  html += absoluteCol(rR16);
+  html += absConnector(rR32, rR16, 'left');
+  html += absoluteCol(rR32);
+
+  html += '</div>'; // flex row
+  html += champBox;
+  html += '</div>'; // overflow wrapper
+
+  container.innerHTML = html;
 }
 // ============ SHARE LEADERBOARD ============
 function shareLeaderboard() {
