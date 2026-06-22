@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e74c3c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GGG2026">
 <title>GGG — Dünya Kupası 2026</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -4141,7 +4146,7 @@ async function renderIstatistik() {
           '<div style="font-size:12px;color:var(--muted);margin-top:2px">Toplam ' + changes.length + ' liderlik değişimi</div>' +
           '</div>';
         if (changes.length) {
-          html += changes.map(function(c) {
+          html += changes.slice().reverse().map(function(c) {
             return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;margin:4px 0;border-radius:10px;background:var(--surface)">' +
               '<span style="font-size:18px">👑</span>' +
               '<div style="flex:1"><div style="font-weight:600;font-size:13px">' + c.from + ' → ' + c.to + '</div>' +
@@ -4655,5 +4660,14 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 </script>
-<div id="player-modal" style="display:none" class="player-modal-overlay" onclick="if(event.target===this)closePlayerModal()"><div class="player-modal"><div class="player-modal-handle"></div><div id="player-modal-content"></div></div></div></body>
+<div id="player-modal" style="display:none" class="player-modal-overlay" onclick="if(event.target===this)closePlayerModal()"><div class="player-modal"><div class="player-modal-handle"></div><div id="player-modal-content"></div></div></div><script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/GGG2026/sw.js')
+      .then(function(reg) { console.log('SW registered'); })
+      .catch(function(err) { console.log('SW error:', err); });
+  });
+}
+</script>
+</body>
 </html>
