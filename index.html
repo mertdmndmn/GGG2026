@@ -780,6 +780,16 @@ async function loadAll() {
   await Promise.all([loadMatches(), loadPredictions(), loadPlayers(), loadResults(), loadTurnuvaBets()]);
   buildFilterBar();
   renderMatches();
+  // Restore last active tab
+  try {
+    const savedTab = localStorage.getItem('ggg_tab');
+    if (savedTab && savedTab !== 'tahmin') {
+      setTimeout(function() {
+        const btn = document.querySelector('.nav-btn[onclick*="\'' + savedTab + '\'"]');
+        showTab(savedTab, btn);
+      }, 300);
+    }
+  } catch(e) {}
   renderLeaderboard();
 }
 
