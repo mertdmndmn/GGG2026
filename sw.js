@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ggg2026-v2';
+const CACHE_NAME = 'ggg2026-v3';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
@@ -17,7 +17,6 @@ self.addEventListener('fetch', function(e) {
     e.respondWith(fetch(e.request));
     return;
   }
-  // Network first, fallback to cache
   e.respondWith(
     fetch(e.request).then(function(res) {
       var clone = res.clone();
