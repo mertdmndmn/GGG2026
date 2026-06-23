@@ -2039,9 +2039,9 @@ function renderAdminMatches() {
       '</div>' +
       (isFinished ? '<div style="text-align:center;font-size:28px;font-weight:700;color:var(--green);margin-bottom:10px">' + res.home_score + ' - ' + res.away_score + '</div>' : '') +
       '<div class="result-inputs">' +
-        '<input class="result-inp" type="number" min="0" id="rh-' + m.id + '" value="' + (isFinished ? res.home_score : '') + '" placeholder="0" oninput="autoFillBets(' + m.id + ')">' +
+        '<input class="result-inp" type="number" min="0" id="rh-' + m.id + '" value="' + (isFinished ? res.home_score : '') + '" placeholder="0" oninput="autoFillBets(' + m.id + ')"' + (isFinished ? ' disabled' : '') + '>' +
         '<span class="score-dash">—</span>' +
-        '<input class="result-inp" type="number" min="0" id="ra-' + m.id + '" value="' + (isFinished ? res.away_score : '') + '" placeholder="0" oninput="autoFillBets(' + m.id + ')">' +
+        '<input class="result-inp" type="number" min="0" id="ra-' + m.id + '" value="' + (isFinished ? res.away_score : '') + '" placeholder="0" oninput="autoFillBets(' + m.id + ')"' + (isFinished ? ' disabled' : '') + '>' +
       '</div>' +
       '<div class="bets-section" style="padding:0 0 6px">' +
         '<div class="bet-row"><span class="bet-label">İlk yarı</span><div class="bet-options">' +
@@ -2071,7 +2071,12 @@ function renderAdminMatches() {
       '<textarea id="admin-lu-away-' + m.id + '" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-family:IBM Plex Sans,sans-serif;font-size:12px;height:110px;resize:none;background:#fff;margin-bottom:8px">' + (m.lineup_away || '') + '</textarea>' +
       '<button onclick="saveLineup(parseInt(' + m.id + '))" style="width:100%;padding:9px;background:#1a7a3c;color:#fff;border:none;border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer">📋 Kadroyu Kaydet</button>' +
       '</div>' +
-      '<button class="confirm-btn" data-mid="' + m.id + '" onclick="adminConfirm(this)">✓ Sonucu Onayla & Puanları Güncelle</button>' +
+      (isFinished
+        ? '<div id="lock-bar-' + m.id + '" style="display:flex;gap:8px;margin-top:10px">' +
+            '<div style="flex:1;padding:10px;background:var(--surface);border-radius:10px;font-size:13px;font-weight:600;color:var(--muted);text-align:center">🔒 Skor girildi</div>' +
+            '<button onclick="unlockMatch(' + m.id + ')" style="padding:10px 16px;background:var(--dark);color:#fff;border:none;border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer">✏️ Düzenle</button>' +
+          '</div>'
+        : '<button class="confirm-btn" data-mid="' + m.id + '" onclick="adminConfirm(this)">✓ Sonucu Onayla & Puanları Güncelle</button>') +
     '</div>';
   }
 
@@ -2217,6 +2222,146 @@ function setAdminBet(mid, key, val, btn) {
   else if (val==='X') btn.classList.add('sel-x');
   else if (val==='2') btn.classList.add('sel-2');
   else btn.classList.add('sel-alt');
+}
+
+function unlockMatch(mid) {
+  // Enable inputs
+  var rh = document.getElementById('rh-' + mid);
+  var ra = document.getElementById('ra-' + mid);
+  if (rh) rh.disabled = false;
+  if (ra) ra.disabled = false;
+  // Enable all bet buttons for this match
+  document.querySelectorAll('[data-mid="' + mid + '"]').forEach(function(btn) {
+    btn.disabled = false;
+  });
+  // Replace lock bar with update button
+  var lockBar = document.getElementById('lock-bar-' + mid);
+  if (lockBar) {
+    lockBar.innerHTML =
+      '<button onclick="updateResult(' + mid + ')" style="width:100%;padding:10px;background:#e67e22;color:#fff;border:none;border-radius:10px;font-family:IBM Plex Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer">⚠️ Skoru Güncelle (Puanlar Yeniden Hesaplanır)</button>';
+  }
+}
+
+async function updateResult(mid) {
+  const h = parseInt(document.getElementById('rh-'+mid).value);
+  const a = parseInt(document.getElementById('ra-'+mid).value);
+  if (isNaN(h)||isNaN(a)) { showToast('Skoru gir!'); return; }
+
+  const ap = adminPending[mid] || {};
+  const existingRes = results[mid] || {};
+  const ms = h>a?'1':h===a?'X':'2';
+  const existingCustom = existingRes.custom || {};
+  const newCustom = {...existingCustom, ...(ap.custom||{})};
+  const m2 = matches.find(function(x){return x.id===mid;});
+  if (m2) newCustom.bets = m2.customBets;
+
+  const resultPayload = {
+    match_id: mid, home_score: h, away_score: a, ms,
+    hy: ap.hy || existingRes.hy || null,
+    kg: ap.kg || existingRes.kg || null,
+    gol: ap.gol || existingRes.gol || null,
+    kk: ap.kk || existingRes.kk || null,
+    custom: newCustom
+  };
+
+  // Save score globally
+  await sbUpsert('match_results', {match_id: mid, home_score: h, away_score: a, ms,
+    hy: resultPayload.hy, kg: resultPayload.kg, gol: resultPayload.gol,
+    kk: resultPayload.kk, custom: resultPayload.custom}, 'match_id');
+  results[mid] = {...resultPayload, group_id: null};
+
+  // Recalculate points from scratch for all groups
+  // First reset all player pts to 0, then recalc all finished matches
+  showToast('Skor güncellendi. Puanlar yeniden hesaplanıyor...');
+
+  // Get all predictions for this match
+  const allPreds = await sbGet('predictions', 'match_id=eq.' + mid);
+  if (Array.isArray(allPreds)) {
+    const predsByGroup = {};
+    allPreds.forEach(function(p) {
+      if (!predsByGroup[p.group_id]) predsByGroup[p.group_id] = [];
+      predsByGroup[p.group_id].push(p);
+    });
+
+    for (const gid of Object.keys(predsByGroup)) {
+      const groupPreds = predsByGroup[gid];
+
+      // Get ALL finished matches to recalculate total pts from scratch
+      const allGroupPreds = await sbGet('predictions', 'group_id=eq.' + gid);
+      const groupPlayers = await sbGet('players', 'group_id=eq.' + gid);
+      if (!Array.isArray(groupPlayers)) continue;
+
+      // Build player totals from scratch across all finished matches
+      const playerTotals = {};
+      groupPlayers.forEach(function(p) { playerTotals[p.name] = 0; });
+
+      // For each finished match, calculate pts
+      const finishedMids = Object.keys(results).map(Number).filter(function(id) {
+        return results[id] && results[id].home_score !== null;
+      });
+
+      for (const fmid of finishedMids) {
+        const fres = results[fmid];
+        const fPreds = Array.isArray(allGroupPreds) ? allGroupPreds.filter(function(p){return p.match_id===fmid;}) : [];
+        if (!fPreds.length) continue;
+
+        const vc = {};
+        ['ms','hy','kg','gol','kk'].forEach(function(f) {
+          vc[f] = {};
+          fPreds.forEach(function(p) { if(p[f]) vc[f][p[f]] = (vc[f][p[f]]||0)+1; });
+        });
+        const ckeys = new Set();
+        fPreds.forEach(function(p) { if(p.custom) Object.keys(p.custom||{}).filter(k=>k.startsWith('c')).forEach(k=>ckeys.add(k)); });
+        ckeys.forEach(function(k) {
+          vc[k] = {};
+          fPreds.forEach(function(p) { var v=(p.custom||{})[k]; if(v) vc[k][v]=(vc[k][v]||0)+1; });
+        });
+
+        const rc = (fres.custom && typeof fres.custom==='object') ? fres.custom : {};
+
+        fPreds.forEach(function(pred) {
+          var pts = 0;
+          var ph = pred.home_score !== null ? parseInt(pred.home_score) : null;
+          var pa = pred.away_score !== null ? parseInt(pred.away_score) : null;
+          if (pred.hy && pred.hy===fres.hy) pts++;
+          if (pred.ms && pred.ms===fres.ms) pts++;
+          if (ph===fres.home_score && pa===fres.away_score) pts+=5;
+          if (pred.kg && pred.kg===fres.kg) pts++;
+          if (pred.gol && pred.gol===fres.gol) pts++;
+          if (pred.kk && pred.kk===fres.kk) pts++;
+          var pc = pred.custom || {};
+          ckeys.forEach(function(k) { if(pc[k] && rc[k] && pc[k]===rc[k]) pts++; });
+
+          var bonus = 0;
+          ['ms','hy','kg','gol','kk'].forEach(function(f) {
+            var pv=pred[f], rv=fres[f];
+            if(!pv||!rv||pv!==rv) return;
+            var tv=Object.values(vc[f]||{}).reduce(function(a,b){return a+b;},0);
+            if(tv>1 && vc[f][pv]===1) bonus++;
+          });
+          ckeys.forEach(function(k) {
+            var pv=(pc||{})[k], rv=(rc||{})[k];
+            if(!pv||!rv||pv!==rv) return;
+            var tv=Object.values(vc[k]||{}).reduce(function(a,b){return a+b;},0);
+            if(tv>1 && vc[k][pv]===1) bonus++;
+          });
+
+          var name = pred.player_name;
+          if (name in playerTotals) playerTotals[name] = (playerTotals[name]||0) + pts + bonus;
+        });
+      }
+
+      // Update all players in this group
+      for (const name of Object.keys(playerTotals)) {
+        await sbPatch('players', 'name=eq.' + encodeURIComponent(name) + '&group_id=eq.' + gid,
+          {pts: playerTotals[name], trend: 0});
+      }
+    }
+  }
+
+  await loadAll();
+  renderAdminMatches();
+  showToast('Puanlar güncellendi! ✅');
 }
 
 async function confirmResult(mid) {
