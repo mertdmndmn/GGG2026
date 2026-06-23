@@ -2227,9 +2227,10 @@ async function confirmResult(mid) {
   if (!ap_check.hy) { showToast('İlk yarı sonucunu seç!'); return; }
   if (!ap_check.kk) { showToast('Kırmızı kart sonucunu seç!'); return; }
 
-  // Prevent double scoring - check local results object
-  if (results[mid] && results[mid].home_score !== null && results[mid].home_score !== undefined) {
-    showToast('Bu mac icin skor zaten girilmis! Puan tekrar hesaplanmadi.');
+  // Prevent double scoring - check Supabase directly
+  const existingCheck = await sbGet('match_results', 'match_id=eq.' + mid);
+  if (Array.isArray(existingCheck) && existingCheck.length > 0 && existingCheck[0].home_score !== null && existingCheck[0].home_score !== undefined) {
+    showToast('Bu maç için skor zaten girilmiş! Puan tekrar hesaplanmadı.');
     return;
   }
 
