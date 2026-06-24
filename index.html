@@ -1755,6 +1755,44 @@ function buildPredsTable(m, preds) {
     html = summary + html;
   }
 
+  // Distribution chart (only when locked)
+  const locked = (m.lock && new Date() >= new Date(m.lock)) || isFinished;
+  if (locked && preds.length > 1) {
+    const dist = {ms:{}, hy:{}, gol:{}, kg:{}};
+    preds.forEach(function(p) {
+      ['ms','hy','gol','kg'].forEach(function(f) {
+        if (p[f]) dist[f][p[f]] = (dist[f][p[f]]||0) + 1;
+      });
+    });
+    const total = preds.length;
+    const labels = {ms:'Maç Sonucu', hy:'İlk Yarı', gol:'2.5 Gol', kg:'KG'};
+    const colors = {'1':'#2ecc71','X':'#f39c12','2':'#e74c3c','Üst':'#3498db','Alt':'#e67e22','Var':'#9b59b6','Yok':'#95a5a6'};
+
+    html += '<div style="margin-top:12px;padding:10px 0;border-top:1px solid var(--border)">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px">📊 Grup Dağılımı</div>';
+
+    ['ms','hy','gol','kg'].forEach(function(f) {
+      var d = dist[f];
+      if (!Object.keys(d).length) return;
+      html += '<div style="margin-bottom:8px">';
+      html += '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">' + labels[f] + '</div>';
+      html += '<div style="display:flex;gap:4px;align-items:center">';
+      Object.keys(d).sort().forEach(function(val) {
+        var pct = Math.round(d[val] / total * 100);
+        var col = colors[val] || '#999';
+        var isCorrect = isFinished && res && res[f] === val;
+        html += '<div style="flex:' + pct + ';min-width:28px">';
+        html += '<div style="background:' + col + (isCorrect ? '' : '88') + ';border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;' + (isCorrect ? 'outline:2px solid ' + col + ';' : '') + '">';
+        html += '<span style="font-size:10px;font-weight:700;color:#fff">' + val + '</span>';
+        html += '</div>';
+        html += '<div style="font-size:10px;text-align:center;color:var(--muted);margin-top:2px">' + pct + '%</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    });
+    html += '</div>';
+  }
+
   return html;
 }
 
@@ -4424,6 +4462,82 @@ async function renderIstatistik() {
     '</div>';
     container.appendChild(div);
   });
+
+  // Ülke performans bölümü
+  const countryDiv = document.createElement('div');
+  countryDiv.style.cssText = 'background:var(--card);border-radius:14px;padding:16px;margin-top:12px;border:1px solid var(--border)';
+  
+  // Get all predictions and results
+  const allPreds = await sbGet('predictions', 'group_id=eq.' + GROUP_ID);
+  if (!Array.isArray(allPreds)) { container.appendChild(countryDiv); return; }
+
+  const finishedMids = Object.keys(results).map(Number).filter(function(id) {
+    return results[id] && results[id].home_score !== null;
+  });
+
+  // Per country: total pts earned by group
+  var countryPts = {};
+  var countryCount = {};
+
+  finishedMids.forEach(function(mid) {
+    var m = matches.find(function(x){return x.id===mid;});
+    if (!m) return;
+    var res = results[mid];
+    var homeTeam = m.home.replace(/[^\w\s\u00C0-\u024F]/g,'').trim();
+    var awayTeam = m.away.replace(/[^\w\s\u00C0-\u024F]/g,'').trim();
+
+    var matchPreds = allPreds.filter(function(p){return p.match_id===mid;});
+    var totalPts = 0;
+    matchPreds.forEach(function(pred) {
+      var pts = 0;
+      if (pred.hy && pred.hy===res.hy) pts++;
+      if (pred.ms && pred.ms===res.ms) pts++;
+      if (pred.home_score!==null && pred.away_score!==null && parseInt(pred.home_score)===res.home_score && parseInt(pred.away_score)===res.away_score) pts+=5;
+      if (pred.kg && pred.kg===res.kg) pts++;
+      if (pred.gol && pred.gol===res.gol) pts++;
+      if (pred.kk && pred.kk===res.kk) pts++;
+      totalPts += pts;
+    });
+    var avg = matchPreds.length ? totalPts / matchPreds.length : 0;
+
+    if (homeTeam) { countryPts[homeTeam] = (countryPts[homeTeam]||0) + avg; countryCount[homeTeam] = (countryCount[homeTeam]||0) + 1; }
+    if (awayTeam) { countryPts[awayTeam] = (countryPts[awayTeam]||0) + avg; countryCount[awayTeam] = (countryCount[awayTeam]||0) + 1; }
+  });
+
+  // Average per country
+  var countryAvg = Object.keys(countryPts).filter(function(t){ return countryCount[t] >= 1 && t.length > 1; }).map(function(t) {
+    return { name: t, avg: countryPts[t] / countryCount[t], matches: countryCount[t] };
+  });
+  countryAvg.sort(function(a,b){return b.avg - a.avg;});
+
+  var maxAvg = countryAvg.length ? countryAvg[0].avg : 1;
+
+  var cHtml = '<div style="font-size:13px;font-weight:700;margin-bottom:12px">🌍 Ülke Performans Analizi</div>';
+  cHtml += '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Grubun hangi ülkenin maçlarında daha iyi tahmin ettiği</div>';
+
+  var top = countryAvg.slice(0, 10);
+  var bot = countryAvg.slice(-5).reverse();
+
+  cHtml += '<div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:6px">🔝 En İyi</div>';
+  top.forEach(function(t) {
+    var w = Math.round(t.avg / maxAvg * 100);
+    cHtml += '<div style="margin-bottom:6px">';
+    cHtml += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>' + t.name + '</span><span style="color:var(--muted)">' + t.avg.toFixed(1) + ' ort · ' + t.matches + ' maç</span></div>';
+    cHtml += '<div style="height:8px;background:var(--border);border-radius:4px"><div style="height:100%;width:' + w + '%;background:var(--green);border-radius:4px"></div></div>';
+    cHtml += '</div>';
+  });
+
+  cHtml += '<div style="font-size:11px;font-weight:600;color:var(--red);margin:10px 0 6px">📉 En Kötü</div>';
+  bot.forEach(function(t) {
+    var w = Math.round(t.avg / maxAvg * 100);
+    cHtml += '<div style="margin-bottom:6px">';
+    cHtml += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>' + t.name + '</span><span style="color:var(--muted)">' + t.avg.toFixed(1) + ' ort · ' + t.matches + ' maç</span></div>';
+    cHtml += '<div style="height:8px;background:var(--border);border-radius:4px"><div style="height:100%;width:' + w + '%;background:var(--red);border-radius:4px"></div></div>';
+    cHtml += '</div>';
+  });
+
+  countryDiv.innerHTML = cHtml;
+  container.appendChild(countryDiv);
 }
 
 function toggleStatSection(header) {
