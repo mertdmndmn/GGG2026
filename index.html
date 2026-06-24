@@ -1001,9 +1001,51 @@ function getTeamForm(teamName) {
 }
 
 function getTeamPosition(teamStr) {
-  // Extract position like "A1", "B2" from strings like "A1. Türkiye" or "🏳 A1. vs"
   var m = teamStr.match(/\b([A-L][1-3])\.?\b/);
   return m ? m[1] : null;
+}
+
+function computeGroupStandings() {
+  // Returns {teamName: {pts, played, rank, group}}
+  var standings = {};
+  var groups = {};
+
+  matches.forEach(function(m) {
+    if (!m.group || !m.group.startsWith('Grup')) return;
+    var r = results[m.id];
+    if (!r || r.home_score === null || r.home_score === undefined) return;
+
+    var h = splitTeam(m.home).name.trim();
+    var a = splitTeam(m.away).name.trim();
+    var g = m.group;
+
+    if (!groups[g]) groups[g] = {};
+    if (!groups[g][h]) groups[g][h] = {pts:0, played:0, gf:0, ga:0};
+    if (!groups[g][a]) groups[g][a] = {pts:0, played:0, gf:0, ga:0};
+
+    groups[g][h].played++;
+    groups[g][a].played++;
+    groups[g][h].gf += r.home_score;
+    groups[g][h].ga += r.away_score;
+    groups[g][a].gf += r.away_score;
+    groups[g][a].ga += r.home_score;
+
+    if (r.home_score > r.away_score) { groups[g][h].pts += 3; }
+    else if (r.home_score === r.away_score) { groups[g][h].pts += 1; groups[g][a].pts += 1; }
+    else { groups[g][a].pts += 3; }
+  });
+
+  Object.keys(groups).forEach(function(g) {
+    var teams = Object.keys(groups[g]).map(function(name) {
+      return {name: name, pts: groups[g][name].pts, played: groups[g][name].played, gd: groups[g][name].gf - groups[g][name].ga};
+    });
+    teams.sort(function(a,b) { return b.pts - a.pts || b.gd - a.gd; });
+    teams.forEach(function(t, i) {
+      standings[t.name] = {pts: t.pts, played: t.played, rank: i+1, total: teams.length, group: g};
+    });
+  });
+
+  return standings;
 }
 
 function formatLocalTime(isoString) {
@@ -1124,39 +1166,26 @@ async function renderMatches() {
       </div>
       ${!locked && !pred.home_score && !pred.ms ? '<div class="no-pred-warning">⚠️ Henüz tahmin girmedin!</div>' : ''}
       <div class="match-teams">
-        <div class="team">
-          <span class="team-flag">${home.flag}</span>
-          <div>
-            <span class="team-name">${home.name}</span>
-            ${(function(){
-              var pos = getTeamPosition(m.home);
-              var form = getTeamForm(home.name);
-              var posHtml = pos ? '<span style="font-size:10px;color:var(--muted);font-weight:600;margin-right:4px">'+pos+'</span>' : '';
-              var formHtml = form.map(function(f){
-                var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
-                return '<span style="font-size:9px;font-weight:700;color:'+col+'">'+f+'</span>';
-              }).join('<span style="color:var(--border)"> </span>');
-              return (posHtml||formHtml) ? '<div style="display:flex;align-items:center;gap:3px;margin-top:2px">'+posHtml+formHtml+'</div>' : '';
-            })()}
-          </div>
-        </div>
-        ${locked && m.result ? `<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dark);letter-spacing:3px;line-height:1">${m.result.home_score} — ${m.result.away_score}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>` : '<div class="score-vs">VS</div>'}
-        <div class="team">
-          <span class="team-flag">${away.flag}</span>
-          <div>
-            <span class="team-name">${away.name}</span>
-            ${(function(){
-              var pos = getTeamPosition(m.away);
-              var form = getTeamForm(away.name);
-              var posHtml = pos ? '<span style="font-size:10px;color:var(--muted);font-weight:600;margin-right:4px">'+pos+'</span>' : '';
-              var formHtml = form.map(function(f){
-                var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
-                return '<span style="font-size:9px;font-weight:700;color:'+col+'">'+f+'</span>';
-              }).join('<span style="color:var(--border)"> </span>');
-              return (posHtml||formHtml) ? '<div style="display:flex;align-items:center;gap:3px;margin-top:2px">'+posHtml+formHtml+'</div>' : '';
-            })()}
-          </div>
-        </div>
+        ${(function(){
+          var standings = computeGroupStandings();
+          function teamInfo(name) {
+            var s = standings[name];
+            var form = getTeamForm(name);
+            var rankHtml = s ? '<span style="font-size:10px;font-weight:700;color:var(--muted)">'+s.rank+'.'+s.total+' &middot; '+s.pts+'P</span>' : '';
+            var formHtml = form.length ? form.map(function(f){
+              var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
+              return '<span style="font-size:9px;font-weight:800;color:'+col+'">'+f+'</span>';
+            }).join(' ') : '';
+            var sub = [rankHtml, formHtml].filter(Boolean).join(' &nbsp; ');
+            return sub ? '<div style="font-size:10px;margin-top:2px">'+sub+'</div>' : '';
+          }
+          var vs = locked && m.result
+            ? '<div style="text-align:center"><div style="font-size:32px;font-weight:700;color:var(--dark);letter-spacing:3px;line-height:1">'+m.result.home_score+' — '+m.result.away_score+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>'
+            : '<div class="score-vs">VS</div>';
+          return '<div class="team"><span class="team-flag">'+home.flag+'</span><div><span class="team-name">'+home.name+'</span>'+teamInfo(home.name)+'</div></div>' +
+            vs +
+            '<div class="team"><span class="team-flag">'+away.flag+'</span><div><span class="team-name">'+away.name+'</span>'+teamInfo(away.name)+'</div></div>';
+        })()}
       </div>
       ${(m.lineup_home || m.lineup_away) ? `<div style="padding:4px 14px 8px">
         <button class="lineup-btn" style="width:100%" onclick="toggleLineup(${m.id})">📋 İlk 11 <span id="lu-arrow-${m.id}">▼</span></button>
