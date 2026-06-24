@@ -4583,6 +4583,68 @@ async function openPlayerModal(name) {
   const avg = predCount > 0 ? (calcPts / predCount).toFixed(1) : '—';
   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank;
 
+  // Favori takım: en çok puan aldığı maçların takımlarını bul
+  let teamPts = {};
+  let biggestBlunder = null, biggestBlunderDiff = 0;
+  if (Array.isArray(preds)) {
+    finishedMatches.forEach(function(m) {
+      const pred = preds.find(function(p){return p.match_id===m.id;});
+      if (!pred) return;
+      const res = results[m.id];
+      let pts = 0;
+      if (pred.hy && pred.hy === res.hy) pts += 1;
+      if (pred.ms && pred.ms === res.ms) pts += 1;
+      if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
+      if (pred.kg && pred.kg === res.kg) pts += 1;
+      if (pred.gol && pred.gol === res.gol) pts += 1;
+      if (pred.kk && pred.kk === res.kk) pts += 1;
+
+      // Extract team names
+      var homeTeam = m.home.replace(/[^\w\s\u00C0-\u024F]/g,'').trim();
+      var awayTeam = m.away.replace(/[^\w\s\u00C0-\u024F]/g,'').trim();
+      if (homeTeam) teamPts[homeTeam] = (teamPts[homeTeam]||0) + pts;
+      if (awayTeam) teamPts[awayTeam] = (teamPts[awayTeam]||0) + pts;
+
+      // Yalan makinesi: en büyük skor farkı yanlış tahmin
+      var ph = pred.home_score !== null ? parseInt(pred.home_score) : null;
+      var pa = pred.away_score !== null ? parseInt(pred.away_score) : null;
+      if (ph !== null && pa !== null && !(ph===res.home_score && pa===res.away_score)) {
+        var diff = Math.abs(ph - res.home_score) + Math.abs(pa - res.away_score);
+        if (diff > biggestBlunderDiff) {
+          biggestBlunderDiff = diff;
+          biggestBlunder = {
+            pred: ph + '-' + pa,
+            real: res.home_score + '-' + res.away_score,
+            home: homeTeam, away: awayTeam
+          };
+        }
+      }
+    });
+  }
+
+  // Find top team
+  var favTeam = null, favPts = 0;
+  Object.keys(teamPts).forEach(function(t) {
+    if (teamPts[t] > favPts) { favPts = teamPts[t]; favTeam = t; }
+  });
+
+  var favTeamHtml = favTeam ? 
+    '<div style="background:var(--surface);border-radius:12px;padding:12px;margin-bottom:10px">' +
+      '<div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">⚽ FAVORİ TAKIM</div>' +
+      '<div style="font-size:16px;font-weight:700">' + favTeam + '</div>' +
+      '<div style="font-size:12px;color:var(--green)">+' + favPts + ' puan kazandırdı</div>' +
+    '</div>' : '';
+
+  var blunderHtml = biggestBlunder ?
+    '<div style="background:var(--surface);border-radius:12px;padding:12px;margin-bottom:10px">' +
+      '<div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">🤦 EN BÜYÜK YANILGI</div>' +
+      '<div style="font-size:13px;font-weight:600">' + biggestBlunder.home + ' — ' + biggestBlunder.away + '</div>' +
+      '<div style="font-size:12px;margin-top:4px">' +
+        '<span style="color:var(--muted)">Tahmin: </span><span style="font-weight:700">' + biggestBlunder.pred + '</span>' +
+        '<span style="color:var(--muted)"> → Gerçek: </span><span style="font-weight:700;color:var(--red)">' + biggestBlunder.real + '</span>' +
+      '</div>' +
+    '</div>' : '';
+
   // Last 5 matches form
   const last5 = finishedMatches.slice(-5);
   let formHtml = '';
@@ -4628,6 +4690,8 @@ async function openPlayerModal(name) {
     '</div>' +
     '<div style="margin-bottom:16px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">SON 5 MAÇ</div><div style="display:flex;gap:6px">' + formHtml + '</div></div>' +
     badgeHtml +
+    favTeamHtml +
+    blunderHtml +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
       '<div style="background:var(--surface);border-radius:12px;padding:12px;text-align:center">' +
         '<div style="font-size:22px;font-weight:700;color:var(--green)">' + avg + '</div>' +
