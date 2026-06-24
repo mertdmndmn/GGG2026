@@ -1174,8 +1174,8 @@ async function renderMatches() {
             var rankHtml = s ? '<span style="font-size:11px;font-weight:700;color:var(--muted)">'+s.rank+'. sıra</span>' : '';
             var formHtml = form.length ? form.map(function(f){
               var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
-              return '<span style="font-size:12px;font-weight:900;color:'+col+'">'+f+'</span>';
-            }).join('<span style="color:var(--border)"> </span>') : '';
+              return '<span style="font-size:14px;font-weight:900;color:'+col+';line-height:1">'+f+'</span>';
+            }).join('<span style="font-size:14px;color:var(--border)"> </span>') : '';
             var parts = [];
             if (rankHtml) parts.push(rankHtml);
             if (formHtml) parts.push(formHtml);
