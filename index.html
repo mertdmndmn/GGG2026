@@ -976,6 +976,36 @@ function setFilter(g, btn) {
 
 function splitTeam(str) { const p = str.split(' '); return {flag: p[0], name: p.slice(1).join(' ')}; }
 
+function getTeamForm(teamName) {
+  // Find last 3 matches for this team and return W/D/L
+  var form = [];
+  var teamMatches = matches.filter(function(m) {
+    var h = splitTeam(m.home).name.trim();
+    var a = splitTeam(m.away).name.trim();
+    return h === teamName || a === teamName;
+  }).filter(function(m) {
+    var r = results[m.id];
+    return r && r.home_score !== null && r.home_score !== undefined;
+  }).slice(-3);
+
+  teamMatches.forEach(function(m) {
+    var r = results[m.id];
+    var isHome = splitTeam(m.home).name.trim() === teamName;
+    var gf = isHome ? r.home_score : r.away_score;
+    var ga = isHome ? r.away_score : r.home_score;
+    if (gf > ga) form.push('W');
+    else if (gf === ga) form.push('D');
+    else form.push('L');
+  });
+  return form;
+}
+
+function getTeamPosition(teamStr) {
+  // Extract position like "A1", "B2" from strings like "A1. Türkiye" or "🏳 A1. vs"
+  var m = teamStr.match(/\b([A-L][1-3])\.?\b/);
+  return m ? m[1] : null;
+}
+
 function formatLocalTime(isoString) {
   if (!isoString || isoString === '2099-12-31T00:00:00Z') return '';
   const d = new Date(isoString);
@@ -1094,9 +1124,39 @@ async function renderMatches() {
       </div>
       ${!locked && !pred.home_score && !pred.ms ? '<div class="no-pred-warning">⚠️ Henüz tahmin girmedin!</div>' : ''}
       <div class="match-teams">
-        <div class="team"><span class="team-flag">${home.flag}</span><span class="team-name">${home.name}</span></div>
+        <div class="team">
+          <span class="team-flag">${home.flag}</span>
+          <div>
+            <span class="team-name">${home.name}</span>
+            ${(function(){
+              var pos = getTeamPosition(m.home);
+              var form = getTeamForm(home.name);
+              var posHtml = pos ? '<span style="font-size:10px;color:var(--muted);font-weight:600;margin-right:4px">'+pos+'</span>' : '';
+              var formHtml = form.map(function(f){
+                var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
+                return '<span style="font-size:9px;font-weight:700;color:'+col+'">'+f+'</span>';
+              }).join('<span style="color:var(--border)"> </span>');
+              return (posHtml||formHtml) ? '<div style="display:flex;align-items:center;gap:3px;margin-top:2px">'+posHtml+formHtml+'</div>' : '';
+            })()}
+          </div>
+        </div>
         ${locked && m.result ? `<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--dark);letter-spacing:3px;line-height:1">${m.result.home_score} — ${m.result.away_score}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>` : '<div class="score-vs">VS</div>'}
-        <div class="team"><span class="team-flag">${away.flag}</span><span class="team-name">${away.name}</span></div>
+        <div class="team">
+          <span class="team-flag">${away.flag}</span>
+          <div>
+            <span class="team-name">${away.name}</span>
+            ${(function(){
+              var pos = getTeamPosition(m.away);
+              var form = getTeamForm(away.name);
+              var posHtml = pos ? '<span style="font-size:10px;color:var(--muted);font-weight:600;margin-right:4px">'+pos+'</span>' : '';
+              var formHtml = form.map(function(f){
+                var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
+                return '<span style="font-size:9px;font-weight:700;color:'+col+'">'+f+'</span>';
+              }).join('<span style="color:var(--border)"> </span>');
+              return (posHtml||formHtml) ? '<div style="display:flex;align-items:center;gap:3px;margin-top:2px">'+posHtml+formHtml+'</div>' : '';
+            })()}
+          </div>
+        </div>
       </div>
       ${(m.lineup_home || m.lineup_away) ? `<div style="padding:4px 14px 8px">
         <button class="lineup-btn" style="width:100%" onclick="toggleLineup(${m.id})">📋 İlk 11 <span id="lu-arrow-${m.id}">▼</span></button>
