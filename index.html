@@ -1171,7 +1171,7 @@ async function renderMatches() {
           function teamInfo(name) {
             var s = standings[name];
             var form = getTeamForm(name);
-            var rankHtml = s ? '<span style="font-size:10px;font-weight:700;color:var(--muted)">'+s.rank+'.'+s.total+' &middot; '+s.pts+'P</span>' : '';
+            var rankHtml = s ? '<span style="font-size:10px;font-weight:700;color:var(--muted)">'+s.rank+'. sıra</span>' : '';
             var formHtml = form.length ? form.map(function(f){
               var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
               return '<span style="font-size:9px;font-weight:800;color:'+col+'">'+f+'</span>';
