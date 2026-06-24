@@ -1012,7 +1012,7 @@ function computeGroupStandings() {
 
   matches.forEach(function(m) {
     if (!m.group || !m.group.startsWith('Grup')) return;
-    var r = results[m.id];
+    var r = results[m.id] || results[String(m.id)];
     if (!r || r.home_score === null || r.home_score === undefined) return;
 
     var h = splitTeam(m.home).name.trim();
@@ -1171,13 +1171,15 @@ async function renderMatches() {
           function teamInfo(name) {
             var s = standings[name];
             var form = getTeamForm(name);
-            var rankHtml = s ? '<span style="font-size:10px;font-weight:700;color:var(--muted)">'+s.rank+'. sıra</span>' : '';
+            var rankHtml = s ? '<span style="font-size:11px;font-weight:700;color:var(--muted)">'+s.rank+'. sıra</span>' : '';
             var formHtml = form.length ? form.map(function(f){
               var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
-              return '<span style="font-size:9px;font-weight:800;color:'+col+'">'+f+'</span>';
-            }).join(' ') : '';
-            var sub = [rankHtml, formHtml].filter(Boolean).join(' &nbsp; ');
-            return sub ? '<div style="font-size:10px;margin-top:2px">'+sub+'</div>' : '';
+              return '<span style="font-size:12px;font-weight:900;color:'+col+'">'+f+'</span>';
+            }).join('<span style="color:var(--border)"> </span>') : '';
+            var parts = [];
+            if (rankHtml) parts.push(rankHtml);
+            if (formHtml) parts.push(formHtml);
+            return parts.length ? '<div style="margin-top:4px;display:flex;align-items:center;gap:6px">'+parts.join('<span style="color:var(--border)">·</span>')+'</div>' : '';
           }
           var vs = locked && m.result
             ? '<div style="text-align:center"><div style="font-size:32px;font-weight:700;color:var(--dark);letter-spacing:3px;line-height:1">'+m.result.home_score+' — '+m.result.away_score+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Sonuç</div></div>'
