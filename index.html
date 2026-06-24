@@ -4468,8 +4468,8 @@ async function renderIstatistik() {
   countryDiv.style.cssText = 'background:var(--card);border-radius:14px;padding:16px;margin-top:12px;border:1px solid var(--border)';
   
   // Get all predictions and results
-  const allPreds = await sbGet('predictions', 'group_id=eq.' + GROUP_ID);
-  if (!Array.isArray(allPreds)) { container.appendChild(countryDiv); return; }
+  const countryAllPreds = await sbGet('predictions', 'group_id=eq.' + GROUP_ID);
+  if (!Array.isArray(countryAllPreds)) { container.appendChild(countryDiv); return; }
 
   const finishedMids = Object.keys(results).map(Number).filter(function(id) {
     return results[id] && results[id].home_score !== null;
@@ -4486,7 +4486,7 @@ async function renderIstatistik() {
     var homeTeam = m.home.replace(/[^\w\s\u00C0-\u024F]/g,'').trim();
     var awayTeam = m.away.replace(/[^\w\s\u00C0-\u024F]/g,'').trim();
 
-    var matchPreds = allPreds.filter(function(p){return p.match_id===mid;});
+    var matchPreds = countryAllPreds.filter(function(p){return p.match_id===mid;});
     var totalPts = 0;
     matchPreds.forEach(function(pred) {
       var pts = 0;
