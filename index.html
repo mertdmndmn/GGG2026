@@ -1114,9 +1114,9 @@ async function renderMatches() {
         </div>
       </div>` : ''}
       <div class="score-inputs">
-        <input class="score-inp" type="number" min="0" max="20" value="${hS !== null && hS !== undefined && hS !== '' ? hS : ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'home_score',this.value);autoFillPred(${m.id},this.value,null)">
+        <input class="score-inp" type="number" min="0" max="20" value="${hS !== null && hS !== undefined && hS !== '' ? hS : ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'home_score',this.value);autoFillPred(${m.id},this.value,null);refreshDistribution(${m.id})">
         <span class="score-dash">—</span>
-        <input class="score-inp" type="number" min="0" max="20" value="${aS !== null && aS !== undefined && aS !== '' ? aS : ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id},null,this.value)">
+        <input class="score-inp" type="number" min="0" max="20" value="${aS !== null && aS !== undefined && aS !== '' ? aS : ''}" placeholder="-" ${locked?'disabled':''} oninput="setPred(${m.id},'away_score',this.value);autoFillPred(${m.id},null,this.value);refreshDistribution(${m.id})">
       </div>
       ${!locked ? `<div style="text-align:right;margin:4px 0 8px">
         <button onclick="luckyFill(${m.id})" style="background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:8px;border:1px solid var(--border)">🍀 Şansını Dene</button>
@@ -1205,6 +1205,8 @@ function setBet(mid, key, val, btn) {
   else btn.classList.add('sel-alt');
   // Auto-save
   autoSavePred(mid);
+  // Refresh distribution chart
+  refreshDistribution(mid);
 }
 
 async function autoSavePred(mid) {
@@ -1608,6 +1610,23 @@ function calcPredPts(pred, res, gid) {
   return pts;
 }
 
+async function refreshDistribution(mid) {
+  const gpBody = document.getElementById('gp-body-' + mid);
+  if (!gpBody || gpBody.style.display === 'none') return;
+  const m = matches.find(function(x){return x.id===mid;});
+  if (!m) return;
+  const freshPreds = await sbGet('predictions', 'match_id=eq.' + mid + '&group_id=eq.' + GROUP_ID);
+  if (!Array.isArray(freshPreds)) return;
+  // Update match predictions in matchPredsCache
+  matchPredsCache[mid] = freshPreds;
+  // Re-render the preds table
+  const countSpan = gpBody.previousElementSibling && gpBody.previousElementSibling.querySelector('span');
+  if (countSpan) countSpan.textContent = '👥 Grup Tahminleri (' + freshPreds.length + ')';
+  gpBody.innerHTML = buildPredsTable(m, freshPreds);
+}
+
+var matchPredsCache = {};
+
 function buildPredsTable(m, preds) {
   if (!preds || !preds.length) return '<div style="font-size:12px;color:var(--muted);padding:4px 0">Henüz tahmin yok.</div>';
 
@@ -1755,9 +1774,9 @@ function buildPredsTable(m, preds) {
     html = summary + html;
   }
 
-  // Distribution chart (only when locked)
+  // Distribution chart - always show when there are preds
   const locked = (m.lock && new Date() >= new Date(m.lock)) || isFinished;
-  if (locked && preds.length > 1) {
+  if (preds.length > 0) {
     const dist = {ms:{}, hy:{}, gol:{}, kg:{}};
     preds.forEach(function(p) {
       ['ms','hy','gol','kg'].forEach(function(f) {
@@ -4512,7 +4531,10 @@ async function renderIstatistik() {
 
   var maxAvg = countryAvg.length ? countryAvg[0].avg : 1;
 
-  var cHtml = '<div style="font-size:13px;font-weight:700;margin-bottom:12px">🌍 Ülke Performans Analizi</div>';
+  var cHtml = '<div class="stat-section-header" onclick="toggleStatSection(this)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:0">' +
+    '<span style="font-size:13px;font-weight:700">🌍 Ülke Performans Analizi</span>' +
+    '<span class="stat-toggle-arrow">▼</span></div>' +
+    '<div class="stat-section-body" style="margin-top:10px">';
   cHtml += '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Grubun hangi ülkenin maçlarında daha iyi tahmin ettiği</div>';
 
   var top = countryAvg.slice(0, 10);
@@ -4536,7 +4558,9 @@ async function renderIstatistik() {
     cHtml += '</div>';
   });
 
+  cHtml += '</div>'; // close stat-section-body
   countryDiv.innerHTML = cHtml;
+  countryDiv.classList.add('stat-section');
   container.appendChild(countryDiv);
 }
 
