@@ -321,6 +321,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <button class="filter-btn" id="status-btn-tomorrow" onclick="setStatusFilter('tomorrow',this)">⏭️ Yarın</button>
       </div>
       <div class="filter-bar" id="filter-bar"></div>
+      <div id="group-standings-bar" style="display:none;margin-top:8px"></div>
       <div id="matches-container"><div class="loading">Maçlar yükleniyor...</div></div>
     </div>
     <div id="tab-puan" class="section">
@@ -972,6 +973,78 @@ function setFilter(g, btn) {
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderMatches();
+  renderGroupStandingsBar();
+}
+
+function renderGroupStandingsBar() {
+  var bar = document.getElementById('group-standings-bar');
+  if (!bar) return;
+  if (!currentFilter || currentFilter === 'Tümü' || !currentFilter.startsWith('Grup')) {
+    bar.innerHTML = '';
+    bar.style.display = 'none';
+    return;
+  }
+  var standings = computeGroupStandings();
+  var groupTeams = Object.keys(standings).filter(function(t) {
+    return standings[t].group === currentFilter;
+  }).sort(function(a,b) {
+    return standings[a].rank - standings[b].rank;
+  });
+  if (!groupTeams.length) { bar.innerHTML = ''; bar.style.display = 'none'; return; }
+
+  var html = '<div style="background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--border)">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">' + currentFilter + ' Puan Tablosu</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<tr style="color:var(--muted);font-size:11px"><td style="padding:3px 0;width:20px">#</td><td>Takım</td><td style="text-align:center">O</td><td style="text-align:center">G</td><td style="text-align:center">B</td><td style="text-align:center">M</td><td style="text-align:right;font-weight:700">P</td></tr>';
+
+  groupTeams.forEach(function(name, i) {
+    var s = standings[name];
+    var gp = s.played;
+    // Count W/D/L from form
+    var form = getTeamForm(name);
+    var W = form.filter(function(f){return f==='W';}).length;
+    var D = form.filter(function(f){return f==='D';}).length;
+    var L = form.filter(function(f){return f==='L';}).length;
+    // Need to compute full record not just last 3
+    var allForm = getAllTeamForm(name);
+    var fW = allForm.filter(function(f){return f==='W';}).length;
+    var fD = allForm.filter(function(f){return f==='D';}).length;
+    var fL = allForm.filter(function(f){return f==='L';}).length;
+    var isTop2 = i < 2;
+    html += '<tr style="border-top:1px solid var(--border);' + (isTop2 ? 'color:var(--green)' : '') + '">';
+    html += '<td style="padding:5px 0;font-weight:700">' + (i+1) + '</td>';
+    html += '<td style="font-weight:' + (isTop2?'700':'400') + '">' + name + '</td>';
+    html += '<td style="text-align:center">' + gp + '</td>';
+    html += '<td style="text-align:center">' + fW + '</td>';
+    html += '<td style="text-align:center">' + fD + '</td>';
+    html += '<td style="text-align:center">' + fL + '</td>';
+    html += '<td style="text-align:right;font-weight:700">' + s.pts + '</td>';
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  bar.innerHTML = html;
+  bar.style.display = 'block';
+}
+
+function getAllTeamForm(teamName) {
+  var form = [];
+  matches.filter(function(m) {
+    var h = splitTeam(m.home).name.trim();
+    var a = splitTeam(m.away).name.trim();
+    return h === teamName || a === teamName;
+  }).filter(function(m) {
+    var r = results[m.id] || results[String(m.id)];
+    return r && r.home_score !== null && r.home_score !== undefined;
+  }).forEach(function(m) {
+    var r = results[m.id] || results[String(m.id)];
+    var isHome = splitTeam(m.home).name.trim() === teamName;
+    var gf = isHome ? r.home_score : r.away_score;
+    var ga = isHome ? r.away_score : r.home_score;
+    if (gf > ga) form.push('W');
+    else if (gf === ga) form.push('D');
+    else form.push('L');
+  });
+  return form;
 }
 
 function splitTeam(str) { const p = str.split(' '); return {flag: p[0], name: p.slice(1).join(' ')}; }
