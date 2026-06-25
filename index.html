@@ -5020,36 +5020,15 @@ async function openPlayerModal(name) {
 }
 
 function renderBracket() {
-  const container = document.getElementById('bracket-container');
-  const roundBar = document.getElementById('bracket-round-bar');
+  var container = document.getElementById('bracket-container');
+  var roundBar = document.getElementById('bracket-round-bar');
   if (!container) return;
 
-  const rounds = [
-    {key:'Son 32', ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
-    {key:'Son 16', ids:[89,90,91,92,93,94,95,96]},
-    {key:'Çeyrek Final', ids:[97,98,99,100]},
-    {key:'Yarı Final', ids:[101,102]},
-    {key:'3. lük Maçı', ids:[103]},
-    {key:'Final', ids:[104]}
-  ];
+  var rounds = ['Son 32','Son 16','Çeyrek Final','Yarı Final','Final'];
+  if (!window._bracketRound) window._bracketRound = 'Son 32';
 
-  // Find first round with any data or upcoming
-  var defaultRound = 'Son 32';
-  for (var i = rounds.length-1; i >= 0; i--) {
-    var hasData = rounds[i].ids.some(function(id) {
-      var m = matches.find(function(x){return x.id===id;});
-      return m && (results[id] || new Date() <= new Date(m.lock || '2099-01-01'));
-    });
-    if (hasData) { defaultRound = rounds[i].key; break; }
-  }
-  if (!window._bracketRound) window._bracketRound = defaultRound;
-
-  // Build round bar
   roundBar.innerHTML = rounds.map(function(r) {
-    var hasAny = r.ids.some(function(id){ return matches.find(function(x){return x.id===id;}); });
-    if (!hasAny) return '';
-    var active = window._bracketRound === r.key ? 'active' : '';
-    return '<button class="filter-btn '+active+'" onclick="setBracketRound(&quot;'+r.key+'&quot;)">' + r.key + '</button>';
+    return '<button class="filter-btn ' + (window._bracketRound===r?'active':'') + '" onclick="setBracketRound(&quot;'+r+'&quot;)">'+r+'</button>';
   }).join('');
 
   renderBracketRound();
@@ -5057,8 +5036,8 @@ function renderBracket() {
 
 function setBracketRound(key) {
   window._bracketRound = key;
-  document.querySelectorAll('#bracket-round-bar .filter-btn').forEach(function(b) {
-    b.classList.toggle('active', b.textContent === key);
+  document.querySelectorAll('#bracket-round-bar .filter-btn').forEach(function(b){
+    b.classList.toggle('active', b.textContent===key);
   });
   renderBracketRound();
 }
@@ -5067,120 +5046,165 @@ function renderBracketRound() {
   var container = document.getElementById('bracket-container');
   if (!container) return;
 
-  var rounds = [
-    {key:'Son 32', ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
-    {key:'Son 16', ids:[89,90,91,92,93,94,95,96]},
-    {key:'Çeyrek Final', ids:[97,98,99,100]},
-    {key:'Yarı Final', ids:[101,102]},
-    {key:'3. lük Maçı', ids:[103]},
-    {key:'Final', ids:[104]}
-  ];
+  var ROUND_IDS = {
+    'Son 32': [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88],
+    'Son 16': [89,90,91,92,93,94,95,96],
+    'Çeyrek Final': [97,98,99,100],
+    'Yarı Final': [101,102],
+    'Final': [104]
+  };
 
-  var round = rounds.find(function(r){return r.key===window._bracketRound;});
-  if (!round) return;
+  var round = window._bracketRound || 'Son 32';
+  var ids = ROUND_IDS[round] || [];
+
+  // Split into left and right halves
+  var half = Math.ceil(ids.length / 2);
+  var leftIds = ids.slice(0, half);
+  var rightIds = ids.slice(half);
+
+  var CH = 48; // card height
+  var CW = 130; // card width
+  var CN = 20; // connector width
+  var GAP = round === 'Son 32' ? 8 : round === 'Son 16' ? 20 : round === 'Çeyrek Final' ? 40 : 60;
 
   function cleanName(str) {
     var out = '';
-    for (var i=0; i<str.length; i++) {
-      if (str.charCodeAt(i) < 256) out += str[i];
-    }
-    return out.replace(/^\s*\S+\s+/, '').trim().substring(0, 18) || 'TBD';
+    for (var i=0; i<str.length; i++) { if (str.charCodeAt(i)<256) out+=str[i]; }
+    return out.replace(/^\s*\S+\s+/,'').trim().substring(0,16)||'TBD';
   }
+  function flagOf(str) { return str.trim().split(' ')[0]; }
 
-  function flag(str) {
-    return str.trim().split(' ')[0];
-  }
-
-  var html = '<div style="display:flex;flex-direction:column;gap:10px">';
-
-  round.ids.forEach(function(id) {
+  function card(id) {
     var m = matches.find(function(x){return x.id===id;});
-    if (!m) return;
     var res = results[id];
-    var fin = res && res.home_score !== null && res.home_score !== undefined;
-    var hName = cleanName(m.home);
-    var aName = cleanName(m.away);
-    var hFlag = flag(m.home);
-    var aFlag = flag(m.away);
-    var isTBD = hName === 'TBD' || hName.indexOf('.') > -1;
-
-    // Get standings for group phase teams
-    var standings = computeGroupStandings ? computeGroupStandings() : {};
-    var hStanding = standings[hName];
-    var aStanding = standings[aName];
-    var hForm = getTeamForm ? getTeamForm(hName) : [];
-    var aForm = getTeamForm ? getTeamForm(aName) : [];
-
-    function formHtml(form) {
-      return form.slice(-3).map(function(f) {
-        var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
-        return '<span style="font-size:11px;font-weight:900;color:'+col+'">'+f+'</span>';
-      }).join(' ');
-    }
-
+    var fin = res && res.home_score!==null && res.home_score!==undefined;
+    var h = m ? cleanName(m.home) : 'TBD';
+    var a = m ? cleanName(m.away) : 'TBD';
+    var hf = m ? flagOf(m.home) : '🏳';
+    var af = m ? flagOf(m.away) : '🏳';
     var hw = fin && res.home_score > res.away_score;
     var aw = fin && res.away_score > res.home_score;
+    var isTBD = !m || h.indexOf('.')>-1 || h==='TBD';
+    var gc = 'var(--green)'; var dk = 'var(--dark)'; var mu = 'var(--muted)';
+    return '<div style="border:1px solid '+(fin?gc:'var(--border)')+';border-radius:10px;overflow:hidden;background:var(--card);width:'+CW+'px;flex-shrink:0">'+
+      '<div style="padding:4px 8px;font-size:11px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:'+(hw?'rgba(46,204,113,0.08)':'')+'">'+
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:'+(hw?700:400)+';color:'+(isTBD?mu:hw?gc:dk)+'">'+hf+' '+h+'</span>'+
+        (fin?'<b style="margin-left:4px;font-size:12px;color:'+(hw?gc:mu)+'">'+res.home_score+'</b>':'')+
+      '</div>'+
+      '<div style="padding:4px 8px;font-size:11px;display:flex;justify-content:space-between;align-items:center;background:'+(aw?'rgba(46,204,113,0.08)':'')+'">'+
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:'+(aw?700:400)+';color:'+(isTBD?mu:aw?gc:dk)+'">'+af+' '+a+'</span>'+
+        (fin?'<b style="margin-left:4px;font-size:12px;color:'+(aw?gc:mu)+'">'+res.away_score+'</b>':'')+
+      '</div>'+
+    '</div>';
+  }
 
-    var mn = m.time || '';
-    var locked = fin || (m.lock && new Date() >= new Date(m.lock));
+  function col(ids, positions, totalH) {
+    var h = '<div style="position:relative;width:'+CW+'px;height:'+totalH+'px;flex-shrink:0">';
+    ids.forEach(function(id, i) {
+      h += '<div style="position:absolute;top:'+Math.round(positions[i])+'px;left:0">'+card(id)+'</div>';
+    });
+    return h + '</div>';
+  }
 
-    html += '<div style="background:var(--card);border-radius:14px;overflow:hidden;border:1px solid '+(fin?'var(--green)':'var(--border)')+'">';
-    
-    // Match time header
-    html += '<div style="background:var(--surface);padding:6px 14px;display:flex;justify-content:space-between;align-items:center">';
-    html += '<span style="font-size:11px;color:var(--muted)">' + mn + '</span>';
-    html += fin ? '<span style="font-size:11px;font-weight:700;color:var(--green)">Tamamlandı</span>' : 
-            locked ? '<span style="font-size:11px;color:var(--muted)">Kilitli</span>' : 
-            '<span style="font-size:11px;color:var(--red)">Açık</span>';
-    html += '</div>';
+  function positions(n, gap) {
+    var p = [];
+    for (var i=0; i<n; i++) p.push(i*(CH+gap));
+    return p;
+  }
 
-    // Teams row
-    html += '<div style="display:flex;align-items:center;padding:14px;gap:8px">';
-    
-    // Home team
-    html += '<div style="flex:1;'+(hw?'opacity:1':'opacity:'+(fin?'0.5':'1'))+'">';
-    html += '<div style="display:flex;align-items:center;gap:8px">';
-    html += '<span style="font-size:28px">' + (isTBD?'🏳':hFlag) + '</span>';
-    html += '<div>';
-    html += '<div style="font-size:14px;font-weight:'+(hw?'700':'500')+';color:'+(hw?'var(--green)':'var(--dark)')+'">' + hName + '</div>';
-    if (!isTBD && (hStanding || hForm.length)) {
-      html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center">';
-      if (hStanding) html += '<span>'+hStanding.rank+'. sıra</span>';
-      if (hForm.length) html += '<span>'+formHtml(hForm)+'</span>';
-      html += '</div>';
+  function nextPos(prev) {
+    var p = [];
+    for (var i=0; i<prev.length/2; i++) {
+      var y1 = prev[i*2]+CH/2;
+      var y2 = prev[i*2+1]+CH/2;
+      p.push((y1+y2)/2-CH/2);
     }
-    html += '</div></div></div>';
+    return p;
+  }
 
-    // Score or VS
-    html += '<div style="text-align:center;min-width:60px">';
-    if (fin) {
-      html += '<div style="font-size:26px;font-weight:900;color:var(--dark);line-height:1">' + res.home_score + ' — ' + res.away_score + '</div>';
-      if (res.pen_home !== undefined && res.pen_home !== null) {
-        html += '<div style="font-size:11px;color:var(--muted)">('+res.pen_home+' — '+res.pen_away+' pen.)</div>';
+  function connector(fromPos, toPos, dir, totalH) {
+    var svg = '<svg width="'+CN+'" height="'+totalH+'" style="flex-shrink:0;display:block">';
+    toPos.forEach(function(tp, i) {
+      var y1 = Math.round(fromPos[i*2]+CH/2);
+      var y2 = Math.round(fromPos[i*2+1]+CH/2);
+      var ym = Math.round(tp+CH/2);
+      if (dir==='r') {
+        svg += '<line x1="0" y1="'+y1+'" x2="0" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
+        svg += '<line x1="0" y1="'+ym+'" x2="'+CN+'" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
+      } else {
+        svg += '<line x1="'+CN+'" y1="'+y1+'" x2="'+CN+'" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
+        svg += '<line x1="'+CN+'" y1="'+ym+'" x2="0" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
       }
-    } else {
-      html += '<div style="font-size:16px;font-weight:700;color:var(--muted)">VS</div>';
-    }
-    html += '</div>';
+    });
+    return svg + '</svg>';
+  }
 
-    // Away team
-    html += '<div style="flex:1;text-align:right;'+(aw?'opacity:1':'opacity:'+(fin?'0.5':'1'))+'">';
-    html += '<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">';
-    html += '<div>';
-    html += '<div style="font-size:14px;font-weight:'+(aw?'700':'500')+';color:'+(aw?'var(--green)':'var(--dark)')+'">' + aName + '</div>';
-    if (!isTBD && (aStanding || aForm.length)) {
-      html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center;justify-content:flex-end">';
-      if (aStanding) html += '<span>'+aStanding.rank+'. sıra</span>';
-      if (aForm.length) html += '<span>'+formHtml(aForm)+'</span>';
-      html += '</div>';
+  function hline(y, totalH, color) {
+    return '<svg width="'+CN+'" height="'+totalH+'" style="flex-shrink:0;display:block">'+
+      '<line x1="0" y1="'+Math.round(y)+'" x2="'+CN+'" y2="'+Math.round(y)+'" stroke="'+(color||'#ccc')+'" stroke-width="1.5"/>'+
+    '</svg>';
+  }
+
+  // Build layout based on round
+  var html = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 8px">';
+
+  if (round === 'Final') {
+    var finPos = [0];
+    var totalH = CH + 20;
+    html += '<div style="display:flex;align-items:flex-start;justify-content:center;padding:20px 0">';
+    html += '<div style="text-align:center">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:1px">🏆 Final</div>';
+    html += card(ids[0]);
+
+    var res104 = results[104];
+    var fin104 = res104 && res104.home_score !== null;
+    if (fin104) {
+      var m104 = matches.find(function(x){return x.id===104;});
+      var winner = res104.home_score > res104.away_score ? cleanName(m104.home) : cleanName(m104.away);
+      html += '<div style="margin-top:12px;border:2px solid var(--green);border-radius:10px;padding:8px 16px;background:rgba(46,204,113,0.08)">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px">Şampiyon</div>'+
+        '<div style="font-size:16px;font-weight:700;color:var(--green);margin-top:2px">'+winner+'</div>'+
+      '</div>';
     }
-    html += '</div>';
-    html += '<span style="font-size:28px">' + (isTBD?'🏳':aFlag) + '</span>';
     html += '</div></div>';
+  } else if (round === 'Yarı Final') {
+    var totalH = CH + 10;
+    html += '<div style="display:flex;flex-direction:column;gap:16px">';
+    ids.forEach(function(id, i) {
+      html += '<div>';
+      html += '<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:6px">'+(i===0?'1. Yarı Final':'2. Yarı Final')+'</div>';
+      html += card(id);
+      html += '</div>';
+    });
+    html += '</div>';
+  } else {
+    // For Son 32, Son 16, Çeyrek Final: show left half + right half mirrored
+    var lPos = positions(leftIds.length, GAP);
+    var rPos = positions(rightIds.length, GAP);
+    var totalH = Math.max(
+      lPos.length ? lPos[lPos.length-1]+CH : 0,
+      rPos.length ? rPos[rPos.length-1]+CH : 0
+    ) + 10;
 
-    html += '</div>'; // teams row
-    html += '</div>'; // card
-  });
+    html += '<div style="display:flex;flex-direction:column;gap:0">';
+
+    // Label
+    html += '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;text-align:center">'+round+'</div>';
+
+    html += '<div style="display:flex;gap:0;align-items:flex-start">';
+
+    // Left col
+    html += col(leftIds, lPos, totalH);
+
+    // Right col (mirrored)
+    if (rightIds.length) {
+      html += '<div style="width:20px;flex-shrink:0"></div>';
+      html += col(rightIds, rPos, totalH);
+    }
+
+    html += '</div>';
+    html += '</div>';
+  }
 
   html += '</div>';
   container.innerHTML = html;
