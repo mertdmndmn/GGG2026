@@ -4728,6 +4728,71 @@ async function renderIstatistik() {
     container.appendChild(div);
   });
 
+  // Utanç Duvarı
+  const shameDiv = document.createElement('div');
+  shameDiv.style.cssText = 'background:var(--card);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow)';
+
+  // Find worst predictions: biggest gap between predicted and actual score
+  var blunders = [];
+  finishedMatches.forEach(function(m) {
+    var res = results[m.id];
+    var matchPreds = allPreds.filter(function(p){ return p.match_id === m.id; });
+    var homeClean = splitTeam(m.home).name.trim();
+    var awayClean = splitTeam(m.away).name.trim();
+    matchPreds.forEach(function(pred) {
+      if (pred.home_score === null || pred.away_score === null) return;
+      var ph = parseInt(pred.home_score);
+      var pa = parseInt(pred.away_score);
+      if (isNaN(ph) || isNaN(pa)) return;
+      var diff = Math.abs(ph - res.home_score) + Math.abs(pa - res.away_score);
+      if (diff < 4) return; // only embarrassing ones
+      blunders.push({
+        name: pred.player_name,
+        pred: ph + ' - ' + pa,
+        real: res.home_score + ' - ' + res.away_score,
+        diff: diff,
+        home: homeClean,
+        away: awayClean,
+        hFlag: splitTeam(m.home).flag,
+        aFlag: splitTeam(m.away).flag
+      });
+    });
+  });
+  blunders.sort(function(a,b){ return b.diff - a.diff; });
+  var top5 = blunders.slice(0, 5);
+
+  var shameHtml = '<div onclick="toggleStatSection(this)" style="display:flex;align-items:center;justify-content:space-between;padding:14px;cursor:pointer">' +
+    '<div><div style="font-size:15px;font-weight:700">🤦 Utanç Duvarı</div>' +
+    '<div style="font-size:12px;color:var(--muted);margin-top:2px">En rezil tahminler</div></div>' +
+    '<span class="stat-arrow" style="color:var(--muted)">▼</span>' +
+    '</div>' +
+    '<div class="stat-body" style="display:none;padding:0 14px 14px">';
+
+  if (!top5.length) {
+    shameHtml += '<div style="color:var(--muted);font-size:13px;padding:8px 0">Henüz utanç verici tahmin yok 😇</div>';
+  } else {
+    top5.forEach(function(b, i) {
+      var emojis = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+      shameHtml += '<div style="padding:10px 0;border-bottom:1px solid var(--border)' + (i===top5.length-1?';border-bottom:none':'') + '">';
+      shameHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
+      shameHtml += '<span style="font-size:16px">' + emojis[i] + '</span>';
+      shameHtml += '<span style="font-size:13px;font-weight:700">' + b.name + '</span>';
+      shameHtml += '</div>';
+      shameHtml += '<div style="font-size:12px;color:var(--muted);margin-left:24px">';
+      shameHtml += b.hFlag + ' ' + b.home + ' vs ' + b.aFlag + ' ' + b.away;
+      shameHtml += '</div>';
+      shameHtml += '<div style="font-size:12px;margin-left:24px;margin-top:4px;display:flex;gap:12px">';
+      shameHtml += '<span>Tahmin: <b>' + b.pred + '</b></span>';
+      shameHtml += '<span style="color:var(--green)">Gerçek: <b>' + b.real + '</b></span>';
+      shameHtml += '</div>';
+      shameHtml += '</div>';
+    });
+  }
+
+  shameHtml += '</div>';
+  shameDiv.innerHTML = shameHtml;
+  container.appendChild(shameDiv);
+
   // Ülke performans bölümü
   const countryDiv = document.createElement('div');
   countryDiv.style.cssText = 'background:var(--card);border-radius:14px;padding:16px;margin-top:12px;border:1px solid var(--border)';
