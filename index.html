@@ -2222,7 +2222,7 @@ async function renderTurnuvaLeaderboard() {
   }
 
   // Load all player turnuva bets
-  const allBets = await sbGet('turnuva_bets', 'group_id=eq.' + GROUP_ID);
+  const allBets = await sbGet('tournament_bets', 'group_id=eq.' + GROUP_ID);
   if (!Array.isArray(allBets) || !allBets.length) { sec.innerHTML = ''; return; }
 
   // Calculate per-player turnuva pts
