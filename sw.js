@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ggg2026-v22';
+const CACHE_NAME = 'ggg2026-v23';
 self.addEventListener('install', function(e) { self.skipWaiting(); });
 self.addEventListener('activate', function(e) {
   e.waitUntil(caches.keys().then(function(keys) {
