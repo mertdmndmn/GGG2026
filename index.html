@@ -5031,7 +5031,7 @@ function renderBracket() {
     return '<button class="filter-btn ' + (window._bracketRound===r?'active':'') + '" onclick="setBracketRound(&quot;'+r+'&quot;)">'+r+'</button>';
   }).join('');
 
-  renderBracketRound();
+  renderBracketFull();
 }
 
 function setBracketRound(key) {
@@ -5039,173 +5039,199 @@ function setBracketRound(key) {
   document.querySelectorAll('#bracket-round-bar .filter-btn').forEach(function(b){
     b.classList.toggle('active', b.textContent===key);
   });
-  renderBracketRound();
+  // Scroll to the selected round column
+  var col = document.getElementById('bracket-col-'+key.replace(/\s/g,'-'));
+  if (col) {
+    var wrapper = document.getElementById('bracket-scroll');
+    if (wrapper) {
+      var colLeft = col.offsetLeft;
+      var wrapperWidth = wrapper.offsetWidth;
+      var colWidth = col.offsetWidth;
+      wrapper.scrollTo({left: colLeft - (wrapperWidth/2) + (colWidth/2), behavior:'smooth'});
+    }
+  }
 }
 
-function renderBracketRound() {
+function setBracketRound(key) {
+  window._bracketRound = key;
+  document.querySelectorAll('#bracket-round-bar .filter-btn').forEach(function(b){
+    b.classList.toggle('active', b.textContent===key);
+  });
+  var col = document.getElementById('bracket-col-'+key.replace(/[\s]/g,'-'));
+  if (col) {
+    var wrapper = document.getElementById('bracket-scroll');
+    if (wrapper) {
+      wrapper.scrollTo({left: col.offsetLeft - wrapper.offsetWidth/2 + col.offsetWidth/2, behavior:'smooth'});
+    }
+  }
+}
+
+function renderBracketFull() {
   var container = document.getElementById('bracket-container');
   if (!container) return;
 
-  var ROUND_IDS = {
-    'Son 32': [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88],
-    'Son 16': [89,90,91,92,93,94,95,96],
-    'Çeyrek Final': [97,98,99,100],
-    'Yarı Final': [101,102],
-    'Final': [104]
-  };
+  var CH = 44;
+  var CW = 86;
+  var CN = 18;
 
-  var round = window._bracketRound || 'Son 32';
-  var ids = ROUND_IDS[round] || [];
-
-  // Split into left and right halves
-  var half = Math.ceil(ids.length / 2);
-  var leftIds = ids.slice(0, half);
-  var rightIds = ids.slice(half);
-
-  var CH = 48; // card height
-  var CW = 130; // card width
-  var CN = 20; // connector width
-  var GAP = round === 'Son 32' ? 8 : round === 'Son 16' ? 20 : round === 'Çeyrek Final' ? 40 : 60;
+  var lR32 = [73,74,75,76,77,78,79,80];
+  var rR32 = [81,82,83,84,85,86,87,88];
+  var lR16 = [89,90,91,92];
+  var rR16 = [93,94,95,96];
+  var lQF  = [97,98];
+  var rQF  = [99,100];
+  var lSF  = 101;
+  var rSF  = 102;
+  var FIN  = 104;
 
   function cleanName(str) {
     var out = '';
     for (var i=0; i<str.length; i++) { if (str.charCodeAt(i)<256) out+=str[i]; }
-    return out.replace(/^\s*\S+\s+/,'').trim().substring(0,16)||'TBD';
+    return out.replace(/^\s*\S+\s+/,'').trim().substring(0,14)||'TBD';
   }
   function flagOf(str) { return str.trim().split(' ')[0]; }
+
+  function getWinner(id) {
+    var res = results[id];
+    if (!res||res.home_score===null||res.home_score===undefined) return null;
+    var m = matches.find(function(x){return x.id===id;});
+    if (!m) return null;
+    if (res.home_score>res.away_score) return cleanName(m.home);
+    if (res.away_score>res.home_score) return cleanName(m.away);
+    if (res.pen_home!==undefined&&res.pen_home!==null) return res.pen_home>res.pen_away?cleanName(m.home):cleanName(m.away);
+    return cleanName(m.home);
+  }
 
   function card(id) {
     var m = matches.find(function(x){return x.id===id;});
     var res = results[id];
-    var fin = res && res.home_score!==null && res.home_score!==undefined;
-    var h = m ? cleanName(m.home) : 'TBD';
-    var a = m ? cleanName(m.away) : 'TBD';
-    var hf = m ? flagOf(m.home) : '🏳';
-    var af = m ? flagOf(m.away) : '🏳';
-    var hw = fin && res.home_score > res.away_score;
-    var aw = fin && res.away_score > res.home_score;
-    var isTBD = !m || h.indexOf('.')>-1 || h==='TBD';
-    var gc = 'var(--green)'; var dk = 'var(--dark)'; var mu = 'var(--muted)';
-    return '<div style="border:1px solid '+(fin?gc:'var(--border)')+';border-radius:10px;overflow:hidden;background:var(--card);width:'+CW+'px;flex-shrink:0">'+
-      '<div style="padding:4px 8px;font-size:11px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:'+(hw?'rgba(46,204,113,0.08)':'')+'">'+
+    var fin = res&&res.home_score!==null&&res.home_score!==undefined;
+    var h = m?cleanName(m.home):'TBD';
+    var a = m?cleanName(m.away):'TBD';
+    var hf = m?flagOf(m.home):'🏳';
+    var af = m?flagOf(m.away):'🏳';
+    var hw = fin&&res.home_score>res.away_score;
+    var aw = fin&&res.away_score>res.home_score;
+    var isTBD = !m||h.indexOf('.')>-1||h==='TBD';
+    var gc='var(--green)';var dk='var(--dark)';var mu='var(--muted)';
+    return '<div style="border:1px solid '+(fin?gc:'var(--border)')+';border-radius:8px;overflow:hidden;background:var(--card);width:'+CW+'px;flex-shrink:0">'+
+      '<div style="padding:4px 6px;font-size:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:'+(hw?'rgba(46,204,113,0.08)':'')+'">'+
         '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:'+(hw?700:400)+';color:'+(isTBD?mu:hw?gc:dk)+'">'+hf+' '+h+'</span>'+
-        (fin?'<b style="margin-left:4px;font-size:12px;color:'+(hw?gc:mu)+'">'+res.home_score+'</b>':'')+
+        (fin?'<b style="margin-left:3px;font-size:10px;color:'+(hw?gc:mu)+'">'+res.home_score+'</b>':'')+
       '</div>'+
-      '<div style="padding:4px 8px;font-size:11px;display:flex;justify-content:space-between;align-items:center;background:'+(aw?'rgba(46,204,113,0.08)':'')+'">'+
+      '<div style="padding:4px 6px;font-size:10px;display:flex;justify-content:space-between;align-items:center;background:'+(aw?'rgba(46,204,113,0.08)':'')+'">'+
         '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:'+(aw?700:400)+';color:'+(isTBD?mu:aw?gc:dk)+'">'+af+' '+a+'</span>'+
-        (fin?'<b style="margin-left:4px;font-size:12px;color:'+(aw?gc:mu)+'">'+res.away_score+'</b>':'')+
+        (fin?'<b style="margin-left:3px;font-size:10px;color:'+(aw?gc:mu)+'">'+res.away_score+'</b>':'')+
       '</div>'+
     '</div>';
   }
 
-  function col(ids, positions, totalH) {
-    var h = '<div style="position:relative;width:'+CW+'px;height:'+totalH+'px;flex-shrink:0">';
-    ids.forEach(function(id, i) {
-      h += '<div style="position:absolute;top:'+Math.round(positions[i])+'px;left:0">'+card(id)+'</div>';
-    });
-    return h + '</div>';
+  var GAP = 8;
+  function makePos(n, gap) {
+    var p=[];for(var i=0;i<n;i++) p.push(i*(CH+gap));return p;
   }
-
-  function positions(n, gap) {
-    var p = [];
-    for (var i=0; i<n; i++) p.push(i*(CH+gap));
-    return p;
-  }
-
   function nextPos(prev) {
-    var p = [];
-    for (var i=0; i<prev.length/2; i++) {
-      var y1 = prev[i*2]+CH/2;
-      var y2 = prev[i*2+1]+CH/2;
+    var p=[];
+    for(var i=0;i<prev.length/2;i++){
+      var y1=prev[i*2]+CH/2; var y2=prev[i*2+1]+CH/2;
       p.push((y1+y2)/2-CH/2);
     }
     return p;
   }
 
-  function connector(fromPos, toPos, dir, totalH) {
-    var svg = '<svg width="'+CN+'" height="'+totalH+'" style="flex-shrink:0;display:block">';
-    toPos.forEach(function(tp, i) {
-      var y1 = Math.round(fromPos[i*2]+CH/2);
-      var y2 = Math.round(fromPos[i*2+1]+CH/2);
-      var ym = Math.round(tp+CH/2);
-      if (dir==='r') {
-        svg += '<line x1="0" y1="'+y1+'" x2="0" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
-        svg += '<line x1="0" y1="'+ym+'" x2="'+CN+'" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
-      } else {
-        svg += '<line x1="'+CN+'" y1="'+y1+'" x2="'+CN+'" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
-        svg += '<line x1="'+CN+'" y1="'+ym+'" x2="0" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
-      }
+  var lR32p = makePos(8,GAP);
+  var lR16p = nextPos(lR32p);
+  var lQFp  = nextPos(lR16p);
+  var lSFp  = nextPos(lQFp);
+  var rR32p = makePos(8,GAP);
+  var rR16p = nextPos(rR32p);
+  var rQFp  = nextPos(rR16p);
+  var rSFp  = nextPos(rQFp);
+  var finP  = nextPos([lSFp[0],rSFp[0]]);
+  var totalH = lR32p[7]+CH+10;
+
+  function colDiv(ids, positions, roundKey) {
+    var rid = roundKey ? ' id="bracket-col-'+roundKey.replace(/[\s]/g,'-')+'"' : '';
+    var h='<div style="position:relative;width:'+CW+'px;height:'+totalH+'px;flex-shrink:0"'+rid+'>';
+    ids.forEach(function(id,i){
+      h+='<div style="position:absolute;top:'+Math.round(positions[i])+'px;left:0">'+card(id)+'</div>';
     });
-    return svg + '</svg>';
+    return h+'</div>';
   }
 
-  function hline(y, totalH, color) {
+  function conn(fromPos, toPos, dir) {
+    var svg='<svg width="'+CN+'" height="'+totalH+'" style="flex-shrink:0;display:block">';
+    toPos.forEach(function(tp,i){
+      var y1=Math.round(fromPos[i*2]+CH/2);
+      var y2=Math.round(fromPos[i*2+1]+CH/2);
+      var ym=Math.round(tp+CH/2);
+      if(dir==='r'){
+        svg+='<line x1="0" y1="'+y1+'" x2="0" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
+        svg+='<line x1="0" y1="'+ym+'" x2="'+CN+'" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
+      } else {
+        svg+='<line x1="'+CN+'" y1="'+y1+'" x2="'+CN+'" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
+        svg+='<line x1="'+CN+'" y1="'+ym+'" x2="0" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
+      }
+    });
+    return svg+'</svg>';
+  }
+
+  function hline(y, color) {
     return '<svg width="'+CN+'" height="'+totalH+'" style="flex-shrink:0;display:block">'+
       '<line x1="0" y1="'+Math.round(y)+'" x2="'+CN+'" y2="'+Math.round(y)+'" stroke="'+(color||'#ccc')+'" stroke-width="1.5"/>'+
     '</svg>';
   }
 
-  // Build layout based on round
-  var html = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 8px">';
-
-  if (round === 'Final') {
-    var finPos = [0];
-    var totalH = CH + 20;
-    html += '<div style="display:flex;align-items:flex-start;justify-content:center;padding:20px 0">';
-    html += '<div style="text-align:center">';
-    html += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:1px">🏆 Final</div>';
-    html += card(ids[0]);
-
-    var res104 = results[104];
-    var fin104 = res104 && res104.home_score !== null;
-    if (fin104) {
-      var m104 = matches.find(function(x){return x.id===104;});
-      var winner = res104.home_score > res104.away_score ? cleanName(m104.home) : cleanName(m104.away);
-      html += '<div style="margin-top:12px;border:2px solid var(--green);border-radius:10px;padding:8px 16px;background:rgba(46,204,113,0.08)">'+
-        '<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px">Şampiyon</div>'+
-        '<div style="font-size:16px;font-weight:700;color:var(--green);margin-top:2px">'+winner+'</div>'+
-      '</div>';
-    }
-    html += '</div></div>';
-  } else if (round === 'Yarı Final') {
-    var totalH = CH + 10;
-    html += '<div style="display:flex;flex-direction:column;gap:16px">';
-    ids.forEach(function(id, i) {
-      html += '<div>';
-      html += '<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:6px">'+(i===0?'1. Yarı Final':'2. Yarı Final')+'</div>';
-      html += card(id);
-      html += '</div>';
-    });
-    html += '</div>';
-  } else {
-    // For Son 32, Son 16, Çeyrek Final: show left half + right half mirrored
-    var lPos = positions(leftIds.length, GAP);
-    var rPos = positions(rightIds.length, GAP);
-    var totalH = Math.max(
-      lPos.length ? lPos[lPos.length-1]+CH : 0,
-      rPos.length ? rPos[rPos.length-1]+CH : 0
-    ) + 10;
-
-    html += '<div style="display:flex;flex-direction:column;gap:0">';
-
-    // Label
-    html += '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;text-align:center">'+round+'</div>';
-
-    html += '<div style="display:flex;gap:0;align-items:flex-start">';
-
-    // Left col
-    html += col(leftIds, lPos, totalH);
-
-    // Right col (mirrored)
-    if (rightIds.length) {
-      html += '<div style="width:20px;flex-shrink:0"></div>';
-      html += col(rightIds, rPos, totalH);
-    }
-
-    html += '</div>';
-    html += '</div>';
+  function label(text) {
+    return '<div style="position:relative;width:'+CW+'px;flex-shrink:0"><div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;text-align:center;letter-spacing:0.5px;margin-bottom:6px">'+text+'</div></div>';
   }
 
+  var champ = getWinner(FIN);
+  var champBox = champ?'<div style="text-align:center;margin-top:10px"><div style="display:inline-block;border:2px solid var(--green);border-radius:10px;padding:6px 14px;background:rgba(46,204,113,0.08)"><div style="font-size:9px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px">Şampiyon</div><div style="font-size:14px;font-weight:700;color:var(--green);margin-top:2px">'+champ+'</div></div></div>':'';
+
+  // Label row
+  var labelRow = '<div style="display:flex;margin-bottom:4px">'+
+    label('Son 32')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
+    label('Son 16')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
+    label('Ç.Final')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
+    label('Y.Final')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
+    label('Final')+
+    '<div style="width:'+CN+'px;flex-shrink:0"></div>'+
+    label('Y.Final')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
+    label('Ç.Final')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
+    label('Son 16')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
+    label('Son 32')+
+  '</div>';
+
+  var html = '<div id="bracket-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 8px">';
+  html += labelRow;
+  html += '<div style="display:flex;align-items:flex-start">';
+
+  html += colDiv(lR32, lR32p, 'Son 32');
+  html += conn(lR32p, lR16p, 'r');
+  html += colDiv(lR16, lR16p, 'Son 16');
+  html += conn(lR16p, lQFp, 'r');
+  html += colDiv(lQF, lQFp, 'Çeyrek-Final');
+  html += conn(lQFp, lSFp, 'r');
+  html += colDiv([lSF], lSFp, 'Yarı-Final');
+  html += hline(lSFp[0]+CH/2, 'var(--red)');
+
+  // Final center
+  html += '<div style="position:relative;width:'+CW+'px;height:'+totalH+'px;flex-shrink:0" id="bracket-col-Final">';
+  html += '<div style="position:absolute;top:'+Math.round(finP[0])+'px;left:0">'+card(FIN)+'</div>';
+  html += '</div>';
+
+  html += hline(rSFp[0]+CH/2, 'var(--red)');
+  html += colDiv([rSF], rSFp, null);
+  html += conn(rQFp, rSFp, 'l');
+  html += colDiv(rQF, rQFp, null);
+  html += conn(rR16p, rQFp, 'l');
+  html += colDiv(rR16, rR16p, null);
+  html += conn(rR32p, rR16p, 'l');
+  html += colDiv(rR32, rR32p, null);
+
+  html += '</div>';
+  html += champBox;
   html += '</div>';
   container.innerHTML = html;
 }
