@@ -349,8 +349,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <div class="lb-header"><span>#</span><span>Oyuncu</span><span>Puan</span><span>+/-</span></div>
       <div class="lb-card" id="lb-container"><div class="loading">Yükleniyor...</div></div>
       <div style="margin-top:14px">
-        
-        
+        <div id="turnuva-lb-section"></div>
       </div>
       <div class="section-label" style="margin-top:20px">Puan Sistemi</div>
       <div class="pts-card">
@@ -942,7 +941,7 @@ function showTab(tab, btn) {
   window.scrollTo({top:0, behavior:'smooth'});
   if (tab === 'bracket') { renderBracket(); }
   if (tab === 'istatistik') { loadPlayers().then(async () => { renderMacStatsAuto(); renderIstatistik(); }); }
-  if (tab === 'puan') { loadPlayers().then(async () => {
+  if (tab === 'puan') { loadPlayers().then(async () => { renderTurnuvaLeaderboard();
     renderLeaderboard();
       }); }
   if (tab === 'admin' && isAdmin) renderAdminMatches();
@@ -2204,6 +2203,71 @@ function renderLeaderboard() {
   const myRank = sorted.findIndex(p => p.name === currentUser) + 1;
   document.getElementById('my-total-pts').textContent = me ? me.pts : 0;
   document.getElementById('my-rank').textContent = '#' + (myRank || '—');
+}
+
+async function renderTurnuvaLeaderboard() {
+  var sec = document.getElementById('turnuva-lb-section');
+  if (!sec) return;
+
+  // Load all predictions
+  const allPreds = await sbGet('predictions', 'group_id=eq.' + GROUP_ID + '&match_id=lte.0');
+  // Load tournament bets for all players from tournament_results table — not available per player
+  // Instead: load tournament_results which stores group results, and player bets from turnuva_bets
+  const trRows = await sbGet('tournament_results', 'group_id=eq.' + GROUP_ID);
+  const actualResults = (Array.isArray(trRows) && trRows.length > 0) ? trRows[0].results || {} : {};
+
+  if (!Object.keys(actualResults).length) {
+    sec.innerHTML = '';
+    return;
+  }
+
+  // Load all player turnuva bets
+  const allBets = await sbGet('turnuva_bets', 'group_id=eq.' + GROUP_ID);
+  if (!Array.isArray(allBets) || !allBets.length) { sec.innerHTML = ''; return; }
+
+  // Calculate per-player turnuva pts
+  var playerPts = {};
+  allBets.forEach(function(row) {
+    var name = row.player_name;
+    var bets = row.bets || {};
+    var pts = 0;
+    TURNUVA_FIELDS.forEach(function(f) {
+      var predicted = bets[f.key] || '';
+      var actual = actualResults[f.key] || '';
+      if (predicted && actual && normalizeTR(predicted) === normalizeTR(actual)) {
+        pts += f.pts;
+      }
+    });
+    playerPts[name] = pts;
+  });
+
+  var ranked = Object.keys(playerPts).sort(function(a,b){ return playerPts[b]-playerPts[a]; });
+  if (!ranked.length || ranked.every(function(n){ return playerPts[n]===0; })) {
+    sec.innerHTML = '';
+    return;
+  }
+
+  var html = '<div style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)">';
+  // Header (accordion)
+  html += '<div onclick="var b=this.nextElementSibling;b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;this.querySelector(&quot;.acc-arr&quot;).textContent=b.style.display===&quot;none&quot;?&quot;▼&quot;:&quot;▲&quot;" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer">';
+  html += '<div><div style="font-size:15px;font-weight:700">🏆 Turnuva Bahisleri</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Turnuva tahmini puan sıralaması</div></div>';
+  html += '<span class="acc-arr" style="color:var(--muted)">▼</span>';
+  html += '</div>';
+  html += '<div style="display:none;padding:0 0 8px">';
+
+  ranked.forEach(function(name, i) {
+    var pts = playerPts[name];
+    var isMe = name === currentUser;
+    var medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    html += '<div style="display:flex;align-items:center;padding:10px 16px;border-top:1px solid var(--border);background:'+(isMe?'rgba(232,40,30,0.03)':'')+';">';
+    html += '<span style="font-size:20px;font-weight:700;color:var(--muted);width:28px;font-variant-numeric:tabular-nums">'+(i+1)+'</span>';
+    html += '<span style="flex:1;font-size:14px;font-weight:'+(isMe?700:500)+'">'+medal+' '+name+(isMe?' <small style="color:var(--muted)">sen</small>':'')+'</span>';
+    html += '<span style="font-size:16px;font-weight:700;color:'+(pts>0?'var(--green)':'var(--muted)')+'">'+pts+'</span>';
+    html += '</div>';
+  });
+
+  html += '</div></div>';
+  sec.innerHTML = html;
 }
 
 let adminTab = 'pending';
