@@ -970,7 +970,8 @@ function buildFilterBar() {
 
 function setFilter(g, btn) {
   currentFilter = g;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  // Only remove active from group filter buttons, not status buttons
+  document.querySelectorAll('#filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderMatches();
   renderGroupStandingsBar();
@@ -3042,6 +3043,7 @@ function setStatusFilter(s, btn) {
   document.querySelectorAll('[id^="status-btn-"]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderMatches();
+  renderGroupStandingsBar();
 }
 
 // ============ SAMPION TAB ============
