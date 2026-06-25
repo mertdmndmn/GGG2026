@@ -371,7 +371,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
     </div>
 
     <div id="tab-bracket" class="section">
-      <div class="section-label">Nakavt Bracket</div>
+      <div class="filter-bar" id="bracket-round-bar" style="margin-bottom:12px"></div>
       <div id="bracket-container"></div>
     </div>
 
@@ -5020,185 +5020,168 @@ async function openPlayerModal(name) {
 }
 
 function renderBracket() {
+  const container = document.getElementById('bracket-container');
+  const roundBar = document.getElementById('bracket-round-bar');
+  if (!container) return;
+
+  const rounds = [
+    {key:'Son 32', ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
+    {key:'Son 16', ids:[89,90,91,92,93,94,95,96]},
+    {key:'Çeyrek Final', ids:[97,98,99,100]},
+    {key:'Yarı Final', ids:[101,102]},
+    {key:'3. lük Maçı', ids:[103]},
+    {key:'Final', ids:[104]}
+  ];
+
+  // Find first round with any data or upcoming
+  var defaultRound = 'Son 32';
+  for (var i = rounds.length-1; i >= 0; i--) {
+    var hasData = rounds[i].ids.some(function(id) {
+      var m = matches.find(function(x){return x.id===id;});
+      return m && (results[id] || new Date() <= new Date(m.lock || '2099-01-01'));
+    });
+    if (hasData) { defaultRound = rounds[i].key; break; }
+  }
+  if (!window._bracketRound) window._bracketRound = defaultRound;
+
+  // Build round bar
+  roundBar.innerHTML = rounds.map(function(r) {
+    var hasAny = r.ids.some(function(id){ return matches.find(function(x){return x.id===id;}); });
+    if (!hasAny) return '';
+    var active = window._bracketRound === r.key ? 'active' : '';
+    return '<button class="filter-btn '+active+'" onclick="setBracketRound(&quot;'+r.key+'&quot;)">' + r.key + '</button>';
+  }).join('');
+
+  renderBracketRound();
+}
+
+function setBracketRound(key) {
+  window._bracketRound = key;
+  document.querySelectorAll('#bracket-round-bar .filter-btn').forEach(function(b) {
+    b.classList.toggle('active', b.textContent === key);
+  });
+  renderBracketRound();
+}
+
+function renderBracketRound() {
   var container = document.getElementById('bracket-container');
   if (!container) return;
 
-  // Strip emoji from team name
-  function clean(str) {
+  var rounds = [
+    {key:'Son 32', ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
+    {key:'Son 16', ids:[89,90,91,92,93,94,95,96]},
+    {key:'Çeyrek Final', ids:[97,98,99,100]},
+    {key:'Yarı Final', ids:[101,102]},
+    {key:'3. lük Maçı', ids:[103]},
+    {key:'Final', ids:[104]}
+  ];
+
+  var round = rounds.find(function(r){return r.key===window._bracketRound;});
+  if (!round) return;
+
+  function cleanName(str) {
     var out = '';
-    for (var i = 0; i < str.length; i++) {
-      var code = str.charCodeAt(i);
-      if (code < 256) out += str[i];
+    for (var i=0; i<str.length; i++) {
+      if (str.charCodeAt(i) < 256) out += str[i];
     }
-    // remove leading short tokens like "A1." "M73" etc
-    out = out.replace(/^\s*[A-Za-z0-9]{1,4}\.?\s*/, '').trim();
-    return out.substring(0, 15) || 'TBD';
+    return out.replace(/^\s*\S+\s+/, '').trim().substring(0, 18) || 'TBD';
   }
 
-  function getMatch(id) {
-    return matches.find(function(m){ return m.id === id; });
+  function flag(str) {
+    return str.trim().split(' ')[0];
   }
 
-  function home(id) {
-    var m = getMatch(id); return m ? clean(m.home) : 'TBD';
-  }
-  function away(id) {
-    var m = getMatch(id); return m ? clean(m.away) : 'TBD';
-  }
-  function winner(id) {
-    var res = results[id];
-    if (!res || res.home_score === null || res.home_score === undefined) return null;
-    if (res.home_score > res.away_score) return home(id);
-    if (res.away_score > res.home_score) return away(id);
-    if (res.pen_home > res.pen_away) return home(id);
-    return away(id);
-  }
+  var html = '<div style="display:flex;flex-direction:column;gap:10px">';
 
-  function card(id) {
+  round.ids.forEach(function(id) {
+    var m = matches.find(function(x){return x.id===id;});
+    if (!m) return;
     var res = results[id];
     var fin = res && res.home_score !== null && res.home_score !== undefined;
-    var h = home(id), a = away(id);
+    var hName = cleanName(m.home);
+    var aName = cleanName(m.away);
+    var hFlag = flag(m.home);
+    var aFlag = flag(m.away);
+    var isTBD = hName === 'TBD' || hName.indexOf('.') > -1;
+
+    // Get standings for group phase teams
+    var standings = computeGroupStandings ? computeGroupStandings() : {};
+    var hStanding = standings[hName];
+    var aStanding = standings[aName];
+    var hForm = getTeamForm ? getTeamForm(hName) : [];
+    var aForm = getTeamForm ? getTeamForm(aName) : [];
+
+    function formHtml(form) {
+      return form.slice(-3).map(function(f) {
+        var col = f==='W'?'#2ecc71':f==='D'?'#f39c12':'#e74c3c';
+        return '<span style="font-size:11px;font-weight:900;color:'+col+'">'+f+'</span>';
+      }).join(' ');
+    }
+
     var hw = fin && res.home_score > res.away_score;
     var aw = fin && res.away_score > res.home_score;
-    var gc = 'var(--green)';
-    var mu = 'var(--muted)';
-    var dk = 'var(--dark)';
-    var m2 = matches.find(function(x){return x.id===id;});
-    var timeBar = (!fin && m2 && m2.time) ? '<div style="font-size:9px;color:var(--muted);text-align:center;padding:2px 4px;border-bottom:1px solid var(--border);background:var(--surface)">'+m2.time+'</div>' : '';
-    return '<div style="border:1px solid '+(fin?gc:'var(--border)')+';border-radius:8px;overflow:hidden;background:var(--card);width:80px">' +
-      timeBar +
-      '<div style="padding:3px 5px;font-size:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;background:'+(hw?'rgba(26,122,60,0.1)':'')+'">'+
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:'+(hw?700:400)+';color:'+(hw?gc:dk)+'">'+h+'</span>'+
-        (fin ? '<b style="margin-left:3px;color:'+(hw?gc:mu)+'">'+res.home_score+'</b>' : '') +
-      '</div>'+
-      '<div style="padding:3px 5px;font-size:10px;display:flex;justify-content:space-between;background:'+(aw?'rgba(26,122,60,0.1)':'')+'">'+
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:'+(aw?700:400)+';color:'+(aw?gc:dk)+'">'+a+'</span>'+
-        (fin ? '<b style="margin-left:3px;color:'+(aw?gc:mu)+'">'+res.away_score+'</b>' : '') +
-      '</div>'+
-    '</div>';
-  }
 
-  // Card height ~44px, gap between cards in each round
-  var CH = 44;
-  var GAP = 8;
+    var mn = m.time || '';
+    var locked = fin || (m.lock && new Date() >= new Date(m.lock));
 
-  // positions: array of top-px for each card in a column
-  // R32: 8 cards evenly
-  function makeR32pos() {
-    var p = [];
-    for (var i=0; i<8; i++) p.push(i*(CH+GAP));
-    return p;
-  }
+    html += '<div style="background:var(--card);border-radius:14px;overflow:hidden;border:1px solid '+(fin?'var(--green)':'var(--border)')+'">';
+    
+    // Match time header
+    html += '<div style="background:var(--surface);padding:6px 14px;display:flex;justify-content:space-between;align-items:center">';
+    html += '<span style="font-size:11px;color:var(--muted)">' + mn + '</span>';
+    html += fin ? '<span style="font-size:11px;font-weight:700;color:var(--green)">Tamamlandı</span>' : 
+            locked ? '<span style="font-size:11px;color:var(--muted)">Kilitli</span>' : 
+            '<span style="font-size:11px;color:var(--red)">Açık</span>';
+    html += '</div>';
 
-  function nextPos(prev) {
-    var p = [];
-    for (var i=0; i<prev.length/2; i++) {
-      var y1 = prev[i*2] + CH/2;
-      var y2 = prev[i*2+1] + CH/2;
-      p.push((y1+y2)/2 - CH/2);
+    // Teams row
+    html += '<div style="display:flex;align-items:center;padding:14px;gap:8px">';
+    
+    // Home team
+    html += '<div style="flex:1;'+(hw?'opacity:1':'opacity:'+(fin?'0.5':'1'))+'">';
+    html += '<div style="display:flex;align-items:center;gap:8px">';
+    html += '<span style="font-size:28px">' + (isTBD?'🏳':hFlag) + '</span>';
+    html += '<div>';
+    html += '<div style="font-size:14px;font-weight:'+(hw?'700':'500')+';color:'+(hw?'var(--green)':'var(--dark)')+'">' + hName + '</div>';
+    if (!isTBD && (hStanding || hForm.length)) {
+      html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center">';
+      if (hStanding) html += '<span>'+hStanding.rank+'. sıra</span>';
+      if (hForm.length) html += '<span>'+formHtml(hForm)+'</span>';
+      html += '</div>';
     }
-    return p;
-  }
+    html += '</div></div></div>';
 
-  var lR32p = makeR32pos();
-  var lR16p = nextPos(lR32p);
-  var lQFp  = nextPos(lR16p);
-  var lSFp  = nextPos(lQFp);
-  var rR32p = makeR32pos();
-  var rR16p = nextPos(rR32p);
-  var rQFp  = nextPos(rR16p);
-  var rSFp  = nextPos(rQFp);
-  var finP  = nextPos([lSFp[0], rSFp[0]]);
-
-  var totalH = lR32p[7] + CH + 4;
-  var CW = 80;
-  var CN = 16; // connector width
-
-  function col(ids, positions) {
-    var h = '<div style="position:relative;width:'+CW+'px;height:'+totalH+'px;flex-shrink:0">';
-    for (var i=0; i<ids.length; i++) {
-      h += '<div style="position:absolute;top:'+Math.round(positions[i])+'px">'+card(ids[i])+'</div>';
-    }
-    return h + '</div>';
-  }
-
-  // connector SVG: join pairs from fromPos → toPos
-  function conn(fromPos, toPos, side) {
-    // side: 'r' means line is on right edge (going right), 'l' means left edge (going left)
-    var h = '<svg width="'+CN+'" height="'+totalH+'" style="flex-shrink:0;display:block">';
-    for (var i=0; i<toPos.length; i++) {
-      var y1 = Math.round(fromPos[i*2] + CH/2);
-      var y2 = Math.round(fromPos[i*2+1] + CH/2);
-      var ym = Math.round(toPos[i] + CH/2);
-      if (side === 'r') {
-        h += '<line x1="0" y1="'+y1+'" x2="0" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
-        h += '<line x1="0" y1="'+ym+'" x2="'+CN+'" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
-      } else {
-        h += '<line x1="'+CN+'" y1="'+y1+'" x2="'+CN+'" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
-        h += '<line x1="'+CN+'" y1="'+ym+'" x2="0" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
+    // Score or VS
+    html += '<div style="text-align:center;min-width:60px">';
+    if (fin) {
+      html += '<div style="font-size:26px;font-weight:900;color:var(--dark);line-height:1">' + res.home_score + ' — ' + res.away_score + '</div>';
+      if (res.pen_home !== undefined && res.pen_home !== null) {
+        html += '<div style="font-size:11px;color:var(--muted)">('+res.pen_home+' — '+res.pen_away+' pen.)</div>';
       }
+    } else {
+      html += '<div style="font-size:16px;font-weight:700;color:var(--muted)">VS</div>';
     }
-    return h + '</svg>';
-  }
+    html += '</div>';
 
-  function hline(y, color) {
-    return '<svg width="'+CN+'" height="'+totalH+'" style="flex-shrink:0;display:block">'+
-      '<line x1="0" y1="'+Math.round(y)+'" x2="'+CN+'" y2="'+Math.round(y)+'" stroke="'+(color||'#ccc')+'" stroke-width="1.5"/>'+
-    '</svg>';
-  }
+    // Away team
+    html += '<div style="flex:1;text-align:right;'+(aw?'opacity:1':'opacity:'+(fin?'0.5':'1'))+'">';
+    html += '<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">';
+    html += '<div>';
+    html += '<div style="font-size:14px;font-weight:'+(aw?'700':'500')+';color:'+(aw?'var(--green)':'var(--dark)')+'">' + aName + '</div>';
+    if (!isTBD && (aStanding || aForm.length)) {
+      html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center;justify-content:flex-end">';
+      if (aStanding) html += '<span>'+aStanding.rank+'. sıra</span>';
+      if (aForm.length) html += '<span>'+formHtml(aForm)+'</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+    html += '<span style="font-size:28px">' + (isTBD?'🏳':aFlag) + '</span>';
+    html += '</div></div>';
 
-  function label(text, width) {
-    return '<div style="width:'+width+'px;flex-shrink:0;font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;text-align:center;letter-spacing:0.5px">'+text+'</div>';
-  }
+    html += '</div>'; // teams row
+    html += '</div>'; // card
+  });
 
-  var champ = winner(104);
-  var champBox = champ ? '<div style="text-align:center;margin-top:12px">'+
-    '<div style="display:inline-block;border:2px solid var(--green);border-radius:10px;padding:6px 16px;background:rgba(26,122,60,0.08)">'+
-    '<div style="font-size:9px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px">Sampion</div>'+
-    '<div style="font-size:14px;font-weight:700;color:var(--green);margin-top:2px">'+champ+'</div>'+
-    '</div></div>' : '';
-
-  var labelsHtml = '<div style="display:flex;margin-bottom:6px">'+
-    label('Son 32', CW) + label('', CN) + label('Son 16', CW) + label('', CN) +
-    label('C.F', CW) + label('', CN) + label('Y.F', CW) + label('', CN) +
-    label('Final', CW+8) +
-    label('', CN) + label('Y.F', CW) + label('', CN) + label('C.F', CW) +
-    label('', CN) + label('Son 16', CW) + label('', CN) + label('Son 32', CW) +
-  '</div>';
-
-  var finSVY = finP[0] + CH/2;
-
-  var html = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 8px">';
-  html += labelsHtml;
-  html += '<div style="display:flex;align-items:flex-start">';
-
-  // Left
-  html += col([73,74,75,76,77,78,79,80], lR32p);
-  html += conn(lR32p, lR16p, 'r');
-  html += col([89,90,91,92], lR16p);
-  html += conn(lR16p, lQFp, 'r');
-  html += col([97,98], lQFp);
-  html += conn(lQFp, lSFp, 'r');
-  html += col([101], lSFp);
-  html += hline(lSFp[0]+CH/2, '#E8281E');
-
-  // Final center
-  html += '<div style="position:relative;width:'+(CW+8)+'px;height:'+totalH+'px;flex-shrink:0">';
-  html += '<div style="position:absolute;top:'+Math.round(finP[0])+'px;left:4px">'+card(104)+'</div>';
-  html += '</div>';
-
-  // Right (mirrored)
-  html += hline(rSFp[0]+CH/2, '#E8281E');
-  html += col([102], rSFp);
-  html += conn(rQFp, rSFp, 'l');
-  html += col([99,100], rQFp);
-  html += conn(rR16p, rQFp, 'l');
-  html += col([93,94,95,96], rR16p);
-  html += conn(rR32p, rR16p, 'l');
-  html += col([81,82,83,84,85,86,87,88], rR32p);
-
-  html += '</div>';
-  html += champBox;
   html += '</div>';
   container.innerHTML = html;
 }
