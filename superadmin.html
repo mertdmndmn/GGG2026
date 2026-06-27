@@ -277,11 +277,11 @@ async function searchPreds() {
     html += '<td><b>' + r.player_name + '</b></td>';
     html += '<td>M' + r.match_id + '</td>';
     html += '<td>' + (r.home_score !== null ? r.home_score + '-' + r.away_score : '—') + '</td>';
-    html += '<td>' + (r.ms||'—') + '</td>';
-    html += '<td>' + (r.hy||'—') + '</td>';
-    html += '<td>' + (r.kg||'—') + '</td>';
-    html += '<td>' + (r.gol||'—') + '</td>';
-    html += '<td>' + (r.kk||'—') + '</td>';
+    html += '<td><input class="edit-inp" style="width:35px" id="pms-'+i+'" value="'+(r.ms||'')+'"></td>';
+    html += '<td><input class="edit-inp" style="width:35px" id="phy-'+i+'" value="'+(r.hy||'')+'"></td>';
+    html += '<td><input class="edit-inp" style="width:45px" id="pkg-'+i+'" value="'+(r.kg||'')+'"></td>';
+    html += '<td><input class="edit-inp" style="width:45px" id="pgol-'+i+'" value="'+(r.gol||'')+'"></td>';
+    html += '<td><input class="edit-inp" style="width:45px" id="pkk-'+i+'" value="'+(r.kk||'')+'"></td>';
     html += '<td><input class="edit-inp" style="width:200px" id="custom-' + i + '" value=\'' + customStr.replace(/'/g,"&#39;") + '\'></td>';
     var gName = allGroups.find(function(g){return g.id===r.group_id;});
     html += '<td style="font-size:10px;color:#aaa">' + (gName?gName.name:r.group_id.substring(0,8)) + '</td>';
@@ -296,10 +296,18 @@ async function searchPreds() {
 
 async function updateCustom(name, mid, gid, i) {
   try {
-    var val = JSON.parse(document.getElementById('custom-'+i).value);
-    await sbPatch('predictions', 'player_name=eq.'+encodeURIComponent(name)+'&match_id=eq.'+mid+'&group_id=eq.'+gid, {custom: val});
-    showToast('Custom güncellendi ✅');
-  } catch(e) { showToast('Geçersiz JSON!'); }
+    var custom = JSON.parse(document.getElementById('custom-'+i).value);
+    var payload = {
+      custom: custom,
+      ms: document.getElementById('pms-'+i).value || null,
+      hy: document.getElementById('phy-'+i).value || null,
+      kg: document.getElementById('pkg-'+i).value || null,
+      gol: document.getElementById('pgol-'+i).value || null,
+      kk: document.getElementById('pkk-'+i).value || null
+    };
+    var ok = await sbPatch('predictions', 'player_name=eq.'+encodeURIComponent(name)+'&match_id=eq.'+mid+'&group_id=eq.'+gid, payload);
+    if (ok) showToast('Tahmin güncellendi ✅');
+  } catch(e) { showToast('Hata: ' + e.message); }
 }
 
 async function clearCustom(name, mid, gid, i) {
