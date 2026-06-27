@@ -261,13 +261,18 @@ async function searchPreds() {
 
   if (!rows.length) { results.innerHTML = '<div class="loading">Sonuç yok</div>'; return; }
 
-  var html = '<div class="card"><table><thead><tr><th>Oyuncu</th><th>Maç</th><th>Skor</th><th>Custom</th><th>Grup</th><th>İşlem</th></tr></thead><tbody>';
+  var html = '<div class="card"><table><thead><tr><th>Oyuncu</th><th>Maç</th><th>Skor</th><th>MS</th><th>HY</th><th>KG</th><th>Gol</th><th>KK</th><th>Custom</th><th>Grup</th><th>İşlem</th></tr></thead><tbody>';
   rows.forEach(function(r, i) {
     var customStr = JSON.stringify(r.custom || {});
     html += '<tr>';
     html += '<td><b>' + r.player_name + '</b></td>';
     html += '<td>M' + r.match_id + '</td>';
     html += '<td>' + (r.home_score !== null ? r.home_score + '-' + r.away_score : '—') + '</td>';
+    html += '<td>' + (r.ms||'—') + '</td>';
+    html += '<td>' + (r.hy||'—') + '</td>';
+    html += '<td>' + (r.kg||'—') + '</td>';
+    html += '<td>' + (r.gol||'—') + '</td>';
+    html += '<td>' + (r.kk||'—') + '</td>';
     html += '<td><input class="edit-inp" style="width:200px" id="custom-' + i + '" value=\'' + customStr.replace(/'/g,"&#39;") + '\'></td>';
     var gName = allGroups.find(function(g){return g.id===r.group_id;});
     html += '<td style="font-size:10px;color:#aaa">' + (gName?gName.name:r.group_id.substring(0,8)) + '</td>';
