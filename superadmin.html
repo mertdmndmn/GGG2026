@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GGG Super Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans',sans-serif;background:#0f0f0f;color:#fff;min-height:100vh;}
+.login-screen{display:flex;align-items:center;justify-content:center;height:100vh;}
+.login-box{background:#1a1a1a;border:1px solid #333;border-radius:16px;padding:32px;width:320px;text-align:center;}
+.login-box h1{font-size:24px;margin-bottom:8px;color:#E8281E;}
+.login-box p{color:#666;font-size:13px;margin-bottom:24px;}
+.inp{width:100%;padding:12px;background:#111;border:1px solid #333;border-radius:10px;color:#fff;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px;}
+.inp:focus{border-color:#E8281E;}
+.btn{width:100%;padding:12px;background:#E8281E;color:#fff;border:none;border-radius:50px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn:hover{background:#c0201a;}
+.btn-sm{padding:6px 14px;font-size:12px;font-weight:600;border:none;border-radius:50px;cursor:pointer;font-family:inherit;}
+.btn-green{background:#0D7A3E;color:#fff;}
+.btn-red{background:#c0201a;color:#fff;}
+.btn-blue{background:#1a4fa8;color:#fff;}
+.btn-gray{background:#333;color:#fff;}
+#app{display:none;padding:16px;max-width:900px;margin:0 auto;}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #333;}
+.header h1{color:#E8281E;font-size:20px;}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.tab{padding:8px 18px;background:#1a1a1a;border:1px solid #333;border-radius:50px;cursor:pointer;font-size:13px;font-weight:500;color:#888;}
+.tab.active{background:#E8281E;border-color:#E8281E;color:#fff;}
+.card{background:#1a1a1a;border:1px solid #333;border-radius:14px;padding:16px;margin-bottom:12px;}
+.card h3{font-size:14px;font-weight:600;margin-bottom:12px;color:#ccc;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:8px 10px;color:#666;font-weight:500;border-bottom:1px solid #333;font-size:11px;text-transform:uppercase;}
+td{padding:8px 10px;border-bottom:1px solid #1f1f1f;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#1f1f1f;}
+.badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-green{background:rgba(13,122,62,0.2);color:#2ecc71;}
+.badge-red{background:rgba(232,40,30,0.2);color:#e74c3c;}
+.edit-inp{background:#111;border:1px solid #444;border-radius:6px;color:#fff;padding:4px 8px;font-size:13px;width:70px;font-family:inherit;}
+.section-title{font-size:16px;font-weight:700;margin-bottom:12px;color:#fff;}
+.loading{color:#666;padding:20px;text-align:center;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 20px;border-radius:50px;font-size:13px;display:none;z-index:999;border:1px solid #444;}
+select.edit-inp{width:auto;}
+.group-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0;}
+.group-body{display:none;margin-top:12px;}
+.pred-row{display:grid;grid-template-columns:120px 60px 60px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #222;font-size:12px;}
+.pred-row:last-child{border:none;}
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <h1>⚡ Super Admin</h1>
+    <p>GGG2026 Kontrol Paneli</p>
+    <input class="inp" type="password" id="sa-pass" placeholder="Şifre" onkeydown="if(event.key==='Enter')doSALogin()">
+    <button class="btn" onclick="doSALogin()">Giriş</button>
+  </div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <h1>⚡ GGG Super Admin</h1>
+    <button class="btn-sm btn-gray" onclick="location.reload()">Çıkış</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('groups',this)">👥 Gruplar & Oyuncular</div>
+    <div class="tab" onclick="switchTab('matches',this)">⚽ Maçlar & Skorlar</div>
+    <div class="tab" onclick="switchTab('predictions',this)">🎯 Tahminler</div>
+  </div>
+
+  <div id="tab-groups"></div>
+  <div id="tab-matches" style="display:none"></div>
+  <div id="tab-predictions" style="display:none"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://blaesgnkyjjkcsrjpwfy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_faNSQmoTR_LStLViGyM1-A_ItMgoDX3';
+const SA_PASS = 'mertdmn';
+const HEADERS = {'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation'};
+
+async function sbGet(table, params) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + params, {headers: HEADERS});
+  return r.json();
+}
+async function sbPatch(table, params, body) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + params, {method:'PATCH', headers: HEADERS, body: JSON.stringify(body)});
+  return r.json();
+}
+async function sbDelete(table, params) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + params, {method:'DELETE', headers: HEADERS});
+  return r.ok;
+}
+
+function showToast(msg, dur) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(function(){ t.style.display = 'none'; }, dur || 2500);
+}
+
+function doSALogin() {
+  var pass = document.getElementById('sa-pass').value;
+  if (pass === SA_PASS) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadGroups();
+    loadMatches();
+  } else {
+    showToast('Yanlış şifre!');
+  }
+}
+
+var allGroups = [];
+var allPlayers = [];
+
+async function loadGroups() {
+  var tab = document.getElementById('tab-groups');
+  tab.innerHTML = '<div class="loading">Yükleniyor...</div>';
+  allGroups = await sbGet('groups', 'select=*');
+  allPlayers = await sbGet('players', 'select=*&order=pts.desc');
+  renderGroups();
+}
+
+function renderGroups() {
+  var tab = document.getElementById('tab-groups');
+  var html = '<div class="section-title">Gruplar (' + allGroups.length + ')</div>';
+
+  allGroups.forEach(function(g) {
+    var players = allPlayers.filter(function(p){ return p.group_id === g.id; });
+    html += '<div class="card">';
+    html += '<div class="group-header" onclick="toggleGroup(this)">';
+    html += '<div><b>' + g.name + '</b> <span style="color:#666;font-size:12px;margin-left:8px">' + players.length + ' oyuncu · ' + g.id.substring(0,8) + '...</span></div>';
+    html += '<span style="color:#666">▼</span>';
+    html += '</div>';
+    html += '<div class="group-body">';
+    html += '<table><thead><tr><th>Oyuncu</th><th>Puan</th><th>Yeni Puan</th><th>İşlem</th></tr></thead><tbody>';
+    players.forEach(function(p) {
+      html += '<tr>';
+      html += '<td><b>' + p.name + '</b></td>';
+      html += '<td><span class="badge badge-green">' + p.pts + '</span></td>';
+      html += '<td><input class="edit-inp" type="number" id="pts-' + g.id + '-' + p.name.replace(/\s/g,'_') + '" value="' + p.pts + '"></td>';
+      html += '<td style="display:flex;gap:6px">';
+      html += '<button class="btn-sm btn-blue" onclick="updatePts(\'' + g.id + '\',\'' + p.name.replace(/'/g,"\\'") + '\')">Kaydet</button>';
+      html += '<button class="btn-sm btn-red" onclick="deletePlayer(\'' + g.id + '\',\'' + p.name.replace(/'/g,"\\'") + '\')">Sil</button>';
+      html += '</td></tr>';
+    });
+    html += '</tbody></table>';
+    html += '</div></div>';
+  });
+
+  tab.innerHTML = html;
+}
+
+function toggleGroup(el) {
+  var body = el.nextElementSibling;
+  var arrow = el.querySelector('span');
+  body.style.display = body.style.display === 'block' ? 'none' : 'block';
+  arrow.textContent = body.style.display === 'block' ? '▲' : '▼';
+}
+
+async function updatePts(groupId, playerName) {
+  var key = groupId + '-' + playerName.replace(/\s/g,'_');
+  var inp = document.getElementById('pts-' + key);
+  if (!inp) return;
+  var newPts = parseInt(inp.value);
+  await sbPatch('players', 'name=eq.' + encodeURIComponent(playerName) + '&group_id=eq.' + groupId, {pts: newPts});
+  // Update local
+  var p = allPlayers.find(function(x){ return x.name===playerName && x.group_id===groupId; });
+  if (p) p.pts = newPts;
+  showToast(playerName + ' → ' + newPts + ' puan ✅');
+}
+
+async function deletePlayer(groupId, playerName) {
+  if (!confirm(playerName + ' silinsin mi?')) return;
+  await sbDelete('players', 'name=eq.' + encodeURIComponent(playerName) + '&group_id=eq.' + groupId);
+  allPlayers = allPlayers.filter(function(p){ return !(p.name===playerName && p.group_id===groupId); });
+  renderGroups();
+  showToast(playerName + ' silindi');
+}
+
+// MATCHES TAB
+var allMatchResults = [];
+
+async function loadMatches() {
+  allMatchResults = await sbGet('match_results', 'select=*&order=match_id.asc');
+  renderMatches();
+}
+
+function renderMatches() {
+  var tab = document.getElementById('tab-matches');
+  var html = '<div class="section-title">Maç Sonuçları (' + allMatchResults.length + ')</div>';
+  html += '<div class="card"><table><thead><tr><th>ID</th><th>Skor</th><th>MS</th><th>HY</th><th>KG</th><th>Gol</th><th>KK</th><th>Grup</th><th>İşlem</th></tr></thead><tbody>';
+
+  allMatchResults.forEach(function(r) {
+    html += '<tr>';
+    html += '<td><b>M' + r.match_id + '</b></td>';
+    html += '<td>' + r.home_score + '-' + r.away_score + '</td>';
+    html += '<td><input class="edit-inp" style="width:40px" id="ms-' + r.match_id + '" value="' + (r.ms||'') + '"></td>';
+    html += '<td><input class="edit-inp" style="width:40px" id="hy-' + r.match_id + '" value="' + (r.hy||'') + '"></td>';
+    html += '<td><input class="edit-inp" style="width:50px" id="kg-' + r.match_id + '" value="' + (r.kg||'') + '"></td>';
+    html += '<td><input class="edit-inp" style="width:50px" id="gol-' + r.match_id + '" value="' + (r.gol||'') + '"></td>';
+    html += '<td><input class="edit-inp" style="width:50px" id="kk-' + r.match_id + '" value="' + (r.kk||'') + '"></td>';
+    html += '<td style="font-size:11px;color:#666">' + (r.group_id ? r.group_id.substring(0,8)+'...' : 'Global') + '</td>';
+    html += '<td><button class="btn-sm btn-blue" onclick="updateMatch(' + r.match_id + ')">Kaydet</button></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  tab.innerHTML = html;
+}
+
+async function updateMatch(mid) {
+  var payload = {
+    ms: document.getElementById('ms-'+mid).value,
+    hy: document.getElementById('hy-'+mid).value,
+    kg: document.getElementById('kg-'+mid).value,
+    gol: document.getElementById('gol-'+mid).value,
+    kk: document.getElementById('kk-'+mid).value
+  };
+  await sbPatch('match_results', 'match_id=eq.' + mid, payload);
+  showToast('M' + mid + ' güncellendi ✅');
+}
+
+// PREDICTIONS TAB
+async function loadPredictions() {
+  var tab = document.getElementById('tab-predictions');
+  tab.innerHTML = '<div class="loading">Yükleniyor...</div>';
+
+  var html = '<div class="section-title">Tahmin Ara</div>';
+  html += '<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">';
+  html += '<div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">Oyuncu adı</label><input class="edit-inp" style="width:160px" id="pred-search-name" placeholder="Safa"></div>';
+  html += '<div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">Maç ID</label><input class="edit-inp" style="width:70px" id="pred-search-mid" placeholder="61"></div>';
+  html += '<div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">Grup ID (kısa)</label><input class="edit-inp" style="width:100px" id="pred-search-gid" placeholder="d9e6ad5f"></div>';
+  html += '<button class="btn-sm btn-blue" onclick="searchPreds()">Ara</button>';
+  html += '</div>';
+  html += '<div id="pred-results"></div>';
+  tab.innerHTML = html;
+}
+
+async function searchPreds() {
+  var name = document.getElementById('pred-search-name').value.trim();
+  var mid = document.getElementById('pred-search-mid').value.trim();
+  var gid = document.getElementById('pred-search-gid').value.trim();
+
+  var params = 'select=*';
+  if (name) params += '&player_name=eq.' + encodeURIComponent(name);
+  if (mid) params += '&match_id=eq.' + mid;
+  if (gid) params += '&group_id=like.' + gid + '*';
+  params += '&limit=50';
+
+  var results = document.getElementById('pred-results');
+  results.innerHTML = '<div class="loading">Aranıyor...</div>';
+  var rows = await sbGet('predictions', params);
+
+  if (!rows.length) { results.innerHTML = '<div class="loading">Sonuç yok</div>'; return; }
+
+  var html = '<div class="card"><table><thead><tr><th>Oyuncu</th><th>Maç</th><th>Skor</th><th>Custom</th><th>Grup</th><th>İşlem</th></tr></thead><tbody>';
+  rows.forEach(function(r, i) {
+    var customStr = JSON.stringify(r.custom || {});
+    html += '<tr>';
+    html += '<td><b>' + r.player_name + '</b></td>';
+    html += '<td>M' + r.match_id + '</td>';
+    html += '<td>' + (r.home_score !== null ? r.home_score + '-' + r.away_score : '—') + '</td>';
+    html += '<td><input class="edit-inp" style="width:200px" id="custom-' + i + '" value=\'' + customStr.replace(/'/g,"&#39;") + '\'></td>';
+    html += '<td style="font-size:10px;color:#666">' + r.group_id.substring(0,8) + '</td>';
+    html += '<td style="display:flex;gap:4px">';
+    html += '<button class="btn-sm btn-blue" onclick="updateCustom(\'' + r.player_name.replace(/'/g,"\\'") + '\',' + r.match_id + ',\'' + r.group_id + '\',' + i + ')">Kaydet</button>';
+    html += '<button class="btn-sm btn-red" onclick="clearCustom(\'' + r.player_name.replace(/'/g,"\\'") + '\',' + r.match_id + ',\'' + r.group_id + '\',' + i + ')">Sıfırla</button>';
+    html += '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  results.innerHTML = html;
+}
+
+async function updateCustom(name, mid, gid, i) {
+  try {
+    var val = JSON.parse(document.getElementById('custom-'+i).value);
+    await sbPatch('predictions', 'player_name=eq.'+encodeURIComponent(name)+'&match_id=eq.'+mid+'&group_id=eq.'+gid, {custom: val});
+    showToast('Custom güncellendi ✅');
+  } catch(e) { showToast('Geçersiz JSON!'); }
+}
+
+async function clearCustom(name, mid, gid, i) {
+  document.getElementById('custom-'+i).value = '{}';
+  await sbPatch('predictions', 'player_name=eq.'+encodeURIComponent(name)+'&match_id=eq.'+mid+'&group_id=eq.'+gid, {custom: {}});
+  showToast('Custom sıfırlandı ✅');
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  btn.classList.add('active');
+  ['groups','matches','predictions'].forEach(function(t){
+    document.getElementById('tab-'+t).style.display = t===name ? 'block' : 'none';
+  });
+  if (name === 'predictions') loadPredictions();
+}
+</script>
+</body>
+</html>
