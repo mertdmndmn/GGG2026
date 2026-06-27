@@ -134,7 +134,7 @@ function renderGroups() {
     var players = allPlayers.filter(function(p){ return p.group_id === g.id; });
     html += '<div class="card">';
     html += '<div class="group-header" onclick="toggleGroup(this)">';
-    html += '<div><b>' + g.name + '</b> <span style="color:#666;font-size:12px;margin-left:8px">' + players.length + ' oyuncu · ' + g.id.substring(0,8) + '...</span></div>';
+    html += '<div><b>' + g.name + '</b> <span style="color:#666;font-size:12px;margin-left:8px">' + players.length + ' oyuncu</span></div>';
     html += '<span style="color:#666">▼</span>';
     html += '</div>';
     html += '<div class="group-body">';
@@ -234,7 +234,10 @@ async function loadPredictions() {
   html += '<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">';
   html += '<div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">Oyuncu adı</label><input class="edit-inp" style="width:160px" id="pred-search-name" placeholder="Safa"></div>';
   html += '<div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">Maç ID</label><input class="edit-inp" style="width:70px" id="pred-search-mid" placeholder="61"></div>';
-  html += '<div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">Grup ID (kısa)</label><input class="edit-inp" style="width:100px" id="pred-search-gid" placeholder="d9e6ad5f"></div>';
+  // Build group dropdown
+  var gOpts = '<option value="">Tümü</option>';
+  allGroups.forEach(function(g){ gOpts += '<option value="'+g.id+'">'+g.name+'</option>'; });
+  html += '<div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">Grup</label><select class="edit-inp" style="width:140px" id="pred-search-gid">'+gOpts+'</select></div>';
   html += '<button class="btn-sm btn-blue" onclick="searchPreds()">Ara</button>';
   html += '</div>';
   html += '<div id="pred-results"></div>';
@@ -249,7 +252,7 @@ async function searchPreds() {
   var params = 'select=*';
   if (name) params += '&player_name=eq.' + encodeURIComponent(name);
   if (mid) params += '&match_id=eq.' + mid;
-  if (gid) params += '&group_id=like.' + gid + '*';
+  if (gid) params += '&group_id=eq.' + gid;
   params += '&limit=50';
 
   var results = document.getElementById('pred-results');
@@ -266,7 +269,8 @@ async function searchPreds() {
     html += '<td>M' + r.match_id + '</td>';
     html += '<td>' + (r.home_score !== null ? r.home_score + '-' + r.away_score : '—') + '</td>';
     html += '<td><input class="edit-inp" style="width:200px" id="custom-' + i + '" value=\'' + customStr.replace(/'/g,"&#39;") + '\'></td>';
-    html += '<td style="font-size:10px;color:#666">' + r.group_id.substring(0,8) + '</td>';
+    var gName = allGroups.find(function(g){return g.id===r.group_id;});
+    html += '<td style="font-size:10px;color:#aaa">' + (gName?gName.name:r.group_id.substring(0,8)) + '</td>';
     html += '<td style="display:flex;gap:4px">';
     html += '<button class="btn-sm btn-blue" onclick="updateCustom(\'' + r.player_name.replace(/'/g,"\\'") + '\',' + r.match_id + ',\'' + r.group_id + '\',' + i + ')">Kaydet</button>';
     html += '<button class="btn-sm btn-red" onclick="clearCustom(\'' + r.player_name.replace(/'/g,"\\'") + '\',' + r.match_id + ',\'' + r.group_id + '\',' + i + ')">Sıfırla</button>';
