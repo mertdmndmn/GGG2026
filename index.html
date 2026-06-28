@@ -5230,6 +5230,7 @@ function renderBracketRound(round) {
       '<div style="padding:6px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
         '<span style="font-size:11px;font-weight:600;color:var(--muted)">'+timeStr+'</span>'+
         (fin ? '<span style="font-size:10px;color:'+gc+';font-weight:700">TAMAM'+penStr+'</span>' :
+               (m && m.lock && new Date(m.lock)<new Date() && !tbdH && !tbdA) ? '<span style="font-size:10px;color:var(--red);font-weight:700">SONUÇ BEKLENİYOR</span>' :
                (!tbdH&&!tbdA) ? '<span style="font-size:10px;color:var(--accent);font-weight:600">BEKLIYOR</span>' :
                '<span style="font-size:10px;color:var(--muted)">TBD</span>')+
       '</div>'+
