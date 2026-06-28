@@ -5174,7 +5174,10 @@ function renderBracket() {
   renderBracketRound(window._bracketRound);
 }
 
+var BRACKET_ROUNDS = ['Son 32','Son 16','Çeyrek Final','Yarı Final','Final'];
+
 function renderBracketRound(round) {
+  if (typeof round === 'number') round = BRACKET_ROUNDS[round];
   window._bracketRound = round;
   try { localStorage.setItem('ggg_bracket_round', round); } catch(e) {}
   var container = document.getElementById('bracket-container');
@@ -5187,7 +5190,7 @@ function renderBracketRound(round) {
     'Yarı Final':  [101,102],
     'Final':       [103,104]
   };
-  var rounds = ['Son 32','Son 16','Çeyrek Final','Yarı Final','Final'];
+  var rounds = BRACKET_ROUNDS;
   var ids = roundMap[round] || [];
 
   function flagOf(str) { return (str||'').trim().split(' ')[0]; }
@@ -5255,7 +5258,8 @@ function renderBracketRound(round) {
   var tabs = '<div style="display:flex;gap:6px;overflow-x:auto;padding:0 0 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none">';
   rounds.forEach(function(r) {
     var active = r === round;
-    tabs += '<button onclick="renderBracketRound('+JSON.stringify(r)+')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'var(--accent)':'var(--card)')+';color:'+(active?'#fff':'var(--muted)')+';font-size:12px;font-weight:'+(active?700:500)+';cursor:pointer">'+r+'</button>';
+    var idx = rounds.indexOf(r);
+    tabs += '<button onclick="renderBracketRound(rounds['+idx+'])" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'var(--accent)':'var(--card)')+';color:'+(active?'#fff':'var(--muted)')+';font-size:12px;font-weight:'+(active?700:500)+';cursor:pointer">'+r+'</button>';
   });
   tabs += '</div>';
 

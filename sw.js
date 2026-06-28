@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ggg2026-v37';
+const CACHE_NAME = 'ggg2026-v38';
 const urlsToCache = ['/GGG2026/', '/GGG2026/index.html'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
