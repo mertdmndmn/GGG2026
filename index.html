@@ -5255,11 +5255,10 @@ function renderBracketRound(round) {
   }
 
   // Round selector tabs
-  var tabs = '<div style="display:flex;gap:6px;overflow-x:auto;padding:0 0 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none">';
-  rounds.forEach(function(r) {
+  var tabs = '<div id="bracket-round-tabs" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none">';
+  rounds.forEach(function(r, idx) {
     var active = r === round;
-    var idx = rounds.indexOf(r);
-    tabs += '<button onclick="renderBracketRound(rounds['+idx+'])" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'var(--accent)':'var(--card)')+';color:'+(active?'#fff':'var(--muted)')+';font-size:12px;font-weight:'+(active?700:500)+';cursor:pointer">'+r+'</button>';
+    tabs += '<button data-idx="'+idx+'" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'var(--accent)':'var(--card)')+';color:'+(active?'#fff':'var(--muted)')+';font-size:12px;font-weight:'+(active?700:500)+';cursor:pointer">'+r+'</button>';
   });
   tabs += '</div>';
 
@@ -5276,6 +5275,13 @@ function renderBracketRound(round) {
   ids.forEach(function(id) { cards += matchCard(id); });
 
   container.innerHTML = tabs + champBox + '<div style="padding:0 2px">' + cards + '</div>';
+  var tabBar = document.getElementById('bracket-round-tabs');
+  if (tabBar) {
+    tabBar.addEventListener('click', function(e) {
+      var btn = e.target.closest('button[data-idx]');
+      if (btn) renderBracketRound(BRACKET_ROUNDS[parseInt(btn.getAttribute('data-idx'))]);
+    });
+  }
 }
 // ============ SHARE LEADERBOARD ============
 function shareLeaderboard() {
