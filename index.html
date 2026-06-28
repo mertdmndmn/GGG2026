@@ -542,70 +542,70 @@ async function sbPatch(table, params, body) {
 
 const ALL_MATCHES = [
   {id:1,group:'Grup A',time:'11 Haz · 22:00',home:'🇲🇽 Meksika',away:'🇿🇦 G.Afrika',lock:'2026-06-11T19:00:00Z'},
-  {id:2,group:'Grup A',time:'12 Haz · 05:00',home:'🇰🇷 G.Kore',away:'🇨🇿 Çekya',lock:'2026-06-12T02:00:00Z'},
+  {id:2,group:'Grup A',time:'12 Haz · 05:00',home:'🇰🇷 G.Kore',away:'🇨🇿 Cekya',lock:'2026-06-12T02:00:00Z'},
   {id:3,group:'Grup B',time:'12 Haz · 22:00',home:'🇨🇦 Kanada',away:'🇧🇦 Bosna Hersek',lock:'2026-06-12T19:00:00Z'},
   {id:4,group:'Grup D',time:'13 Haz · 04:00',home:'🇺🇸 ABD',away:'🇵🇾 Paraguay',lock:'2026-06-13T01:00:00Z'},
-  {id:5,group:'Grup B',time:'13 Haz · 22:00',home:'🇶🇦 Katar',away:'🇨🇭 Isviçre',lock:'2026-06-13T19:00:00Z'},
+  {id:5,group:'Grup B',time:'13 Haz · 22:00',home:'🇶🇦 Katar',away:'🇨🇭 Isvicre',lock:'2026-06-13T19:00:00Z'},
   {id:6,group:'Grup C',time:'14 Haz · 01:00',home:'🇧🇷 Brezilya',away:'🇲🇦 Fas',lock:'2026-06-13T22:00:00Z'},
-  {id:7,group:'Grup C',time:'14 Haz · 04:00',home:'🇭🇹 Haiti',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 Iskoçya',lock:'2026-06-14T01:00:00Z'},
+  {id:7,group:'Grup C',time:'14 Haz · 04:00',home:'🇭🇹 Haiti',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 Iskocya',lock:'2026-06-14T01:00:00Z'},
   {id:8,group:'Grup D',time:'14 Haz · 07:00',home:'🇦🇺 Avustralya',away:'🇹🇷 Türkiye',lock:'2026-06-14T04:00:00Z'},
-  {id:9,group:'Grup E',time:'14 Haz · 20:00',home:'🇩🇪 Almanya',away:'🇨🇼 Curaçao',lock:'2026-06-14T18:00:00Z'},
+  {id:9,group:'Grup E',time:'14 Haz · 20:00',home:'🇩🇪 Almanya',away:'🇨🇼 Curacao',lock:'2026-06-14T18:00:00Z'},
   {id:10,group:'Grup F',time:'14 Haz · 23:00',home:'🇳🇱 Hollanda',away:'🇯🇵 Japonya',lock:'2026-06-14T21:00:00Z'},
-  {id:11,group:'Grup E',time:'15 Haz · 02:00',home:'🇨🇮 F.Fildişi',away:'🇪🇨 Ekvador',lock:'2026-06-15T00:00:00Z'},
+  {id:11,group:'Grup E',time:'15 Haz · 02:00',home:'🇨🇮 Fildisi Sah.',away:'🇪🇨 Ekvador',lock:'2026-06-15T00:00:00Z'},
   {id:12,group:'Grup F',time:'15 Haz · 05:00',home:'🇹🇳 Tunus',away:'🇸🇪 Isvec',lock:'2026-06-15T02:00:00Z'},
-  {id:13,group:'Grup H',time:'15 Haz · 19:00',home:'🇪🇸 Ispanya',away:'🇨🇻 Yeşilburun',lock:'2026-06-15T16:00:00Z'},
-  {id:14,group:'Grup G',time:'15 Haz · 22:00',home:'🇧🇪 Belçika',away:'🇪🇬 Misir',lock:'2026-06-15T19:00:00Z'},
+  {id:13,group:'Grup H',time:'15 Haz · 19:00',home:'🇪🇸 Ispanya',away:'🇨🇻 Yesilburun',lock:'2026-06-15T16:00:00Z'},
+  {id:14,group:'Grup G',time:'15 Haz · 22:00',home:'🇧🇪 Belcika',away:'🇪🇬 Misir',lock:'2026-06-15T19:00:00Z'},
   {id:15,group:'Grup H',time:'16 Haz · 01:00',home:'🇸🇦 S.Arabistan',away:'🇺🇾 Uruguay',lock:'2026-06-15T22:00:00Z'},
   {id:16,group:'Grup G',time:'16 Haz · 04:00',home:'🇮🇷 Iran',away:'🇳🇿 Y.Zelanda',lock:'2026-06-16T01:00:00Z'},
   {id:17,group:'Grup I',time:'16 Haz · 22:00',home:'🇫🇷 Fransa',away:'🇸🇳 Senegal',lock:'2026-06-16T19:00:00Z'},
-  {id:18,group:'Grup I',time:'17 Haz · 01:00',home:'🇮🇶 Irak',away:'🇳🇴 Norveç',lock:'2026-06-16T22:00:00Z'},
+  {id:18,group:'Grup I',time:'17 Haz · 01:00',home:'🇮🇶 Irak',away:'🇳🇴 Norvec',lock:'2026-06-16T22:00:00Z'},
   {id:19,group:'Grup J',time:'17 Haz · 04:00',home:'🇦🇷 Arjantin',away:'🇩🇿 Cezayir',lock:'2026-06-17T01:00:00Z'},
   {id:20,group:'Grup J',time:'17 Haz · 07:00',home:'🇦🇹 Avusturya',away:'🇯🇴 Ürdün',lock:'2026-06-17T04:00:00Z'},
   {id:21,group:'Grup K',time:'17 Haz · 20:00',home:'🇵🇹 Portekiz',away:'🇨🇩 Kongo DR',lock:'2026-06-17T17:00:00Z'},
   {id:22,group:'Grup L',time:'17 Haz · 23:00',home:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Ingiltere',away:'🇭🇷 Hirvatistan',lock:'2026-06-17T20:00:00Z'},
   {id:23,group:'Grup L',time:'18 Haz · 02:00',home:'🇬🇭 Gana',away:'🇵🇦 Panama',lock:'2026-06-17T23:00:00Z'},
   {id:24,group:'Grup K',time:'18 Haz · 05:00',home:'🇺🇿 Özbekistan',away:'🇨🇴 Kolombiya',lock:'2026-06-18T02:00:00Z'},
-  {id:25,group:'Grup A',time:'18 Haz · 19:00',home:'🇨🇿 Çekya',away:'🇿🇦 G.Afrika',lock:'2026-06-18T16:00:00Z'},
-  {id:26,group:'Grup B',time:'18 Haz · 22:00',home:'🇨🇭 Isviçre',away:'🇧🇦 Bosna Hersek',lock:'2026-06-18T19:00:00Z'},
+  {id:25,group:'Grup A',time:'18 Haz · 19:00',home:'🇨🇿 Cekya',away:'🇿🇦 G.Afrika',lock:'2026-06-18T16:00:00Z'},
+  {id:26,group:'Grup B',time:'18 Haz · 22:00',home:'🇨🇭 Isvicre',away:'🇧🇦 Bosna Hersek',lock:'2026-06-18T19:00:00Z'},
   {id:27,group:'Grup B',time:'19 Haz · 01:00',home:'🇨🇦 Kanada',away:'🇶🇦 Katar',lock:'2026-06-18T22:00:00Z'},
   {id:28,group:'Grup A',time:'19 Haz · 04:00',home:'🇲🇽 Meksika',away:'🇰🇷 G.Kore',lock:'2026-06-19T01:00:00Z'},
   {id:29,group:'Grup D',time:'19 Haz · 22:00',home:'🇺🇸 ABD',away:'🇦🇺 Avustralya',lock:'2026-06-19T19:00:00Z'},
-  {id:30,group:'Grup C',time:'20 Haz · 01:00',home:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 Iskoçya',away:'🇲🇦 Fas',lock:'2026-06-19T22:00:00Z'},
+  {id:30,group:'Grup C',time:'20 Haz · 01:00',home:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 Iskocya',away:'🇲🇦 Fas',lock:'2026-06-19T22:00:00Z'},
   {id:31,group:'Grup C',time:'20 Haz · 03:30',home:'🇧🇷 Brezilya',away:'🇭🇹 Haiti',lock:'2026-06-20T00:30:00Z'},
   {id:32,group:'Grup D',time:'20 Haz · 06:00',home:'🇹🇷 Türkiye',away:'🇵🇾 Paraguay',lock:'2026-06-20T03:00:00Z'},
   {id:33,group:'Grup F',time:'20 Haz · 20:00',home:'🇳🇱 Hollanda',away:'🇸🇪 Isvec',lock:'2026-06-20T17:00:00Z'},
-  {id:34,group:'Grup E',time:'20 Haz · 23:00',home:'🇩🇪 Almanya',away:'🇨🇮 F.Fildişi',lock:'2026-06-20T20:00:00Z'},
-  {id:35,group:'Grup E',time:'21 Haz · 03:00',home:'🇪🇨 Ekvador',away:'🇨🇼 Curaçao',lock:'2026-06-21T00:00:00Z'},
+  {id:34,group:'Grup E',time:'20 Haz · 23:00',home:'🇩🇪 Almanya',away:'🇨🇮 Fildisi Sah.',lock:'2026-06-20T20:00:00Z'},
+  {id:35,group:'Grup E',time:'21 Haz · 03:00',home:'🇪🇨 Ekvador',away:'🇨🇼 Curacao',lock:'2026-06-21T00:00:00Z'},
   {id:36,group:'Grup F',time:'21 Haz · 07:00',home:'🇹🇳 Tunus',away:'🇯🇵 Japonya',lock:'2026-06-21T04:00:00Z'},
   {id:37,group:'Grup H',time:'21 Haz · 19:00',home:'🇪🇸 Ispanya',away:'🇸🇦 S.Arabistan',lock:'2026-06-21T16:00:00Z'},
-  {id:38,group:'Grup G',time:'21 Haz · 22:00',home:'🇧🇪 Belçika',away:'🇮🇷 Iran',lock:'2026-06-21T19:00:00Z'},
-  {id:39,group:'Grup H',time:'22 Haz · 01:00',home:'🇺🇾 Uruguay',away:'🇨🇻 Yeşilburun',lock:'2026-06-21T22:00:00Z'},
+  {id:38,group:'Grup G',time:'21 Haz · 22:00',home:'🇧🇪 Belcika',away:'🇮🇷 Iran',lock:'2026-06-21T19:00:00Z'},
+  {id:39,group:'Grup H',time:'22 Haz · 01:00',home:'🇺🇾 Uruguay',away:'🇨🇻 Yesilburun',lock:'2026-06-21T22:00:00Z'},
   {id:40,group:'Grup G',time:'22 Haz · 04:00',home:'🇳🇿 Y.Zelanda',away:'🇪🇬 Misir',lock:'2026-06-22T01:00:00Z'},
   {id:41,group:'Grup J',time:'22 Haz · 20:00',home:'🇦🇷 Arjantin',away:'🇦🇹 Avusturya',lock:'2026-06-22T17:00:00Z'},
   {id:42,group:'Grup I',time:'23 Haz · 00:00',home:'🇫🇷 Fransa',away:'🇮🇶 Irak',lock:'2026-06-22T21:00:00Z'},
-  {id:43,group:'Grup I',time:'23 Haz · 03:00',home:'🇳🇴 Norveç',away:'🇸🇳 Senegal',lock:'2026-06-23T00:00:00Z'},
+  {id:43,group:'Grup I',time:'23 Haz · 03:00',home:'🇳🇴 Norvec',away:'🇸🇳 Senegal',lock:'2026-06-23T00:00:00Z'},
   {id:44,group:'Grup J',time:'23 Haz · 06:00',home:'🇯🇴 Ürdün',away:'🇩🇿 Cezayir',lock:'2026-06-23T03:00:00Z'},
   {id:45,group:'Grup K',time:'23 Haz · 20:00',home:'🇵🇹 Portekiz',away:'🇺🇿 Özbekistan',lock:'2026-06-23T17:00:00Z'},
   {id:46,group:'Grup L',time:'23 Haz · 23:00',home:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Ingiltere',away:'🇬🇭 Gana',lock:'2026-06-23T20:00:00Z'},
   {id:47,group:'Grup L',time:'24 Haz · 02:00',home:'🇵🇦 Panama',away:'🇭🇷 Hirvatistan',lock:'2026-06-23T23:00:00Z'},
   {id:48,group:'Grup K',time:'24 Haz · 05:00',home:'🇨🇴 Kolombiya',away:'🇨🇩 Kongo DR',lock:'2026-06-24T02:00:00Z'},
-  {id:49,group:'Grup B',time:'24 Haz · 22:00',home:'🇨🇭 Isviçre',away:'🇨🇦 Kanada',lock:'2026-06-24T19:00:00Z'},
+  {id:49,group:'Grup B',time:'24 Haz · 22:00',home:'🇨🇭 Isvicre',away:'🇨🇦 Kanada',lock:'2026-06-24T19:00:00Z'},
   {id:50,group:'Grup B',time:'24 Haz · 22:00',home:'🇧🇦 Bosna Hersek',away:'🇶🇦 Katar',lock:'2026-06-24T19:00:00Z'},
-  {id:51,group:'Grup C',time:'25 Haz · 01:00',home:'🇧🇷 Brezilya',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 Iskoçya',lock:'2026-06-24T22:00:00Z'},
+  {id:51,group:'Grup C',time:'25 Haz · 01:00',home:'🇧🇷 Brezilya',away:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 Iskocya',lock:'2026-06-24T22:00:00Z'},
   {id:52,group:'Grup C',time:'25 Haz · 01:00',home:'🇲🇦 Fas',away:'🇭🇹 Haiti',lock:'2026-06-24T22:00:00Z'},
-  {id:53,group:'Grup A',time:'25 Haz · 04:00',home:'🇲🇽 Meksika',away:'🇨🇿 Çekya',lock:'2026-06-25T01:00:00Z'},
+  {id:53,group:'Grup A',time:'25 Haz · 04:00',home:'🇲🇽 Meksika',away:'🇨🇿 Cekya',lock:'2026-06-25T01:00:00Z'},
   {id:54,group:'Grup A',time:'25 Haz · 04:00',home:'🇰🇷 G.Kore',away:'🇿🇦 G.Afrika',lock:'2026-06-25T01:00:00Z'},
   {id:55,group:'Grup E',time:'25 Haz · 23:00',home:'🇪🇨 Ekvador',away:'🇩🇪 Almanya',lock:'2026-06-25T20:00:00Z'},
-  {id:56,group:'Grup E',time:'25 Haz · 23:00',home:'🇨🇼 Curaçao',away:'🇨🇮 F.Fildişi',lock:'2026-06-25T20:00:00Z'},
+  {id:56,group:'Grup E',time:'25 Haz · 23:00',home:'🇨🇼 Curacao',away:'🇨🇮 Fildisi Sah.',lock:'2026-06-25T20:00:00Z'},
   {id:57,group:'Grup F',time:'26 Haz · 02:00',home:'🇹🇳 Tunus',away:'🇳🇱 Hollanda',lock:'2026-06-25T23:00:00Z'},
   {id:58,group:'Grup F',time:'26 Haz · 02:00',home:'🇯🇵 Japonya',away:'🇸🇪 Isvec',lock:'2026-06-25T23:00:00Z'},
   {id:59,group:'Grup D',time:'26 Haz · 05:00',home:'🇺🇸 ABD',away:'🇹🇷 Türkiye',lock:'2026-06-26T02:00:00Z'},
   {id:60,group:'Grup D',time:'26 Haz · 05:00',home:'🇵🇾 Paraguay',away:'🇦🇺 Avustralya',lock:'2026-06-26T02:00:00Z'},
-  {id:61,group:'Grup I',time:'26 Haz · 22:00',home:'🇳🇴 Norveç',away:'🇫🇷 Fransa',lock:'2026-06-26T19:00:00Z'},
+  {id:61,group:'Grup I',time:'26 Haz · 22:00',home:'🇳🇴 Norvec',away:'🇫🇷 Fransa',lock:'2026-06-26T19:00:00Z'},
   {id:62,group:'Grup I',time:'26 Haz · 22:00',home:'🇸🇳 Senegal',away:'🇮🇶 Irak',lock:'2026-06-26T19:00:00Z'},
   {id:63,group:'Grup H',time:'27 Haz · 03:00',home:'🇺🇾 Uruguay',away:'🇪🇸 Ispanya',lock:'2026-06-27T00:00:00Z'},
-  {id:64,group:'Grup H',time:'27 Haz · 03:00',home:'🇨🇻 Yeşilburun',away:'🇸🇦 S.Arabistan',lock:'2026-06-27T00:00:00Z'},
-  {id:65,group:'Grup G',time:'27 Haz · 06:00',home:'🇳🇿 Y.Zelanda',away:'🇧🇪 Belçika',lock:'2026-06-27T03:00:00Z'},
+  {id:64,group:'Grup H',time:'27 Haz · 03:00',home:'🇨🇻 Yesilburun',away:'🇸🇦 S.Arabistan',lock:'2026-06-27T00:00:00Z'},
+  {id:65,group:'Grup G',time:'27 Haz · 06:00',home:'🇳🇿 Y.Zelanda',away:'🇧🇪 Belcika',lock:'2026-06-27T03:00:00Z'},
   {id:66,group:'Grup G',time:'27 Haz · 06:00',home:'🇪🇬 Misir',away:'🇮🇷 Iran',lock:'2026-06-27T03:00:00Z'},
   {id:67,group:'Grup L',time:'28 Haz · 00:00',home:'🇵🇦 Panama',away:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Ingiltere',lock:'2026-06-27T21:00:00Z'},
   {id:68,group:'Grup L',time:'28 Haz · 00:00',home:'🇭🇷 Hirvatistan',away:'🇬🇭 Gana',lock:'2026-06-27T21:00:00Z'},
@@ -620,17 +620,17 @@ const ALL_MATCHES = [
   {id:75,group:'Son 32',time:'30 Haz · 02:00',home:'🇳🇱 Hollanda',away:'🇲🇦 Fas',lock:'2026-06-29T23:00:00Z'},
   {id:76,group:'Son 32',time:'29 Haz · 20:00',home:'🇧🇷 Brezilya',away:'🇯🇵 Japonya',lock:'2026-06-29T17:00:00Z'},
   {id:77,group:'Son 32',time:'1 Tem · 05:00',home:'🇫🇷 Fransa',away:'🇸🇪 Isvec',lock:'2026-07-01T02:00:00Z'},
-  {id:78,group:'Son 32',time:'1 Tem · 01:00',home:'🇨🇮 F.Fildişi',away:'🇳🇴 Norveç',lock:'2026-06-30T22:00:00Z'},
-  {id:79,group:'Son 32',time:'30 Haz · 04:00',home:'🏳 A1. vs 3.(C/E/F/H/I)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:80,group:'Son 32',time:'30 Haz · 17:00',home:'🏳 L1. vs 3.(E/H/I/J/K)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:81,group:'Son 32',time:'1 Tem · 01:00',home:'🏳 D1. vs 3.(B/E/F/I/J)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:82,group:'Son 32',time:'1 Tem · 01:00',home:'🏳 G1. vs 3.(A/E/H/I/J)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:83,group:'Son 32',time:'1 Tem · 07:00',home:'🏳 K2. vs L2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:84,group:'Son 32',time:'2 Tem · 02:00',home:'🇦🇷 Arjantin',away:'🇨🇻 Yeşilburun',lock:'2026-07-01T23:00:00Z'},
-  {id:85,group:'Son 32',time:'3 Tem · 01:00',home:'🇨🇭 Isviçre',away:'🇧🇦 Bosna Hersek',lock:'2026-07-02T22:00:00Z'},
-  {id:86,group:'Son 32',time:'2 Tem · 22:00',home:'🇦🇺 Avustralya',away:'🇪🇬 Misir',lock:'2026-07-02T19:00:00Z'},
-  {id:87,group:'Son 32',time:'2 Tem · 07:30',home:'🏳 K1. vs 3.(D/E/I/J/L)',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:88,group:'Son 32',time:'2 Tem · 00:00',home:'🏳 D2. vs G2.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:78,group:'Son 32',time:'1 Tem · 01:00',home:'🇨🇮 Fildisi Sah.',away:'🇳🇴 Norvec',lock:'2026-06-30T22:00:00Z'},
+  {id:79,group:'Son 32',time:'2 Tem · 04:00',home:'🇲🇽 Meksika',away:'🇪🇨 Ekvador',lock:'2026-07-01T21:00:00Z'},
+  {id:80,group:'Son 32',time:'1 Tem · 19:00',home:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Ingiltere',away:'🇨🇩 Kongo DR',lock:'2026-07-01T09:00:00Z'},
+  {id:81,group:'Son 32',time:'2 Tem · 03:00',home:'🇺🇸 ABD',away:'🇧🇦 Bosna Hersek',lock:'2026-07-01T17:00:00Z'},
+  {id:82,group:'Son 32',time:'1 Tem · 23:00',home:'🇧🇪 Belcika',away:'🇸🇳 Senegal',lock:'2026-07-01T13:00:00Z'},
+  {id:83,group:'Son 32',time:'3 Tem · 02:00',home:'🇵🇹 Portekiz',away:'🇭🇷 Hirvatistan',lock:'2026-07-02T16:00:00Z'},
+  {id:84,group:'Son 32',time:'2 Tem · 22:00',home:'🇪🇸 Ispanya',away:'🇦🇹 Avusturya',lock:'2026-07-02T12:00:00Z'},
+  {id:85,group:'Son 32',time:'3 Tem · 06:00',home:'🇨🇭 Isvicre',away:'🇩🇿 Cezayir',lock:'2026-07-03T03:00:00Z'},
+  {id:86,group:'Son 32',time:'3 Tem · 21:00',home:'🇦🇺 Avustralya',away:'🇪🇬 Misir',lock:'2026-07-03T11:00:00Z'},
+  {id:87,group:'Son 32',time:'4 Tem · 01:00',home:'🇦🇷 Arjantin',away:'🇨🇻 Yesilburun',lock:'2026-07-03T15:00:00Z'},
+  {id:88,group:'Son 32',time:'4 Tem · 04:30',home:'🇨🇴 Kolombiya',away:'🇬🇭 Gana',lock:'2026-07-03T18:30:00Z'},
 
   // SON 16 — 4-7 Temmuz
   {id:89,group:'Son 16',time:'4 Tem · 22:00',home:'🏳 M73 gal. vs M75 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
@@ -3050,17 +3050,17 @@ async function addMatch() {
 // ============ TEAM AUTOCOMPLETE ============
 const TEAMS_2026 = [
   '🇺🇸 ABD', '🇦🇷 Arjantin', '🇦🇺 Avustralya', '🇦🇹 Avusturya',
-  '🇧🇪 Belçika', '🇧🇦 Bosna Hersek', '🇧🇷 Brezilya', '🇨🇦 Kanada',
-  '🇨🇿 Çekya', '🇩🇿 Cezayir', '🇨🇩 Kongo DR', '🇨🇼 Curaçao',
+  '🇧🇪 Belcika', '🇧🇦 Bosna Hersek', '🇧🇷 Brezilya', '🇨🇦 Kanada',
+  '🇨🇿 Cekya', '🇩🇿 Cezayir', '🇨🇩 Kongo DR', '🇨🇼 Curacao',
   '🇪🇨 Ekvador', '🇪🇬 Misir', '🇫🇷 Fransa', '🇨🇮 Fildişi Sahilleri',
-  '🇬🇭 Gana', '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Iskoçya', '🇪🇸 Ispanya', '🇨🇭 Isviçre',
+  '🇬🇭 Gana', '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Iskocya', '🇪🇸 Ispanya', '🇨🇭 Isvicre',
   '🇸🇪 Isvec', '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Ingiltere', '🇮🇷 Iran', '🇮🇶 Irak',
   '🇯🇵 Japonya', '🇯🇴 Ürdün', '🇶🇦 Katar', '🇨🇴 Kolombiya',
   '🇰🇷 G.Kore', '🇭🇷 Hirvatistan', '🇲🇦 Fas', '🇲🇽 Meksika',
-  '🇳🇱 Hollanda', '🇳🇿 Y.Zelanda', '🇳🇴 Norveç', '🇵🇦 Panama',
+  '🇳🇱 Hollanda', '🇳🇿 Y.Zelanda', '🇳🇴 Norvec', '🇵🇦 Panama',
   '🇵🇾 Paraguay', '🇵🇹 Portekiz', '🇸🇦 S.Arabistan', '🇸🇳 Senegal',
   '🇿🇦 G.Afrika', '🇹🇳 Tunus', '🇹🇷 Türkiye', '🇺🇾 Uruguay',
-  '🇺🇿 Özbekistan', '🇭🇹 Haiti', '🇨🇻 Yeşilburun', '🇩🇪 Almanya',
+  '🇺🇿 Özbekistan', '🇭🇹 Haiti', '🇨🇻 Yesilburun', '🇩🇪 Almanya',
 ];
 
 // Normalize Turkish chars for search
@@ -3170,9 +3170,9 @@ async function renderSampionTab() {
     { label: '🥇 1. Torba', pts: 10, color: '#d4a017', bg: '#fffbeb',
       teams: ['🇫🇷 Fransa','🇪🇸 Ispanya','🇦🇷 Arjantin','🇧🇷 Brezilya','🏴󠁧󠁢󠁥󠁮󠁧󠁿 Ingiltere'] },
     { label: '🥈 2. Torba', pts: 20, color: '#6b7280', bg: '#f3f4f6',
-      teams: ['🇩🇪 Almanya','🇵🇹 Portekiz','🇳🇱 Hollanda','🇧🇪 Belçika','🇨🇴 Kolombiya','🇺🇾 Uruguay'] },
+      teams: ['🇩🇪 Almanya','🇵🇹 Portekiz','🇳🇱 Hollanda','🇧🇪 Belcika','🇨🇴 Kolombiya','🇺🇾 Uruguay'] },
     { label: '🥉 3. Torba', pts: 40, color: '#b5622a', bg: '#fff7ed',
-      teams: ['🇺🇸 ABD','🇲🇽 Meksika','🇹🇷 Türkiye','🇲🇦 Fas','🇸🇳 Senegal','🇰🇷 G.Kore','🇯🇵 Japonya','🇦🇺 Avustralya','🇨🇭 Isviçre','🇭🇷 Hirvatistan'] },
+      teams: ['🇺🇸 ABD','🇲🇽 Meksika','🇹🇷 Türkiye','🇲🇦 Fas','🇸🇳 Senegal','🇰🇷 G.Kore','🇯🇵 Japonya','🇦🇺 Avustralya','🇨🇭 Isvicre','🇭🇷 Hirvatistan'] },
     { label: '🎲 4. Torba', pts: 80, color: '#7c3aed', bg: '#f5f3ff',
       teams: [] },
   ];
@@ -5168,185 +5168,107 @@ async function openPlayerModal(name) {
 
 function renderBracket() {
   var container = document.getElementById('bracket-container');
-  var roundBar = document.getElementById('bracket-round-bar');
   if (!container) return;
-
-  var rounds = ['Son 32','Son 16','Çeyrek Final','Yarı Final','Final'];
   if (!window._bracketRound) window._bracketRound = 'Son 32';
-
-  renderBracketFull();
+  renderBracketRound(window._bracketRound);
 }
 
-function renderBracketFull() {
+function renderBracketRound(round) {
+  window._bracketRound = round;
   var container = document.getElementById('bracket-container');
   if (!container) return;
 
-  var CH = 58;
-  var CW = 130;
-  var CN = 22;
+  var roundMap = {
+    'Son 32':      [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88],
+    'Son 16':      [89,90,91,92,93,94,95,96],
+    'Çeyrek Final':[97,98,99,100],
+    'Yarı Final':  [101,102],
+    'Final':       [103,104]
+  };
+  var rounds = ['Son 32','Son 16','Çeyrek Final','Yarı Final','Final'];
+  var ids = roundMap[round] || [];
 
-  var lR32 = [73,74,75,76,77,78,79,80];
-  var rR32 = [81,82,83,84,85,86,87,88];
-  var lR16 = [89,90,91,92];
-  var rR16 = [93,94,95,96];
-  var lQF  = [97,98];
-  var rQF  = [99,100];
-  var lSF  = 101;
-  var rSF  = 102;
-  var FIN  = 104;
-
-  function cleanName(str) {
-    var out = '';
-    for (var i=0; i<str.length; i++) { var code=str.charCodeAt(i); if (code<256||( code>=256&&code<1000)) out+=str[i]; }
-    return out.replace(/^\s*\S+\s+/,'').trim().substring(0,14)||'TBD';
+  function flagOf(str) { return (str||'').trim().split(' ')[0]; }
+  function teamName(str) {
+    var parts = (str||'').trim().split(' ');
+    return parts.slice(1).join(' ') || str || 'TBD';
   }
-  function flagOf(str) { return str.trim().split(' ')[0]; }
-
-  function getWinner(id) {
+  function isTBD(str) {
+    var n = teamName(str);
+    return !n || n === 'TBD' || n.indexOf('.') > -1;
+  }
+  function getWinnerStr(id) {
     var res = results[id];
-    if (!res||res.home_score===null||res.home_score===undefined) return null;
+    if (!res || res.home_score === null || res.home_score === undefined) return null;
     var m = matches.find(function(x){return x.id===id;});
     if (!m) return null;
-    if (res.home_score>res.away_score) return cleanName(m.home);
-    if (res.away_score>res.home_score) return cleanName(m.away);
-    if (res.pen_home!==undefined&&res.pen_home!==null) return res.pen_home>res.pen_away?cleanName(m.home):cleanName(m.away);
-    return cleanName(m.home);
+    if (res.home_score > res.away_score) return m.home;
+    if (res.away_score > res.home_score) return m.away;
+    if (res.pen_home != null) return res.pen_home > res.pen_away ? m.home : m.away;
+    return m.home;
   }
 
-  function card(id) {
+  function matchCard(id) {
     var m = matches.find(function(x){return x.id===id;});
     var res = results[id];
-    var fin = res&&res.home_score!==null&&res.home_score!==undefined;
-    var h = m?cleanName(m.home):'TBD';
-    var a = m?cleanName(m.away):'TBD';
-    var hf = m?flagOf(m.home):'🏳';
-    var af = m?flagOf(m.away):'🏳';
-    var hw = fin&&res.home_score>res.away_score;
-    var aw = fin&&res.away_score>res.home_score;
-    var isTBD = !m||h.indexOf('.')>-1||h==='TBD';
-    var gc='var(--green)';var dk='var(--dark)';var mu='var(--muted)';
-    var timeStr = m?m.time:'';
-    return '<div style="border:1px solid '+(fin?gc:isTBD?'var(--border)':'var(--accent)')+';border-radius:8px;overflow:hidden;background:var(--card);width:'+CW+'px;flex-shrink:0">'+
-      (timeStr?'<div style="padding:2px 6px;font-size:9px;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--border);text-align:center;letter-spacing:0.2px">'+timeStr+'</div>':'')+
-      '<div style="padding:5px 7px;font-size:11px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:'+(hw?'rgba(46,204,113,0.10)':'')+'">'+
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:'+(hw?700:500)+';color:'+(isTBD?mu:hw?gc:dk)+'">'+hf+' '+h+'</span>'+
-        (fin?'<b style="margin-left:4px;font-size:12px;color:'+(hw?gc:mu)+'">'+res.home_score+'</b>':'')+
+    var fin = res && res.home_score !== null && res.home_score !== undefined;
+    var hStr = m ? m.home : '🏳 TBD';
+    var aStr = m ? m.away : '🏳 TBD';
+    var hf = flagOf(hStr); var af = flagOf(aStr);
+    var hn = teamName(hStr); var an = teamName(aStr);
+    var hw = fin && res.home_score > res.away_score;
+    var aw = fin && res.away_score > res.home_score;
+    var tbdH = isTBD(hStr); var tbdA = isTBD(aStr);
+    var gc = 'var(--green)'; var dk = 'var(--dark)'; var mu = 'var(--muted)';
+    var borderCol = fin ? gc : (!tbdH && !tbdA) ? 'var(--accent)' : 'var(--border)';
+    var timeStr = m ? m.time : '';
+    var penStr = (fin && res.pen_home != null) ? ' (p:'+res.pen_home+'-'+res.pen_away+')' : '';
+
+    return '<div style="background:var(--card);border:1.5px solid '+borderCol+';border-radius:12px;overflow:hidden;margin-bottom:10px">'+
+      '<div style="padding:6px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:11px;font-weight:600;color:var(--muted)">'+timeStr+'</span>'+
+        (fin ? '<span style="font-size:10px;color:'+gc+';font-weight:700">TAMAM'+penStr+'</span>' :
+               (!tbdH&&!tbdA) ? '<span style="font-size:10px;color:var(--accent);font-weight:600">BEKLIYOR</span>' :
+               '<span style="font-size:10px;color:var(--muted)">TBD</span>')+
       '</div>'+
-      '<div style="padding:5px 7px;font-size:11px;display:flex;justify-content:space-between;align-items:center;background:'+(aw?'rgba(46,204,113,0.10)':'')+'">'+
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:'+(aw?700:500)+';color:'+(isTBD?mu:aw?gc:dk)+'">'+af+' '+a+'</span>'+
-        (fin?'<b style="margin-left:4px;font-size:12px;color:'+(aw?gc:mu)+'">'+res.away_score+'</b>':'')+
+      '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:'+(hw?'rgba(46,204,113,0.08)':'')+'">'+
+        '<div style="display:flex;align-items:center;gap:8px;flex:1">'+
+          '<span style="font-size:24px;line-height:1">'+hf+'</span>'+
+          '<span style="font-size:14px;font-weight:'+(hw?700:500)+';color:'+(tbdH?mu:hw?gc:dk)+'">'+hn+'</span>'+
+        '</div>'+
+        (fin ? '<span style="font-size:22px;font-weight:800;color:'+(hw?gc:mu)+';min-width:24px;text-align:center">'+res.home_score+'</span>' : '')+
+      '</div>'+
+      '<div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:'+(aw?'rgba(46,204,113,0.08)':'')+'">'+
+        '<div style="display:flex;align-items:center;gap:8px;flex:1">'+
+          '<span style="font-size:24px;line-height:1">'+af+'</span>'+
+          '<span style="font-size:14px;font-weight:'+(aw?700:500)+';color:'+(tbdA?mu:aw?gc:dk)+'">'+an+'</span>'+
+        '</div>'+
+        (fin ? '<span style="font-size:22px;font-weight:800;color:'+(aw?gc:mu)+';min-width:24px;text-align:center">'+res.away_score+'</span>' : '')+
       '</div>'+
     '</div>';
   }
 
-  var GAP = 12;
-  function makePos(n, gap) {
-    var p=[];for(var i=0;i<n;i++) p.push(i*(CH+gap));return p;
-  }
-  function nextPos(prev) {
-    var p=[];
-    for(var i=0;i<prev.length/2;i++){
-      var y1=prev[i*2]+CH/2; var y2=prev[i*2+1]+CH/2;
-      p.push((y1+y2)/2-CH/2);
-    }
-    return p;
-  }
+  // Round selector tabs
+  var tabs = '<div style="display:flex;gap:6px;overflow-x:auto;padding:0 0 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none">';
+  rounds.forEach(function(r) {
+    var active = r === round;
+    tabs += '<button onclick="renderBracketRound('+JSON.stringify(r)+')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'var(--accent)':'var(--card)')+';color:'+(active?'#fff':'var(--muted)')+';font-size:12px;font-weight:'+(active?700:500)+';cursor:pointer">'+r+'</button>';
+  });
+  tabs += '</div>';
 
-  var lR32p = makePos(8,GAP);
-  var lR16p = nextPos(lR32p);
-  var lQFp  = nextPos(lR16p);
-  var lSFp  = nextPos(lQFp);
-  var rR32p = makePos(8,GAP);
-  var rR16p = nextPos(rR32p);
-  var rQFp  = nextPos(rR16p);
-  var rSFp  = nextPos(rQFp);
-  var finP  = nextPos([lSFp[0],rSFp[0]]);
-  var totalH = lR32p[7]+CH+10;
+  // Champion box if final done
+  var champ = getWinnerStr(104);
+  var champBox = champ && round === 'Final'
+    ? '<div style="text-align:center;margin:10px 0 16px"><div style="display:inline-block;border:2px solid var(--green);border-radius:12px;padding:8px 20px;background:rgba(46,204,113,0.08)">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:1px">🏆 ŞAMPIYON</div>'+
+        '<div style="font-size:20px;margin-top:4px">'+flagOf(champ)+' <span style="font-weight:700;color:var(--green)">'+teamName(champ)+'</span></div>'+
+      '</div></div>'
+    : '';
 
-  function colDiv(ids, positions, roundKey) {
-    var rid = roundKey ? ' id="bracket-col-'+roundKey.replace(/[\s]/g,'-')+'"' : '';
-    var h='<div style="position:relative;width:'+CW+'px;height:'+totalH+'px;flex-shrink:0"'+rid+'>';
-    ids.forEach(function(id,i){
-      h+='<div style="position:absolute;top:'+Math.round(positions[i])+'px;left:0">'+card(id)+'</div>';
-    });
-    return h+'</div>';
-  }
+  var cards = '';
+  ids.forEach(function(id) { cards += matchCard(id); });
 
-  function conn(fromPos, toPos, dir) {
-    var svg='<svg width="'+CN+'" height="'+totalH+'" style="flex-shrink:0;display:block">';
-    toPos.forEach(function(tp,i){
-      var y1=Math.round(fromPos[i*2]+CH/2);
-      var y2=Math.round(fromPos[i*2+1]+CH/2);
-      var ym=Math.round(tp+CH/2);
-      if(dir==='r'){
-        svg+='<line x1="0" y1="'+y1+'" x2="0" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
-        svg+='<line x1="0" y1="'+ym+'" x2="'+CN+'" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
-      } else {
-        svg+='<line x1="'+CN+'" y1="'+y1+'" x2="'+CN+'" y2="'+y2+'" stroke="#ccc" stroke-width="1"/>';
-        svg+='<line x1="'+CN+'" y1="'+ym+'" x2="0" y2="'+ym+'" stroke="#ccc" stroke-width="1"/>';
-      }
-    });
-    return svg+'</svg>';
-  }
-
-  function hline(y, color) {
-    return '<svg width="'+CN+'" height="'+totalH+'" style="flex-shrink:0;display:block">'+
-      '<line x1="0" y1="'+Math.round(y)+'" x2="'+CN+'" y2="'+Math.round(y)+'" stroke="'+(color||'#ccc')+'" stroke-width="1.5"/>'+
-    '</svg>';
-  }
-
-  function label(text) {
-    return '<div style="position:relative;width:'+CW+'px;flex-shrink:0"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;text-align:center;letter-spacing:0.5px;margin-bottom:6px">'+text+'</div></div>';
-  }
-
-  var champ = getWinner(FIN);
-  var champBox = champ?'<div style="text-align:center;margin-top:10px"><div style="display:inline-block;border:2px solid var(--green);border-radius:10px;padding:6px 14px;background:rgba(46,204,113,0.08)"><div style="font-size:9px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px">Şampiyon</div><div style="font-size:14px;font-weight:700;color:var(--green);margin-top:2px">'+champ+'</div></div></div>':'';
-
-  // Label row
-  var labelRow = '<div style="display:flex;margin-bottom:4px">'+
-    label('Son 32')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
-    label('Son 16')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
-    label('Ç.Final')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
-    label('Y.Final')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
-    label('Final')+
-    '<div style="width:'+CN+'px;flex-shrink:0"></div>'+
-    label('Y.Final')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
-    label('Ç.Final')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
-    label('Son 16')+'<div style="width:'+CN+'px;flex-shrink:0"></div>'+
-    label('Son 32')+
-  '</div>';
-
-  var html = '<div id="bracket-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 8px">';
-  html += labelRow;
-  html += '<div style="display:flex;align-items:flex-start">';
-
-  html += colDiv(lR32, lR32p, 'Son 32');
-  html += conn(lR32p, lR16p, 'r');
-  html += colDiv(lR16, lR16p, 'Son 16');
-  html += conn(lR16p, lQFp, 'r');
-  html += colDiv(lQF, lQFp, 'Çeyrek-Final');
-  html += conn(lQFp, lSFp, 'r');
-  html += colDiv([lSF], lSFp, 'Yarı-Final');
-  html += hline(lSFp[0]+CH/2, 'var(--red)');
-
-  // Final center
-  html += '<div style="position:relative;width:'+CW+'px;height:'+totalH+'px;flex-shrink:0" id="bracket-col-Final">';
-  html += '<div style="position:absolute;top:'+Math.round(finP[0])+'px;left:0">'+card(FIN)+'</div>';
-  html += '</div>';
-
-  html += hline(rSFp[0]+CH/2, 'var(--red)');
-  html += colDiv([rSF], rSFp, null);
-  html += conn(rQFp, rSFp, 'l');
-  html += colDiv(rQF, rQFp, null);
-  html += conn(rR16p, rQFp, 'l');
-  html += colDiv(rR16, rR16p, null);
-  html += conn(rR32p, rR16p, 'l');
-  html += colDiv(rR32, rR32p, null);
-
-  html += '</div>';
-  html += champBox;
-  html += '</div>';
-  container.innerHTML = html;
+  container.innerHTML = tabs + champBox + '<div style="padding:0 2px">' + cards + '</div>';
 }
 // ============ SHARE LEADERBOARD ============
 function shareLeaderboard() {
