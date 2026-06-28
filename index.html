@@ -2110,17 +2110,17 @@ async function saveTurnuvaResults() {
     for (const bet of allBets) {
       const key = bet.player_name + '|' + bet.group_id;
       const newPts = newTurnuvaPts[key] || 0;
-      const oldPts = prevTurnuvaPts[key] || 0;
-      const diff = newPts - oldPts;
-      if (diff === 0) continue;
       const player = allPlayers.find(function(p) { return p.name === bet.player_name && p.group_id === bet.group_id; });
       const currentPts = player ? (player.pts || 0) : 0;
+      // Use player's current trend as "already applied turnuva pts"
+      const alreadyApplied = player ? (player.trend || 0) : 0;
+      const diff = newPts - alreadyApplied;
+      if (diff === 0) { console.log('Skip', bet.player_name, 'no change'); continue; }
       const newTotal = Math.max(0, currentPts + diff);
-      // Use RPC-style increment to avoid race conditions
       await sbPatch('players',
         'name=eq.' + encodeURIComponent(bet.player_name) + '&group_id=eq.' + bet.group_id,
         {pts: newTotal, trend: newPts});
-      console.log('Updated', bet.player_name, bet.group_id, 'diff:', diff, 'old:', currentPts, 'new:', newTotal);
+      console.log('Updated', bet.player_name, 'diff:', diff, 'old:', currentPts, 'new:', newTotal);
     }
   }
 
