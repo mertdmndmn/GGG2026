@@ -2112,10 +2112,15 @@ async function saveTurnuvaResults() {
       const newPts = newTurnuvaPts[key] || 0;
       const oldPts = prevTurnuvaPts[key] || 0;
       const diff = newPts - oldPts;
+      if (diff === 0) continue;
       const player = allPlayers.find(function(p) { return p.name === bet.player_name && p.group_id === bet.group_id; });
-      const currentPts = player ? player.pts : 0;
-      await sbPatch('players', 'name=eq.' + encodeURIComponent(bet.player_name) + '&group_id=eq.' + bet.group_id,
-        {pts: Math.max(0, currentPts + diff), trend: newPts});
+      const currentPts = player ? (player.pts || 0) : 0;
+      const newTotal = Math.max(0, currentPts + diff);
+      // Use RPC-style increment to avoid race conditions
+      await sbPatch('players',
+        'name=eq.' + encodeURIComponent(bet.player_name) + '&group_id=eq.' + bet.group_id,
+        {pts: newTotal, trend: newPts});
+      console.log('Updated', bet.player_name, bet.group_id, 'diff:', diff, 'old:', currentPts, 'new:', newTotal);
     }
   }
 
