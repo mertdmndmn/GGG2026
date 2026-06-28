@@ -643,17 +643,17 @@ const ALL_MATCHES = [
   {id:96,group:'Son 16',time:'8 Tem · 01:00',home:'🏳 M86 gal. vs M88 gal.',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
 
   // ÇEYREK FİNAL — 10-12 Temmuz
-  {id:97,group:'Çeyrek Final',time:'10 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:98,group:'Çeyrek Final',time:'11 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:99,group:'Çeyrek Final',time:'11 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:100,group:'Çeyrek Final',time:'12 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:97,group:'Ceyrek Final',time:'10 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:98,group:'Ceyrek Final',time:'11 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:99,group:'Ceyrek Final',time:'11 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:100,group:'Ceyrek Final',time:'12 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
 
   // YARI FİNAL — 14-15 Temmuz
-  {id:101,group:'Yarı Final',time:'15 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
-  {id:102,group:'Yarı Final',time:'16 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:101,group:'Yari Final',time:'15 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:102,group:'Yari Final',time:'16 Tem · 01:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
 
   // 3. LÜK MAÇI & FİNAL
-  {id:103,group:'3. lük Maçı',time:'18 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
+  {id:103,group:'3. luk Maci',time:'18 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
   {id:104,group:'Final',time:'19 Tem · 22:00',home:'🏳 TBD',away:'🏳 TBD',lock:'2026-12-31T00:00:00Z'},
 ];
 
@@ -5174,7 +5174,7 @@ function renderBracket() {
   renderBracketRound(window._bracketRound);
 }
 
-var BRACKET_ROUNDS = ['Son 32','Son 16','Çeyrek Final','Yarı Final','Final'];
+var BRACKET_ROUNDS = ['Son 32','Son 16','Ceyrek Final','Yari Final','Final'];
 
 function renderBracketRound(round) {
   if (typeof round === 'number') round = BRACKET_ROUNDS[round];
@@ -5186,8 +5186,8 @@ function renderBracketRound(round) {
   var roundMap = {
     'Son 32':      [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88],
     'Son 16':      [89,90,91,92,93,94,95,96],
-    'Çeyrek Final':[97,98,99,100],
-    'Yarı Final':  [101,102],
+    'Ceyrek Final':[97,98,99,100],
+    'Yari Final':  [101,102],
     'Final':       [103,104]
   };
   var rounds = BRACKET_ROUNDS;
