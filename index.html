@@ -2059,6 +2059,15 @@ async function saveTurnuvaResults() {
 
   if (Object.keys(results).length === 0) { showToast('Hic sonuc girilmedi!'); return; }
 
+  // Load BEFORE saving - to calculate diff correctly
+  const allBets = await sbGet('tournament_bets', 'select=player_name,group_id,bets');
+  const allPlayers = await sbGet('players', 'select=name,group_id,pts');
+  const prevResultsRows = await sbGet('tournament_results', 'select=group_id,results');
+  const prevResultsMap = {};
+  if (Array.isArray(prevResultsRows)) {
+    prevResultsRows.forEach(function(r) { prevResultsMap[r.group_id] = r.results || {}; });
+  }
+
   // Save results to ALL groups
   const allGroupIds = await sbGet('players', 'select=group_id');
   const uniqueGroupIds = [...new Set((Array.isArray(allGroupIds) ? allGroupIds : []).map(r => r.group_id).filter(Boolean))];
@@ -2067,14 +2076,9 @@ async function saveTurnuvaResults() {
     await sbUpsert('tournament_results', {group_id: gid, results: results}, 'group_id');
   }
 
-  // Calculate points for all players across ALL groups
-  // First: load all bets and current player pts
-  const allBets = await sbGet('tournament_bets', 'select=player_name,group_id,bets');
-  const allPlayers = await sbGet('players', 'select=name,group_id,pts');
-
   if (Array.isArray(allBets) && Array.isArray(allPlayers)) {
-    // Step 1: calculate each player's NEW turnuva pts based on current results
-    var newTurnuvaPts = {}; // key: name+'|'+group_id
+    // Step 1: calculate NEW pts per player
+    var newTurnuvaPts = {};
     allBets.forEach(function(bet) {
       const playerBets = bet.bets || {};
       let pts = 0;
@@ -2087,25 +2091,20 @@ async function saveTurnuvaResults() {
       newTurnuvaPts[bet.player_name + '|' + bet.group_id] = pts;
     });
 
-    // Step 2: also load previously stored turnuva results to know what was already added
-    const prevResults = await sbGet('tournament_results', 'select=group_id,results');
-    var prevTurnuvaPts = {}; // key: name+'|'+group_id -> previously earned pts
-    if (Array.isArray(prevResults)) {
-      // For each player, recalculate what they earned under OLD results
-      allBets.forEach(function(bet) {
-        const playerBets = bet.bets || {};
-        let prevPts = 0;
-        // Find prev results for this group (use same GROUP_ID results — it's global)
-        const prevRes = prevResults.length > 0 ? (prevResults[0].results || {}) : {};
-        TURNUVA_FIELDS.forEach(function(field) {
-          const predicted = playerBets[field.key];
-          const actual = prevRes[field.key];
-          if (!predicted || !actual) return;
-          if (normalizeTR(predicted) === normalizeTR(actual)) prevPts += field.pts;
-        });
-        prevTurnuvaPts[bet.player_name + '|' + bet.group_id] = prevPts;
+    // Step 2: calculate PREV pts per player (before this save)
+    var prevTurnuvaPts = {};
+    allBets.forEach(function(bet) {
+      const playerBets = bet.bets || {};
+      let prevPts = 0;
+      const prevRes = prevResultsMap[bet.group_id] || prevResultsMap[GROUP_ID] || {};
+      TURNUVA_FIELDS.forEach(function(field) {
+        const predicted = playerBets[field.key];
+        const actual = prevRes[field.key];
+        if (!predicted || !actual) return;
+        if (normalizeTR(predicted) === normalizeTR(actual)) prevPts += field.pts;
       });
-    }
+      prevTurnuvaPts[bet.player_name + '|' + bet.group_id] = prevPts;
+    });
 
     // Step 3: update each player: remove old turnuva pts, add new
     for (const bet of allBets) {
