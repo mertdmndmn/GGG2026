@@ -1252,7 +1252,7 @@ async function renderMatches() {
     <div class="match-card">
       <div class="match-card-header">
         <span class="match-group">${m.group}</span>
-        <span class="match-time">${m.lock ? formatLocalTime(m.lock) : m.time}${!locked && m.lock ? `<span class="countdown" id="cd-${m.id}"></span>` : ''}</span>
+        <span class="match-time">${m.time}${!locked && m.lock ? `<span class="countdown" id="cd-${m.id}"></span>` : ''}</span>
         <span class="${locked?'match-status-closed':'match-status-open'}">${locked?'KAPALI':'AÇIK'}</span>
       </div>
       ${!locked && !pred.home_score && !pred.ms ? '<div class="no-pred-warning">⚠️ Henüz tahmin girmedin!</div>' : ''}
@@ -2060,10 +2060,15 @@ async function saveTurnuvaResults() {
   // Save results
   await sbUpsert('tournament_results', {group_id: GROUP_ID, results: results}, 'group_id');
 
-  // Calculate points for all players
-  const allBets = await sbGet('tournament_bets', 'group_id=eq.' + GROUP_ID);
-  if (Array.isArray(allBets)) {
-    for (const bet of allBets) {
+  // Calculate points for all players across ALL groups
+  // First: load all bets and current player pts
+  const allBets = await sbGet('tournament_bets', 'select=player_name,group_id,bets');
+  const allPlayers = await sbGet('players', 'select=name,group_id,pts');
+
+  if (Array.isArray(allBets) && Array.isArray(allPlayers)) {
+    // Step 1: calculate each player's NEW turnuva pts based on current results
+    var newTurnuvaPts = {}; // key: name+'|'+group_id
+    allBets.forEach(function(bet) {
       const playerBets = bet.bets || {};
       let pts = 0;
       TURNUVA_FIELDS.forEach(function(field) {
@@ -2072,11 +2077,39 @@ async function saveTurnuvaResults() {
         if (!predicted || !actual) return;
         if (normalizeTR(predicted) === normalizeTR(actual)) pts += field.pts;
       });
-      if (pts > 0) {
-        const player = players.find(function(p) { return p.name === bet.player_name; });
-        await sbPatch('players', 'name=eq.' + encodeURIComponent(bet.player_name) + '&group_id=eq.' + GROUP_ID,
-          {pts: (player ? player.pts : 0) + pts, trend: pts});
-      }
+      newTurnuvaPts[bet.player_name + '|' + bet.group_id] = pts;
+    });
+
+    // Step 2: also load previously stored turnuva results to know what was already added
+    const prevResults = await sbGet('tournament_results', 'select=group_id,results');
+    var prevTurnuvaPts = {}; // key: name+'|'+group_id -> previously earned pts
+    if (Array.isArray(prevResults)) {
+      // For each player, recalculate what they earned under OLD results
+      allBets.forEach(function(bet) {
+        const playerBets = bet.bets || {};
+        let prevPts = 0;
+        // Find prev results for this group (use same GROUP_ID results — it's global)
+        const prevRes = prevResults.length > 0 ? (prevResults[0].results || {}) : {};
+        TURNUVA_FIELDS.forEach(function(field) {
+          const predicted = playerBets[field.key];
+          const actual = prevRes[field.key];
+          if (!predicted || !actual) return;
+          if (normalizeTR(predicted) === normalizeTR(actual)) prevPts += field.pts;
+        });
+        prevTurnuvaPts[bet.player_name + '|' + bet.group_id] = prevPts;
+      });
+    }
+
+    // Step 3: update each player: remove old turnuva pts, add new
+    for (const bet of allBets) {
+      const key = bet.player_name + '|' + bet.group_id;
+      const newPts = newTurnuvaPts[key] || 0;
+      const oldPts = prevTurnuvaPts[key] || 0;
+      const diff = newPts - oldPts;
+      const player = allPlayers.find(function(p) { return p.name === bet.player_name && p.group_id === bet.group_id; });
+      const currentPts = player ? player.pts : 0;
+      await sbPatch('players', 'name=eq.' + encodeURIComponent(bet.player_name) + '&group_id=eq.' + bet.group_id,
+        {pts: Math.max(0, currentPts + diff), trend: newPts});
     }
   }
 
@@ -2156,7 +2189,7 @@ async function scoreSampion(winnerTeam) {
     return TIERS[3].pts;
   }
 
-  const rows = await sbGet('players', 'select=name,sampion,pts&group_id=eq.' + GROUP_ID);
+  const rows = await sbGet('players', 'select=name,sampion,pts,group_id');
   if (!Array.isArray(rows)) { showToast('Veri yuklenemedi!'); return; }
 
   const winners = [];
@@ -2169,7 +2202,7 @@ async function scoreSampion(winnerTeam) {
         normalizedWinner.includes(normalizedPick) ||
         normalizedPick.includes(normalizedWinner)) {
       const pts = getTierPts(player.sampion);
-      await sbPatch('players', 'name=eq.' + encodeURIComponent(player.name) + '&group_id=eq.' + GROUP_ID,
+      await sbPatch('players', 'name=eq.' + encodeURIComponent(player.name) + '&group_id=eq.' + player.group_id,
         {pts: (player.pts || 0) + pts, trend: pts});
       winners.push({name: player.name, pts});
     }
@@ -2314,7 +2347,7 @@ function renderAdminMatches() {
     const res = results[m.id] || {};
     const home = splitTeam(m.home), away = splitTeam(m.away);
     const isFinished = res.home_score !== null && res.home_score !== undefined;
-    const timeStr = m.lock ? formatLocalTime(m.lock) : m.time;
+    const timeStr = m.time;
 
     let customHtml = '';
     (m.customBets||[]).forEach(function(cb, ci) {
