@@ -5169,12 +5169,14 @@ async function openPlayerModal(name) {
 function renderBracket() {
   var container = document.getElementById('bracket-container');
   if (!container) return;
-  if (!window._bracketRound) window._bracketRound = 'Son 32';
+  var saved = localStorage.getItem('ggg_bracket_round') || 'Son 32';
+  if (!window._bracketRound) window._bracketRound = saved;
   renderBracketRound(window._bracketRound);
 }
 
 function renderBracketRound(round) {
   window._bracketRound = round;
+  try { localStorage.setItem('ggg_bracket_round', round); } catch(e) {}
   var container = document.getElementById('bracket-container');
   if (!container) return;
 
