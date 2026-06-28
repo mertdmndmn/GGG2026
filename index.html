@@ -2059,8 +2059,13 @@ async function saveTurnuvaResults() {
 
   if (Object.keys(results).length === 0) { showToast('Hic sonuc girilmedi!'); return; }
 
-  // Save results
-  await sbUpsert('tournament_results', {group_id: GROUP_ID, results: results}, 'group_id');
+  // Save results to ALL groups
+  const allGroupIds = await sbGet('players', 'select=group_id');
+  const uniqueGroupIds = [...new Set((Array.isArray(allGroupIds) ? allGroupIds : []).map(r => r.group_id).filter(Boolean))];
+  if (!uniqueGroupIds.includes(GROUP_ID)) uniqueGroupIds.push(GROUP_ID);
+  for (const gid of uniqueGroupIds) {
+    await sbUpsert('tournament_results', {group_id: gid, results: results}, 'group_id');
+  }
 
   // Calculate points for all players across ALL groups
   // First: load all bets and current player pts
