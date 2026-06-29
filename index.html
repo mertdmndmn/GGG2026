@@ -532,6 +532,12 @@ async function sbUpsert(table, body, onConflict) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
     method:'POST', headers:{...HEADERS,'Prefer':'resolution=merge-duplicates,return=representation'}, body:JSON.stringify(body)
   });
+  if (!r.ok) {
+    const err = await r.text();
+    console.error('sbUpsert ERROR', table, r.status, err);
+    showToast('Kayit hatasi: ' + r.status);
+    return null;
+  }
   return r.json();
 }
 async function sbDelete(table, params) {
@@ -1443,6 +1449,8 @@ async function savePred(mid) {
     kg: p.kg || existing.kg || null,
     gol: p.gol || existing.gol || null,
     kk: p.kk || existing.kk || null,
+    uzatma: p.uzatma || existing.uzatma || null,
+    penalti: p.penalti || existing.penalti || null,
     custom: {...(existing.custom||{}), ...(p.custom||{})}
   };
   await sbUpsert('predictions', payload, 'player_name,match_id,group_id');
@@ -2657,7 +2665,7 @@ async function updateResult(mid) {
   // Save score globally
   await sbUpsert('match_results', {match_id: mid, home_score: h, away_score: a, ms,
     hy: resultPayload.hy, kg: resultPayload.kg, gol: resultPayload.gol,
-    kk: resultPayload.kk,
+    kk: resultPayload.kk, uzatma: resultPayload.uzatma, penalti: resultPayload.penalti,
     custom: resultPayload.custom}, 'match_id');
   results[mid] = {...resultPayload, group_id: null};
 
@@ -2814,6 +2822,8 @@ async function confirmResult(mid) {
     kg: resultPayload.kg || null,
     gol: resultPayload.gol || null,
     kk: resultPayload.kk || null,
+    uzatma: resultPayload.uzatma || null,
+    penalti: resultPayload.penalti || null,
     custom: resultPayload.custom || null,
   };
   await sbUpsert('match_results', globalPayload, 'match_id');
