@@ -1161,7 +1161,7 @@ async function renderMatches() {
   const tomorrowEnd = new Date(todayStart.getTime() + 2 * 86400000);
 
   if (statusFilter === 'upcoming') filtered = filtered.filter(m => !results[m.id] || results[m.id].home_score === null);
-  else if (statusFilter === 'finished') { filtered = filtered.filter(m => results[m.id] && results[m.id].home_score !== null); filtered.sort(function(a,b){ return b.id - a.id; }); }
+  else if (statusFilter === 'finished') { filtered = filtered.filter(m => results[m.id] && results[m.id].home_score !== null); filtered.sort(function(a,b){ var ta=a.lock?new Date(a.lock).getTime():a.id; var tb=b.lock?new Date(b.lock).getTime():b.id; return tb-ta; }); }
   else if (statusFilter === 'today') filtered = filtered.filter(m => { if (!m.lock) return false; const d = new Date(m.lock); return d >= todayStart && d < todayEnd; });
   else if (statusFilter === 'tomorrow') filtered = filtered.filter(m => { if (!m.lock) return false; const d = new Date(m.lock); return d >= todayEnd && d < tomorrowEnd; });
   else if (statusFilter === 'finished') { filtered = filtered.filter(m => m.result !== null && m.result.home_score !== null); filtered.sort(function(a,b){ return b.id - a.id; }); }
