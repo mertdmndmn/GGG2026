@@ -1236,6 +1236,7 @@ async function renderMatches() {
     const matchPreds = allPredsMap[m.id] || [];
     const pred = myPredictions[m.id] || {};
     const locked = (m.result !== null && m.result.home_score !== null) || (m.lock && new Date() >= new Date(m.lock));
+    const isKnockout = m.group && !m.group.startsWith('Grup');
     const home = splitTeam(m.home), away = splitTeam(m.away);
     const hS = pred.home_score !== undefined && pred.home_score !== null ? pred.home_score : '';
     const aS = pred.away_score !== undefined && pred.away_score !== null ? pred.away_score : '';
@@ -1337,6 +1338,19 @@ async function renderMatches() {
           <button class="bet-btn ${pred.kk==='Yok'?'sel-no':''}" onclick="setBet(${m.id},'kk','Yok',this)" ${locked?'disabled':''}>Yok</button>
         </div></div>
         ${customHtml}
+        ${isKnockout ? `
+        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Uzatmalar</div>
+          <div class="bet-row"><span class="bet-label">Uzatma sonucu</span><div class="bet-options">
+            <button class="bet-btn ${pred.uzatma==='1'?'sel-1':''}" onclick="setBet(${m.id},'uzatma','1',this)" ${locked?'disabled':''}>1</button>
+            <button class="bet-btn ${pred.uzatma==='X'?'sel-x':''}" onclick="setBet(${m.id},'uzatma','X',this)" ${locked?'disabled':''}>X</button>
+            <button class="bet-btn ${pred.uzatma==='2'?'sel-2':''}" onclick="setBet(${m.id},'uzatma','2',this)" ${locked?'disabled':''}>2</button>
+          </div></div>
+          <div class="bet-row"><span class="bet-label">Penaltı kazananı</span><div class="bet-options">
+            <button class="bet-btn ${pred.penalti==='1'?'sel-1':''}" onclick="setBet(${m.id},'penalti','1',this)" ${locked?'disabled':''}>1</button>
+            <button class="bet-btn ${pred.penalti==='2'?'sel-2':''}" onclick="setBet(${m.id},'penalti','2',this)" ${locked?'disabled':''}>2</button>
+          </div></div>
+        </div>` : ''}
       </div>
       
       <div class="group-preds" id="gp-${m.id}">
@@ -1781,16 +1795,26 @@ function tagClass(key, val) {
   return 'pred-tag pred-tag-x';
 }
 
-function calcPredPts(pred, res, gid) {
+function isKnockoutMatch(matchId) {
+  var m = matches.find(function(x){return x.id===matchId;});
+  return m && m.group && !m.group.startsWith('Grup');
+}
+
+function calcPredPts(pred, res, gid, matchId) {
   if (!res || res.home_score === null || res.home_score === undefined) return null;
   let pts = 0;
+  var knockout = matchId ? isKnockoutMatch(matchId) : false;
   if (pred.hy && pred.hy === res.hy) pts += 1;
-  if (pred.ms && pred.ms === res.ms) pts += 1;
+  if (pred.ms && pred.ms === res.ms) {
+    pts += (knockout && pred.ms === 'X') ? 3 : 1;
+  }
   if (pred.home_score !== null && pred.away_score !== null &&
       parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
   if (pred.kg && pred.kg === res.kg) pts += 1;
   if (pred.gol && pred.gol === res.gol) pts += 1;
   if (pred.kk && pred.kk === res.kk) pts += 1;
+  if (knockout && res.uzatma && pred.uzatma && pred.uzatma === res.uzatma) pts += 1;
+  if (knockout && res.penalti && pred.penalti && pred.penalti === res.penalti) pts += 1;
   if (gid !== 'd9e6ad5f-3a87-4682-acc9-bd60d58e1023') {
     const pCustom = pred.custom || {};
     const rCustom = res.custom || {};
@@ -2416,6 +2440,7 @@ function renderAdminMatches() {
           '<button class="bet-btn ' + (res.kk==='Yok'?'sel-no':'') + '" data-mid="' + m.id + '" data-key="kk" data-val="Yok" onclick="adminBetClick(this)">Yok</button>' +
         '</div></div>' +
         customHtml +
+      (m.group && !m.group.startsWith('Grup') ? '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">' +'<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Uzatmalar (bos birak = uzatma olmadi)</div>' +'<div class="bet-row"><span class="bet-label">Uzatma sonucu</span><div class="bet-options">' +'<button class="bet-btn ' + (res.uzatma==='1'?'sel-1':'') + '" data-mid="' + m.id + '" data-key="uzatma" data-val="1" onclick="adminBetClick(this)">1</button>' +'<button class="bet-btn ' + (res.uzatma==='X'?'sel-x':'') + '" data-mid="' + m.id + '" data-key="uzatma" data-val="X" onclick="adminBetClick(this)">X</button>' +'<button class="bet-btn ' + (res.uzatma==='2'?'sel-2':'') + '" data-mid="' + m.id + '" data-key="uzatma" data-val="2" onclick="adminBetClick(this)">2</button>' +'</div></div>' +'<div class="bet-row"><span class="bet-label">Penalti kazanani</span><div class="bet-options">' +'<button class="bet-btn ' + (res.penalti==='1'?'sel-1':'') + '" data-mid="' + m.id + '" data-key="penalti" data-val="1" onclick="adminBetClick(this)">1</button>' +'<button class="bet-btn ' + (res.penalti==='2'?'sel-2':'') + '" data-mid="' + m.id + '" data-key="penalti" data-val="2" onclick="adminBetClick(this)">2</button>' +'</div></div>' +'</div>' : '') +
       '</div>' +
       '<div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:12px">' +
       '<div style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:8px">📋 İlk 11</div>' +
@@ -2615,13 +2640,16 @@ async function updateResult(mid) {
     kg: ap.kg || existingRes.kg || null,
     gol: ap.gol || existingRes.gol || null,
     kk: ap.kk || existingRes.kk || null,
+    uzatma: ap.uzatma || existingRes.uzatma || null,
+    penalti: ap.penalti || existingRes.penalti || null,
     custom: newCustom
   };
 
   // Save score globally
   await sbUpsert('match_results', {match_id: mid, home_score: h, away_score: a, ms,
     hy: resultPayload.hy, kg: resultPayload.kg, gol: resultPayload.gol,
-    kk: resultPayload.kk, custom: resultPayload.custom}, 'match_id');
+    kk: resultPayload.kk, uzatma: resultPayload.uzatma, penalti: resultPayload.penalti,
+    custom: resultPayload.custom}, 'match_id');
   results[mid] = {...resultPayload, group_id: null};
 
   // Recalculate points from scratch for all groups
@@ -2678,11 +2706,15 @@ async function updateResult(mid) {
           var ph = pred.home_score !== null ? parseInt(pred.home_score) : null;
           var pa = pred.away_score !== null ? parseInt(pred.away_score) : null;
           if (pred.hy && pred.hy===fres.hy) pts++;
-          if (pred.ms && pred.ms===fres.ms) pts++;
+          var fmatch = matches.find(function(x){return x.id===pred.match_id;});
+          var fIsKO = fmatch && fmatch.group && !fmatch.group.startsWith('Grup');
+          if (pred.ms && pred.ms===fres.ms) pts += (fIsKO && pred.ms==='X') ? 3 : 1;
           if (ph===fres.home_score && pa===fres.away_score) pts+=5;
           if (pred.kg && pred.kg===fres.kg) pts++;
           if (pred.gol && pred.gol===fres.gol) pts++;
           if (pred.kk && pred.kk===fres.kk) pts++;
+          if (fIsKO && fres.uzatma && pred.uzatma && pred.uzatma===fres.uzatma) pts++;
+          if (fIsKO && fres.penalti && pred.penalti && pred.penalti===fres.penalti) pts++;
           var pc = pred.custom || {};
           ckeys.forEach(function(k) { if(pc[k] && rc[k] && pc[k]===rc[k]) pts++; });
 
@@ -2821,13 +2853,16 @@ async function confirmResult(mid) {
 
       for (const pred of groupPreds) {
         let pts = 0;
+        var isKO = isKnockoutMatch(mid);
         if (pred.hy && pred.hy === resultPayload.hy) pts += 1;
-        if (pred.ms && pred.ms === ms) pts += 1;
+        if (pred.ms && pred.ms === ms) pts += (isKO && pred.ms === 'X') ? 3 : 1;
         if (pred.home_score !== null && pred.away_score !== null &&
             parseInt(pred.home_score) === h && parseInt(pred.away_score) === a) pts += 5;
         if (pred.kg && pred.kg === resultPayload.kg) pts += 1;
         if (pred.gol && pred.gol === resultPayload.gol) pts += 1;
         if (pred.kk && pred.kk === resultPayload.kk) pts += 1;
+        if (isKO && resultPayload.uzatma && pred.uzatma && pred.uzatma === resultPayload.uzatma) pts += 1;
+        if (isKO && resultPayload.penalti && pred.penalti && pred.penalti === resultPayload.penalti) pts += 1;
         const pCustom = (gid === 'd9e6ad5f-3a87-4682-acc9-bd60d58e1023') ? {} : (pred.custom || {});
         const rCustom = resultPayload.custom || {};
         Object.keys(pCustom).forEach(k => {
@@ -3440,7 +3475,10 @@ async function renderProfilTab() {
       totalPreds++;
       let pts = 0;
       if (pred.hy && pred.hy === res.hy) { correctHY++; pts += 1; }
-      if (pred.ms && pred.ms === res.ms) { correctMS++; pts += 1; }
+      var mIsKO = m && m.group && !m.group.startsWith('Grup');
+      if (pred.ms && pred.ms === res.ms) { correctMS++; pts += (mIsKO && pred.ms==='X') ? 3 : 1; }
+      if (mIsKO && res.uzatma && pred.uzatma && pred.uzatma===res.uzatma) pts += 1;
+      if (mIsKO && res.penalti && pred.penalti && pred.penalti===res.penalti) pts += 1;
       if (pred.home_score !== null && pred.away_score !== null &&
           parseInt(pred.home_score) === parseInt(res.home_score) && parseInt(pred.away_score) === parseInt(res.away_score)) { exactScore++; pts += 5; if (pred.player_name === currentUser) setTimeout(launchConfetti, 300); }
       if (pred.kg && pred.kg === res.kg) { correctKG++; pts += 1; }
@@ -4238,11 +4276,14 @@ async function renderKumulatifGrafik(finishedMatches) {
       if (!pred) { playerMatchPts[name].push(null); return; } // null = no pred
       let pts = 0;
       if (pred.hy && pred.hy === res.hy) pts += 1;
-      if (pred.ms && pred.ms === res.ms) pts += 1;
+      var _isKO = m && m.group && !m.group.startsWith('Grup');
+      if (pred.ms && pred.ms === res.ms) pts += (_isKO && pred.ms==='X') ? 3 : 1;
       if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
       if (pred.kg && pred.kg === res.kg) pts += 1;
       if (pred.gol && pred.gol === res.gol) pts += 1;
       if (pred.kk && pred.kk === res.kk) pts += 1;
+      if (_isKO && res.uzatma && pred.uzatma && pred.uzatma===res.uzatma) pts += 1;
+      if (_isKO && res.penalti && pred.penalti && pred.penalti===res.penalti) pts += 1;
       let bonus = 0;
       fields.forEach(function(f) {
         const pv = pred[f]; const rv = (f==='ms') ? res.ms : res[f];
@@ -4335,11 +4376,14 @@ async function renderMacStatsForMatch(m) {
   const rows = preds.map(function(pred) {
     let pts = 0;
     if (pred.hy && pred.hy === res.hy) pts += 1;
-    if (pred.ms && pred.ms === res.ms) pts += 1;
+    var _rIsKO = m && m.group && !m.group.startsWith('Grup');
+    if (pred.ms && pred.ms === res.ms) pts += (_rIsKO && pred.ms==='X') ? 3 : 1;
     if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
     if (pred.kg && pred.kg === res.kg) pts += 1;
     if (pred.gol && pred.gol === res.gol) pts += 1;
     if (pred.kk && pred.kk === res.kk) pts += 1;
+    if (_rIsKO && res.uzatma && pred.uzatma && pred.uzatma===res.uzatma) pts += 1;
+    if (_rIsKO && res.penalti && pred.penalti && pred.penalti===res.penalti) pts += 1;
     const pCustom = (GROUP_ID !== 'd9e6ad5f-3a87-4682-acc9-bd60d58e1023') ? (pred.custom || {}) : {};
     const rCustom = res.custom || {};
     Object.keys(pCustom).forEach(function(k) { if (k.startsWith('c') && pCustom[k] && rCustom[k] && pCustom[k] === rCustom[k]) pts += 1; });
@@ -4418,11 +4462,14 @@ async function renderIstatistik() {
       data[name].predCount++;
       let pts = 0;
       if (pred.hy && pred.hy === res.hy) pts += 1;
-      if (pred.ms && pred.ms === res.ms) pts += 1;
+      var _isKO = m && m.group && !m.group.startsWith('Grup');
+      if (pred.ms && pred.ms === res.ms) pts += (_isKO && pred.ms==='X') ? 3 : 1;
       if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
       if (pred.kg && pred.kg === res.kg) pts += 1;
       if (pred.gol && pred.gol === res.gol) pts += 1;
       if (pred.kk && pred.kk === res.kk) pts += 1;
+      if (_isKO && res.uzatma && pred.uzatma && pred.uzatma===res.uzatma) pts += 1;
+      if (_isKO && res.penalti && pred.penalti && pred.penalti===res.penalti) pts += 1;
       let bonus = 0;
       fields.forEach(function(f) {
         const pv = pred[f]; const rv = (f==='ms') ? res.ms : res[f];
@@ -4584,12 +4631,15 @@ async function renderIstatistik() {
             const pred = mp.find(function(p){return p.player_name===n;});
             if (!pred) return;
             let pts = 0;
-            if(pred.ms&&pred.ms===res.ms)pts+=1;
+            var _mIsKO=m&&m.group&&!m.group.startsWith('Grup');
+            if(pred.ms&&pred.ms===res.ms)pts+=(_mIsKO&&pred.ms==='X')?3:1;
             if(pred.hy&&pred.hy===res.hy)pts+=1;
             if(pred.kg&&pred.kg===res.kg)pts+=1;
             if(pred.gol&&pred.gol===res.gol)pts+=1;
             if(pred.kk&&pred.kk===res.kk)pts+=1;
             if(pred.home_score!==null&&parseInt(pred.home_score)===res.home_score&&parseInt(pred.away_score)===res.away_score)pts+=5;
+            if(_mIsKO&&res.uzatma&&pred.uzatma&&pred.uzatma===res.uzatma)pts+=1;
+            if(_mIsKO&&res.penalti&&pred.penalti&&pred.penalti===res.penalti)pts+=1;
             cumPts[n] = (cumPts[n]||0) + pts;
           });
           const leader = pnames.slice().sort(function(a,b){return (cumPts[b]||0)-(cumPts[a]||0);})[0];
@@ -4672,8 +4722,9 @@ async function renderIstatistik() {
           });
           mp.forEach(function(pred) {
             let pts = 0;
+            var _mpIsKO=m&&m.group&&!m.group.startsWith('Grup');
             if(pred.hy&&pred.hy===res.hy)pts+=1;
-            if(pred.ms&&pred.ms===res.ms)pts+=1;
+            if(pred.ms&&pred.ms===res.ms)pts+=(_mpIsKO&&pred.ms==='X')?3:1;
             if(pred.home_score!==null&&parseInt(pred.home_score)===res.home_score&&parseInt(pred.away_score)===res.away_score)pts+=5;
             if(pred.kg&&pred.kg===res.kg)pts+=1;
             if(pred.gol&&pred.gol===res.gol)pts+=1;
@@ -4874,7 +4925,10 @@ async function renderIstatistik() {
     matchPreds.forEach(function(pred) {
       var pts = 0;
       if (pred.hy && pred.hy===res.hy) pts++;
-      if (pred.ms && pred.ms===res.ms) pts++;
+      var _midIsKO=isKnockoutMatch(mid);
+      if (pred.ms && pred.ms===res.ms) pts+=(_midIsKO&&pred.ms==='X')?3:1;
+      if (_midIsKO&&res.uzatma&&pred.uzatma&&pred.uzatma===res.uzatma) pts++;
+      if (_midIsKO&&res.penalti&&pred.penalti&&pred.penalti===res.penalti) pts++;
       if (pred.home_score!==null && pred.away_score!==null && parseInt(pred.home_score)===res.home_score && parseInt(pred.away_score)===res.away_score) pts+=5;
       if (pred.kg && pred.kg===res.kg) pts++;
       if (pred.gol && pred.gol===res.gol) pts++;
@@ -5075,11 +5129,14 @@ async function openPlayerModal(name) {
       // Calculate pts same way as istatistik
       let pts = 0;
       if (pred.hy && pred.hy === res.hy) pts += 1;
-      if (pred.ms && pred.ms === res.ms) pts += 1;
+      var _cpIsKO=m&&m.group&&!m.group.startsWith('Grup');
+      if (pred.ms && pred.ms === res.ms) pts += (_cpIsKO&&pred.ms==='X')?3:1;
       if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
       if (pred.kg && pred.kg === res.kg) pts += 1;
       if (pred.gol && pred.gol === res.gol) pts += 1;
       if (pred.kk && pred.kk === res.kk) pts += 1;
+      if (_cpIsKO&&res.uzatma&&pred.uzatma&&pred.uzatma===res.uzatma) pts+=1;
+      if (_cpIsKO&&res.penalti&&pred.penalti&&pred.penalti===res.penalti) pts+=1;
       calcPts += pts;
     });
   }
@@ -5097,11 +5154,14 @@ async function openPlayerModal(name) {
       const res = results[m.id];
       let pts = 0;
       if (pred.hy && pred.hy === res.hy) pts += 1;
-      if (pred.ms && pred.ms === res.ms) pts += 1;
+      var _bIsKO=m&&m.group&&!m.group.startsWith('Grup');
+      if (pred.ms && pred.ms === res.ms) pts += (_bIsKO&&pred.ms==='X')?3:1;
       if (pred.home_score !== null && pred.away_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
       if (pred.kg && pred.kg === res.kg) pts += 1;
       if (pred.gol && pred.gol === res.gol) pts += 1;
       if (pred.kk && pred.kk === res.kk) pts += 1;
+      if (_bIsKO&&res.uzatma&&pred.uzatma&&pred.uzatma===res.uzatma) pts+=1;
+      if (_bIsKO&&res.penalti&&pred.penalti&&pred.penalti===res.penalti) pts+=1;
 
       // Extract team names
       var homeTeam = m.home.replace(/[^\w\s\u00C0-\u024F]/g,'').trim();
@@ -5159,11 +5219,14 @@ async function openPlayerModal(name) {
       if (!pred) return '<span title="Tahmin yok" style="width:28px;height:28px;border-radius:50%;background:#eee;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#999">—</span>';
       let pts = 0;
       if (pred.hy && pred.hy === res.hy) pts += 1;
-      if (pred.ms && pred.ms === res.ms) pts += 1;
+      var _l5IsKO=m&&m.group&&!m.group.startsWith('Grup');
+      if (pred.ms && pred.ms === res.ms) pts += (_l5IsKO&&pred.ms==='X')?3:1;
       if (pred.home_score !== null && parseInt(pred.home_score) === res.home_score && parseInt(pred.away_score) === res.away_score) pts += 5;
       if (pred.kg && pred.kg === res.kg) pts += 1;
       if (pred.gol && pred.gol === res.gol) pts += 1;
       if (pred.kk && pred.kk === res.kk) pts += 1;
+      if (_l5IsKO&&res.uzatma&&pred.uzatma&&pred.uzatma===res.uzatma) pts+=1;
+      if (_l5IsKO&&res.penalti&&pred.penalti&&pred.penalti===res.penalti) pts+=1;
       const color = pts >= 7 ? '#2ecc71' : pts >= 4 ? '#f39c12' : pts >= 2 ? '#3498db' : '#e74c3c';
       const bg = pts >= 7 ? 'rgba(46,204,113,0.15)' : pts >= 4 ? 'rgba(243,156,18,0.15)' : pts >= 2 ? 'rgba(52,152,219,0.15)' : 'rgba(231,76,60,0.1)';
       return '<span title="' + m.home.split(' ').pop() + ' - ' + m.away.split(' ').pop() + ': +' + pts + '" style="width:32px;height:32px;border-radius:50%;background:' + bg + ';display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:' + color + '">' + pts + '</span>';
