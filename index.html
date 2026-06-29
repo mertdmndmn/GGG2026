@@ -319,6 +319,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
       <button class="nav-btn" onclick="showTab('puan',this)">Puan</button>
       <button class="nav-btn" onclick="showTab('istatistik',this)">📊</button>
       <button class="nav-btn" onclick="showTab('bracket',this)">🏆</button>
+      <button class="nav-btn" onclick="showTab('gruplar',this)">📋</button>
       <button class="nav-btn" onclick="showTab('turnuva',this)">Turnuva</button>
       <button class="nav-btn" onclick="showTab('profil',this)">Profil</button>
       <button class="nav-btn" onclick="showTab('admin',this)">Admin</button>
@@ -337,8 +338,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <button class="filter-btn" id="status-btn-today" onclick="setStatusFilter('today',this)">📆 Bugün</button>
         <button class="filter-btn" id="status-btn-tomorrow" onclick="setStatusFilter('tomorrow',this)">⏭️ Yarın</button>
       </div>
-      <div class="filter-bar" id="filter-bar"></div>
-      <div id="group-standings-bar" style="display:none;margin-top:8px"></div>
+
       <div id="matches-container"><div class="loading">Maçlar yükleniyor...</div></div>
     </div>
     <div id="tab-puan" class="section">
@@ -388,6 +388,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
 
     <div id="tab-bracket" class="section">
       <div id="bracket-container"></div>
+    </div>
+
+    <div id="tab-gruplar" class="section">
+      <div id="gruplar-container"><div class="loading">Yükleniyor...</div></div>
     </div>
 
         <div id="tab-turnuva" class="section">
@@ -948,6 +952,7 @@ function showTab(tab, btn) {
       }); }
   if (tab === 'admin' && isAdmin) renderAdminMatches();
   if (tab === 'turnuva') renderTurnuvaFull();
+  if (tab === 'gruplar') renderGruplar();
   if (tab === 'profil') { loadPlayers().then(() => renderProfilTab()); }
 }
 
@@ -1111,8 +1116,8 @@ function computeGroupStandings() {
     var g = m.group;
 
     if (!groups[g]) groups[g] = {};
-    if (!groups[g][h]) groups[g][h] = {pts:0, played:0, gf:0, ga:0};
-    if (!groups[g][a]) groups[g][a] = {pts:0, played:0, gf:0, ga:0};
+    if (!groups[g][h]) groups[g][h] = {pts:0, played:0, gf:0, ga:0, w:0, d:0, l:0};
+    if (!groups[g][a]) groups[g][a] = {pts:0, played:0, gf:0, ga:0, w:0, d:0, l:0};
 
     groups[g][h].played++;
     groups[g][a].played++;
@@ -1121,18 +1126,18 @@ function computeGroupStandings() {
     groups[g][a].gf += r.away_score;
     groups[g][a].ga += r.home_score;
 
-    if (r.home_score > r.away_score) { groups[g][h].pts += 3; }
-    else if (r.home_score === r.away_score) { groups[g][h].pts += 1; groups[g][a].pts += 1; }
-    else { groups[g][a].pts += 3; }
+    if (r.home_score > r.away_score) { groups[g][h].pts += 3; groups[g][h].w++; groups[g][a].l++; }
+    else if (r.home_score === r.away_score) { groups[g][h].pts += 1; groups[g][a].pts += 1; groups[g][h].d++; groups[g][a].d++; }
+    else { groups[g][a].pts += 3; groups[g][a].w++; groups[g][h].l++; }
   });
 
   Object.keys(groups).forEach(function(g) {
     var teams = Object.keys(groups[g]).map(function(name) {
-      return {name: name, pts: groups[g][name].pts, played: groups[g][name].played, gd: groups[g][name].gf - groups[g][name].ga};
+      return {name: name, pts: groups[g][name].pts, played: groups[g][name].played, gd: groups[g][name].gf - groups[g][name].ga, w: groups[g][name].w||0, d: groups[g][name].d||0, l: groups[g][name].l||0};
     });
     teams.sort(function(a,b) { return b.pts - a.pts || b.gd - a.gd; });
     teams.forEach(function(t, i) {
-      standings[t.name] = {pts: t.pts, played: t.played, rank: i+1, total: teams.length, group: g};
+      standings[t.name] = {pts: t.pts, played: t.played, rank: i+1, total: teams.length, group: g, w: t.w, d: t.d, l: t.l, gd: t.gd};
     });
   });
 
@@ -5216,6 +5221,55 @@ function renderBracket() {
   var saved = localStorage.getItem('ggg_bracket_round') || 'Son 32';
   if (!window._bracketRound) window._bracketRound = saved;
   renderBracketRound(window._bracketRound);
+}
+
+function renderGruplar() {
+  var container = document.getElementById('gruplar-container');
+  if (!container) return;
+
+  var groups = ['Grup A','Grup B','Grup C','Grup D','Grup E','Grup F','Grup G','Grup H','Grup I','Grup J','Grup K','Grup L'];
+  var standings = computeGroupStandings();
+
+  var html = '';
+  groups.forEach(function(g) {
+    var teams = Object.keys(standings).filter(function(t) { return standings[t].group === g; });
+    teams.sort(function(a,b) { return standings[a].rank - standings[b].rank; });
+    if (!teams.length) return;
+
+    html += '<div style="margin-bottom:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden">';
+    html += '<div style="padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--dark)">' + g + '</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html += '<tr style="color:var(--muted);font-size:11px"><th style="padding:6px 14px;text-align:left;font-weight:500">Takım</th><th style="padding:6px 8px;text-align:center;font-weight:500">O</th><th style="padding:6px 8px;text-align:center;font-weight:500">G</th><th style="padding:6px 8px;text-align:center;font-weight:500">B</th><th style="padding:6px 8px;text-align:center;font-weight:500">M</th><th style="padding:6px 8px;text-align:center;font-weight:500">A</th><th style="padding:6px 8px;text-align:center;font-weight:500;color:var(--dark)">P</th></tr>';
+
+    teams.forEach(function(t, i) {
+      var s = standings[t];
+      var qualified = i < 2;
+      var bg = qualified ? 'rgba(46,204,113,0.06)' : '';
+      var flag = '';
+      // find flag from matches
+      for (var j=0; j<matches.length; j++) {
+        var m = matches[j];
+        if (m.group !== g) continue;
+        var hparts = m.home.split(' '); var aparts = m.away.split(' ');
+        var hname = hparts.slice(1).join(' '); var aname = aparts.slice(1).join(' ');
+        if (hname === t) { flag = hparts[0]; break; }
+        if (aname === t) { flag = aparts[0]; break; }
+      }
+      html += '<tr style="border-top:1px solid var(--border);background:' + bg + '">';
+      html += '<td style="padding:7px 14px;font-weight:' + (qualified?700:400) + ';color:var(--dark)">' + (flag?flag+' ':'') + t + '</td>';
+      html += '<td style="padding:7px 8px;text-align:center;color:var(--muted)">' + (s.played||0) + '</td>';
+      html += '<td style="padding:7px 8px;text-align:center;color:var(--muted)">' + (s.w||0) + '</td>';
+      html += '<td style="padding:7px 8px;text-align:center;color:var(--muted)">' + (s.d||0) + '</td>';
+      html += '<td style="padding:7px 8px;text-align:center;color:var(--muted)">' + (s.l||0) + '</td>';
+      html += '<td style="padding:7px 8px;text-align:center;color:var(--muted)">' + (s.gd >= 0 ? '+' : '') + (s.gd||0) + '</td>';
+      html += '<td style="padding:7px 8px;text-align:center;font-weight:700;color:var(--dark)">' + (s.pts||0) + '</td>';
+      html += '</tr>';
+    });
+    html += '</table></div>';
+  });
+
+  html += '<div style="font-size:11px;color:var(--muted);text-align:center;padding:4px 0 8px">Ilk 2 = Son 32 ye gecer</div>';
+  container.innerHTML = html;
 }
 
 var BRACKET_ROUNDS = ['Son 32','Son 16','Ceyrek Final','Yari Final','Final'];
