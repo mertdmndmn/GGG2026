@@ -363,6 +363,9 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         <div class="pts-row"><span>Kırmızı kart var/yok doğru</span><span>1 puan</span></div>
         <div class="pts-row"><span>Özel bahis doğru</span><span>1 puan</span></div>
         <div class="pts-row"><span>Cesaret bonusu (tek farklı + doğru)</span><span>+1 puan</span></div>
+        <div class="pts-row" style="border-top:1px dashed var(--border);margin-top:4px;padding-top:4px"><span>90dk beraberlik (Son 32+)</span><span>3 puan</span></div>
+        <div class="pts-row"><span>Uzatma sonucu doğru (Son 32+)</span><span>1 puan</span></div>
+        <div class="pts-row"><span>Penaltı kazananı doğru (Son 32+)</span><span>1 puan</span></div>
       </div>
     </div>
     <div id="tab-profil" class="section">
@@ -1440,6 +1443,8 @@ async function savePred(mid) {
     kg: p.kg || existing.kg || null,
     gol: p.gol || existing.gol || null,
     kk: p.kk || existing.kk || null,
+    uzatma: p.uzatma || existing.uzatma || null,
+    penalti: p.penalti || existing.penalti || null,
     custom: {...(existing.custom||{}), ...(p.custom||{})}
   };
   await sbUpsert('predictions', payload, 'player_name,match_id,group_id');
@@ -1848,6 +1853,7 @@ function buildPredsTable(m, preds) {
   const res = results[m.id] || null;
   const isFinished = res && res.home_score !== null && res.home_score !== undefined;
 
+  var isKO = m.group && !m.group.startsWith('Grup');
   const fields = [
     {key:'score', label:'Skor'},
     {key:'ms', label:'Sonuç'},
@@ -1856,6 +1862,11 @@ function buildPredsTable(m, preds) {
     {key:'gol', label:'2.5 Gol'},
     {key:'kk', label:'Kırmızı'},
   ];
+
+  if (isKO) {
+    fields.push({key:'uzatma', label:'Uzatma'});
+    fields.push({key:'penalti', label:'Penalti'});
+  }
 
   // Add custom bets
   (m.customBets || []).forEach(function(cb, ci) {
@@ -1938,7 +1949,7 @@ function buildPredsTable(m, preds) {
       if (p._empty) { html += '<td style="color:var(--muted)">—</td>'; }
       else if (!isFinished) { html += '<td>—</td>'; }
       else {
-        const pts = calcPredPts(p, res);
+        const pts = calcPredPts(p, res, GROUP_ID, m.id);
         // Add cesaret bonus
         let bonusPts = 0;
         const fields = ['ms','hy','kg','gol','kk'];
@@ -1967,7 +1978,7 @@ function buildPredsTable(m, preds) {
       preds.forEach(function(p) { if (p[f]) summaryVotes[f][p[f]] = (summaryVotes[f][p[f]] || 0) + 1; });
     });
     const sorted = [...preds].map(function(p) {
-      let base = calcPredPts(p, res) || 0;
+      let base = calcPredPts(p, res, GROUP_ID, m ? m.id : null) || 0;
       let bonus = 0;
       summaryFields.forEach(function(f) {
         const pv = p[f]; const rv = (f === 'ms') ? res.ms : res[f];
@@ -2791,6 +2802,8 @@ async function confirmResult(mid) {
     kg: ap.kg || existingRes.kg || null,
     gol: ap.gol || existingRes.gol || null,
     kk: ap.kk || existingRes.kk || null,
+    uzatma: ap.uzatma || existingRes.uzatma || null,
+    penalti: ap.penalti || existingRes.penalti || null,
     custom: newCustom
   };
   // Save score globally (group_id=null)
@@ -2803,6 +2816,8 @@ async function confirmResult(mid) {
     kg: resultPayload.kg || null,
     gol: resultPayload.gol || null,
     kk: resultPayload.kk || null,
+    uzatma: resultPayload.uzatma || null,
+    penalti: resultPayload.penalti || null,
     custom: resultPayload.custom || null,
   };
   await sbUpsert('match_results', globalPayload, 'match_id');
@@ -3544,7 +3559,7 @@ function addBestWorstToProfile(finishedMatches, myPreds, allResults) {
     const pred = myPreds[m.id];
     const res = allResults[m.id];
     if (!pred || !res || res.home_score === null) return;
-    const earned = calcPredPts(pred, res) || 0;
+    const earned = calcPredPts(pred, res, GROUP_ID, m.id) || 0;
     matchHistory.push({match: m, pts: earned});
     if (earned > bestPts) { bestPts = earned; bestMatch = m; }
     if (earned < worstPts) { worstPts = earned; worstMatch = m; }
@@ -5076,14 +5091,28 @@ function luckyFill(mid) {
     }
   });
 
+  var luckyMatch = matches.find(function(x){return x.id===mid;});
+  var luckyIsKO = luckyMatch && luckyMatch.group && !luckyMatch.group.startsWith('Grup');
+  var msVal = h > a ? '1' : h === a ? 'X' : '2';
+
   // Click buttons for all fields
   const fields = {
     'hy': opts3[Math.floor(Math.random()*3)],
-    'ms': h > a ? '1' : h === a ? 'X' : '2',
+    'ms': msVal,
     'kg': (h > 0 && a > 0) ? 'Var' : 'Yok',
     'gol': (h + a) > 2 ? 'Üst' : 'Alt',
     'kk': optsYN[Math.floor(Math.random()*2)]
   };
+
+  // Knockout extra fields
+  if (luckyIsKO) {
+    // uzatma only if ms is X (draw)
+    if (msVal === 'X') {
+      fields['uzatma'] = opts3[Math.floor(Math.random()*3)];
+    }
+    // penalti always random for knockout
+    fields['penalti'] = Math.random() > 0.5 ? '1' : '2';
+  }
 
   document.querySelectorAll('button').forEach(function(btn) {
     const oc = btn.getAttribute('onclick') || '';
