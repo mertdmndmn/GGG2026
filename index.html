@@ -1165,8 +1165,8 @@ async function renderMatches() {
   else if (statusFilter === 'today') filtered = filtered.filter(m => { if (!m.lock) return false; const d = new Date(m.lock); return d >= todayStart && d < todayEnd; });
   else if (statusFilter === 'tomorrow') filtered = filtered.filter(m => { if (!m.lock) return false; const d = new Date(m.lock); return d >= todayEnd && d < tomorrowEnd; });
   else if (statusFilter === 'finished') { filtered = filtered.filter(m => m.result !== null && m.result.home_score !== null); filtered.sort(function(a,b){ return b.id - a.id; }); }
-  // Sort by lock time
-  filtered.sort(function(a,b){ var ta=a.lock?new Date(a.lock).getTime():a.id*1e10; var tb=b.lock?new Date(b.lock).getTime():b.id*1e10; return ta-tb; });
+  // Sort by lock time (ascending for upcoming, descending for finished)
+  if (statusFilter !== 'finished') { filtered.sort(function(a,b){ var ta=a.lock?new Date(a.lock).getTime():a.id*1e10; var tb=b.lock?new Date(b.lock).getTime():b.id*1e10; return ta-tb; }); }
   if (!filtered.length) { c.innerHTML = '<div class="empty-state">Bu grupta maç yok.</div>'; return; }
 
   // Load all predictions for visible matches
