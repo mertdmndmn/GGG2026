@@ -3966,6 +3966,12 @@ async function renderHerkesTurnuvaBahisleri(actualResults) {
   if (!body) return;
 
   const allBets = await sbGet('tournament_bets', 'group_id=eq.' + GROUP_ID + '&select=player_name,bets');
+  const allPlayers = await sbGet('players', 'group_id=eq.' + GROUP_ID + '&select=name,sampion');
+  const sampionMap = {};
+  if (Array.isArray(allPlayers)) {
+    allPlayers.forEach(function(p) { sampionMap[p.name] = p.sampion; });
+  }
+
   if (!Array.isArray(allBets) || !allBets.length) {
     body.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">Henüz kimse turnuva tahmini yapmadı.</div>';
     return;
@@ -3977,6 +3983,7 @@ async function renderHerkesTurnuvaBahisleri(actualResults) {
   let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">';
   html += '<tr style="position:sticky;top:0;background:var(--card)">';
   html += '<th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--card)">Oyuncu</th>';
+  html += '<th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap">🏆 Sampiyon</th>';
   TURNUVA_FIELDS.forEach(function(f) {
     html += '<th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap">' + f.title + '</th>';
   });
@@ -3984,8 +3991,10 @@ async function renderHerkesTurnuvaBahisleri(actualResults) {
 
   sortedBets.forEach(function(row) {
     const bets = row.bets || {};
+    const sampionPick = sampionMap[row.player_name];
     html += '<tr style="border-bottom:1px solid var(--border)">';
     html += '<td style="padding:6px 8px;font-weight:600;color:var(--dark);white-space:nowrap;position:sticky;left:0;background:var(--card)">' + row.player_name + '</td>';
+    html += '<td style="padding:6px 8px;text-align:center;color:' + (sampionPick ? 'var(--dark)' : 'var(--muted)') + ';white-space:nowrap;font-weight:600">' + (sampionPick || '—') + '</td>';
     TURNUVA_FIELDS.forEach(function(f) {
       const val = bets[f.key];
       const actual = actualResults[f.key];
