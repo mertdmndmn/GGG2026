@@ -4252,7 +4252,7 @@ async function renderPuanGrafik() {
 
   const finishedMatches = matches.filter(function(m) {
     return results[m.id] && results[m.id].home_score !== null;
-  }).sort(function(a,b) { return b.id - a.id; }); // en son önce
+  }).sort(function(a,b) { var ta=a.lock?new Date(a.lock).getTime():a.id; var tb=b.lock?new Date(b.lock).getTime():b.id; return tb-ta; }); // en son önce
 
   if (!finishedMatches.length) {
     document.getElementById('mac-stats-container').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">Henüz biten maç yok</div>';
@@ -4459,7 +4459,7 @@ async function renderIstatistik() {
 
   const finishedMatches = matches.filter(function(m) {
     return results[m.id] && results[m.id].home_score !== null;
-  }).sort(function(a,b) { return a.id - b.id; });
+  }).sort(function(a,b) { var ta=a.lock?new Date(a.lock).getTime():a.id; var tb=b.lock?new Date(b.lock).getTime():b.id; return ta-tb; });
 
   if (!finishedMatches.length) {
     container.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center">Henüz biten maç yok</div>';
