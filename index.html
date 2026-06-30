@@ -3551,7 +3551,13 @@ async function renderProfilTab() {
 
   // Clear history before filling
   histEl.innerHTML = '';
-  histEl.innerHTML = finishedPreds.sort(function(a,b){return b.pred.match_id - a.pred.match_id;}).map(({pred, res, m, pts}) => {
+  finishedPreds.sort(function(a,b){
+    var ta = a.m && a.m.lock ? new Date(a.m.lock).getTime() : a.pred.match_id;
+    var tb = b.m && b.m.lock ? new Date(b.m.lock).getTime() : b.pred.match_id;
+    return tb - ta;
+  });
+  console.log('Profile history order:', finishedPreds.map(function(fp){return (fp.m?fp.m.home:'?') + ' lock=' + (fp.m?fp.m.lock:'none');}));
+  histEl.innerHTML = finishedPreds.map(({pred, res, m, pts}) => {
     const matchName = m ? (m.home + ' — ' + m.away) : 'Maç #' + pred.match_id;
     const predScore = (pred.home_score !== null ? pred.home_score : '?') + ' - ' + (pred.away_score !== null ? pred.away_score : '?');
     const realScore = res.home_score + ' - ' + res.away_score;
