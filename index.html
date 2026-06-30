@@ -4260,6 +4260,8 @@ async function renderPuanGrafik() {
     return results[m.id] && results[m.id].home_score !== null;
   }).sort(function(a,b) { var ta=a.lock?new Date(a.lock).getTime():a.id; var tb=b.lock?new Date(b.lock).getTime():b.id; return tb-ta; }); // en son önce
 
+  console.log('Mac stats select order:', finishedMatches.map(function(m){return m.home + ' lock=' + m.lock;}));
+
   if (!finishedMatches.length) {
     document.getElementById('mac-stats-container').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">Henüz biten maç yok</div>';
     return;
