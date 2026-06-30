@@ -4374,7 +4374,7 @@ async function renderKumulatifGrafik(finishedMatches) {
 
 
 async function renderMacStatsAuto() {
-  const finished = matches.filter(function(m) { return results[m.id] && results[m.id].home_score !== null; }).sort(function(a,b){return b.id-a.id;});
+  const finished = matches.filter(function(m) { return results[m.id] && results[m.id].home_score !== null; }).sort(function(a,b){ var ta=a.lock?new Date(a.lock).getTime():a.id; var tb=b.lock?new Date(b.lock).getTime():b.id; return tb-ta; });
   if (!finished.length) return;
   const sel = document.getElementById('mac-stats-select');
   if (sel) {
