@@ -526,6 +526,12 @@ async function sbPost(table, body) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method:'POST', headers:{...HEADERS,'Prefer':'return=representation'}, body:JSON.stringify(body)
   });
+  if (!r.ok) {
+    const err = await r.text();
+    console.error('sbPost ERROR', table, r.status, err);
+    showToast('Kayit hatasi (' + table + '): ' + r.status);
+    return null;
+  }
   return r.json();
 }
 async function sbUpsert(table, body, onConflict) {
@@ -552,6 +558,11 @@ async function sbPatch(table, params, body) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
     method:'PATCH', headers:{...HEADERS,'Prefer':'return=representation'}, body:JSON.stringify(body)
   });
+  if (!r.ok) {
+    const err = await r.text();
+    console.error('sbPatch ERROR', table, r.status, err);
+    return null;
+  }
   return r.json();
 }
 
@@ -3495,8 +3506,9 @@ async function renderProfilTab() {
       if (!res || res.home_score === null) return;
       totalPreds++;
       let pts = 0;
-      if (pred.hy && pred.hy === res.hy) { correctHY++; pts += 1; }
+      const m = matches.find(x => x.id === pred.match_id);
       var mIsKO = m && m.group && !m.group.startsWith('Grup');
+      if (pred.hy && pred.hy === res.hy) { correctHY++; pts += 1; }
       if (pred.ms && pred.ms === res.ms) { correctMS++; pts += (mIsKO && pred.ms==='X') ? 3 : 1; }
       if (mIsKO && res.uzatma && pred.uzatma && pred.uzatma===res.uzatma) pts += 1;
       if (mIsKO && res.penalti && pred.penalti && pred.penalti===res.penalti) pts += 1;
@@ -3505,7 +3517,6 @@ async function renderProfilTab() {
       if (pred.kg && pred.kg === res.kg) { correctKG++; pts += 1; }
       if (pred.gol && pred.gol === res.gol) { correctGol++; pts += 1; }
       if (pred.kk && pred.kk === res.kk) { correctKK++; pts += 1; }
-      const m = matches.find(x => x.id === pred.match_id);
       finishedPreds.push({pred, res, m, pts});
     });
   }
@@ -5389,7 +5400,13 @@ function renderBracketRound(round) {
     'Final':       [103,104]
   };
   var rounds = BRACKET_ROUNDS;
-  var ids = roundMap[round] || [];
+  var ids = (roundMap[round] || []).slice().sort(function(a,b) {
+    var ma = matches.find(function(x){return x.id===a;});
+    var mb = matches.find(function(x){return x.id===b;});
+    var ta = ma && ma.lock ? new Date(ma.lock).getTime() : a*1e10;
+    var tb = mb && mb.lock ? new Date(mb.lock).getTime() : b*1e10;
+    return ta - tb;
+  });
 
   function flagOf(str) { return (str||'').trim().split(' ')[0]; }
   function teamName(str) {
