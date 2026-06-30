@@ -3948,7 +3948,63 @@ async function renderTurnuvaTab() {
     html += '<button class="tb-save" id="tb-save-btn" onclick="saveTurnuvaBets()" style="margin-top:4px">Turnuva Tahminlerimi Kaydet</button>';
   }
 
+  // Herkesin Bahisleri section
+  html += '<div class="acc-section" style="margin-top:14px">';
+  html += '<div class="acc-header" onclick="toggleAcc(\'herkes-turnuva\')">';
+  html += '<div><div class="acc-title">👥 Herkesin Bahisleri</div></div>';
+  html += '<div style="display:flex;align-items:center;gap:8px"><span class="acc-arrow" id="arrow-herkes-turnuva">▼</span></div>';
+  html += '</div>';
+  html += '<div class="acc-body" id="body-herkes-turnuva"><div class="loading">Yükleniyor...</div></div>';
+  html += '</div>';
+
   c.innerHTML = html;
+  renderHerkesTurnuvaBahisleri(actualResults);
+}
+
+async function renderHerkesTurnuvaBahisleri(actualResults) {
+  const body = document.getElementById('body-herkes-turnuva');
+  if (!body) return;
+
+  const allBets = await sbGet('tournament_bets', 'group_id=eq.' + GROUP_ID + '&select=player_name,bets');
+  if (!Array.isArray(allBets) || !allBets.length) {
+    body.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">Henüz kimse turnuva tahmini yapmadı.</div>';
+    return;
+  }
+
+  // Sort players alphabetically
+  const sortedBets = allBets.slice().sort(function(a,b) { return a.player_name.localeCompare(b.player_name, 'tr'); });
+
+  let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">';
+  html += '<tr style="position:sticky;top:0;background:var(--card)">';
+  html += '<th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--card)">Oyuncu</th>';
+  TURNUVA_FIELDS.forEach(function(f) {
+    html += '<th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap">' + f.title + '</th>';
+  });
+  html += '</tr>';
+
+  sortedBets.forEach(function(row) {
+    const bets = row.bets || {};
+    html += '<tr style="border-bottom:1px solid var(--border)">';
+    html += '<td style="padding:6px 8px;font-weight:600;color:var(--dark);white-space:nowrap;position:sticky;left:0;background:var(--card)">' + row.player_name + '</td>';
+    TURNUVA_FIELDS.forEach(function(f) {
+      const val = bets[f.key];
+      const actual = actualResults[f.key];
+      let color = 'var(--muted)';
+      let mark = '';
+      if (val && actual) {
+        const correct = normalizeTR(val) === normalizeTR(actual);
+        color = correct ? 'var(--green)' : 'var(--red)';
+        mark = correct ? ' ✓' : ' ✗';
+      } else if (val) {
+        color = 'var(--dark)';
+      }
+      html += '<td style="padding:6px 8px;text-align:center;color:' + color + ';white-space:nowrap">' + (val || '—') + mark + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</table></div>';
+  body.innerHTML = html;
 }
 
 function toggleAcc(id) {
