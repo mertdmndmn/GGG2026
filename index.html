@@ -2145,7 +2145,7 @@ async function saveTurnuvaResults() {
         const predicted = playerBets[field.key];
         const actual = results[field.key];
         if (!predicted || !actual) return;
-        if (normalizeTR(predicted) === normalizeTR(actual)) pts += field.pts;
+        if (turnuvaMatch(predicted, actual)) pts += field.pts;
       });
       newTurnuvaPts[bet.player_name + '|' + bet.group_id] = pts;
     });
@@ -2160,7 +2160,7 @@ async function saveTurnuvaResults() {
         const predicted = playerBets[field.key];
         const actual = prevRes[field.key];
         if (!predicted || !actual) return;
-        if (normalizeTR(predicted) === normalizeTR(actual)) prevPts += field.pts;
+        if (turnuvaMatch(predicted, actual)) prevPts += field.pts;
       });
       prevTurnuvaPts[bet.player_name + '|' + bet.group_id] = prevPts;
     });
@@ -2339,7 +2339,7 @@ async function renderTurnuvaLeaderboard() {
     TURNUVA_FIELDS.forEach(function(f) {
       var predicted = bets[f.key] || '';
       var actual = actualResults[f.key] || '';
-      if (predicted && actual && normalizeTR(predicted) === normalizeTR(actual)) {
+      if (predicted && actual && turnuvaMatch(predicted, actual)) {
         pts += f.pts;
       }
     });
@@ -3182,6 +3182,13 @@ const TEAMS_2026 = [
 ];
 
 // Normalize Turkish chars for search
+function turnuvaMatch(predicted, actual) {
+  if (!predicted || !actual) return false;
+  var p = normalizeTR(predicted.trim());
+  var a = normalizeTR(actual.trim());
+  return p === a || a.includes(p) || p.includes(a);
+}
+
 function normalizeTR(str) {
   return str
     .replace(/İ/g,'i').replace(/I/g,'i').replace(/ı/g,'i')
@@ -4001,7 +4008,7 @@ async function renderHerkesTurnuvaBahisleri(actualResults) {
       let color = 'var(--muted)';
       let mark = '';
       if (val && actual) {
-        const correct = normalizeTR(val) === normalizeTR(actual);
+        const correct = turnuvaMatch(val, actual);
         color = correct ? 'var(--green)' : 'var(--red)';
         mark = correct ? ' ✓' : ' ✗';
       } else if (val) {
