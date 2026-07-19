@@ -446,7 +446,13 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--cream);color:var(--
         </div><!-- end asec-turnuva -->
 
         <div id="asec-ayarlar" style="display:none">
-        <div class="section-label" id="sec-ozel" style="margin-top:0">Maça Özel Bahis Ekle</div>
+        <div class="section-label" style="margin-top:0;color:var(--red)">⚠️ Puanları Sıfırdan Hesapla</div>
+        <div class="custom-bet-box" style="border:1.5px solid var(--red)">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Tüm oyuncuların puanlarını maç sonuçları, turnuva bahisleri ve şampiyon tahminlerinden sıfırdan hesaplar. Yanlış/çift puanları temizler. Tüm gruplara uygulanır.</div>
+          <button class="add-bet-btn" style="background:var(--red)" onclick="recalcAllPoints()">🔄 Tüm Puanları Yeniden Hesapla</button>
+          <div id="recalc-status" style="font-size:12px;margin-top:8px;color:var(--muted)"></div>
+        </div>
+        <div class="section-label" id="sec-ozel" style="margin-top:20px">Maça Özel Bahis Ekle</div>
         <div class="custom-bet-box">
           <label>Maç Seç</label>
           <select id="custom-bet-match"></select>
@@ -1820,6 +1826,133 @@ function tagClass(key, val) {
 function isKnockoutMatch(matchId) {
   var m = matches.find(function(x){return x.id===matchId;});
   return m && m.group && !m.group.startsWith('Grup');
+}
+
+async function recalcAllPoints() {
+  if (!confirm('TÜM oyuncuların puanları sıfırdan hesaplanacak. Emin misin?')) return;
+  const statusEl = document.getElementById('recalc-status');
+  function setStatus(t) { if (statusEl) statusEl.textContent = t; }
+  setStatus('Veriler yükleniyor...');
+
+  // Sampion tier points helper (matches scoreSampion TIERS)
+  const SAMPION_TIERS = [
+    { pts: 10, teams: ['Fransa','Ispanya','Arjantin','Brezilya','Ingiltere'] },
+    { pts: 20, teams: ['Almanya','Portekiz','Hollanda','Belcika','Kolombiya','Uruguay'] },
+    { pts: 40, teams: ['ABD','Meksika','Turkiye','Turkiye','Fas','Senegal','G.Kore','Japonya','Avustralya','Isvicre','Hirvatistan'] },
+    { pts: 80, teams: [] }
+  ];
+  function stripFlag(s) {
+    if (!s) return '';
+    return s.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{E0000}-\u{E007F}]/gu, '').trim();
+  }
+  function sampionTierPts(team) {
+    const clean = stripFlag(team);
+    const n = normalizeTR(clean);
+    for (let i = 0; i < 3; i++) {
+      if (SAMPION_TIERS[i].teams.some(function(t){ var tn=normalizeTR(t); return tn===n||n.includes(tn)||tn.includes(n); })) {
+        return SAMPION_TIERS[i].pts;
+      }
+    }
+    return SAMPION_TIERS[3].pts;
+  }
+
+  try {
+    // Fetch everything across ALL groups
+    const allPlayers = await sbGet('players', 'select=name,group_id,sampion');
+    const allPreds = await sbGet('predictions', 'select=player_name,group_id,match_id,ms,hy,kg,gol,kk,home_score,away_score,uzatma,penalti,custom');
+    const allTBets = await sbGet('tournament_bets', 'select=player_name,group_id,bets');
+    const allTResults = await sbGet('tournament_results', 'select=group_id,results');
+
+    if (!Array.isArray(allPlayers) || !Array.isArray(allPreds)) {
+      setStatus('HATA: Veri yüklenemedi.');
+      return;
+    }
+
+    // Index predictions by player+group
+    const predIndex = {};
+    allPreds.forEach(function(p) {
+      const key = p.player_name + '|' + p.group_id;
+      if (!predIndex[key]) predIndex[key] = [];
+      predIndex[key].push(p);
+    });
+
+    // Index tournament bets
+    const tbetIndex = {};
+    (allTBets || []).forEach(function(b) {
+      tbetIndex[b.player_name + '|' + b.group_id] = b.bets || {};
+    });
+
+    // Index tournament results by group
+    const tresIndex = {};
+    (allTResults || []).forEach(function(r) {
+      tresIndex[r.group_id] = r.results || {};
+    });
+
+    // Champion (from actual result) - find the champion from Final match (id 104)
+    const finalRes = results[104];
+    let championTeam = null;
+    if (finalRes && finalRes.home_score !== null && finalRes.home_score !== undefined) {
+      const finalMatch = matches.find(function(m){return m.id===104;});
+      if (finalMatch) {
+        if (finalRes.home_score > finalRes.away_score) championTeam = finalMatch.home;
+        else if (finalRes.away_score > finalRes.home_score) championTeam = finalMatch.away;
+        else if (finalRes.uzatma === '1') championTeam = finalMatch.home;
+        else if (finalRes.uzatma === '2') championTeam = finalMatch.away;
+        else if (finalRes.penalti === '1') championTeam = finalMatch.home;
+        else if (finalRes.penalti === '2') championTeam = finalMatch.away;
+        else if (finalRes.pen_home != null) championTeam = finalRes.pen_home > finalRes.pen_away ? finalMatch.home : finalMatch.away;
+      }
+    }
+
+    setStatus('Hesaplanıyor... (0/' + allPlayers.length + ')');
+    let done = 0;
+
+    for (const player of allPlayers) {
+      const key = player.name + '|' + player.group_id;
+      const myPreds = predIndex[key] || [];
+
+      // 1. Match points (uses calcPredPts - same logic as everywhere)
+      let matchPts = 0;
+      myPreds.forEach(function(p) {
+        const res = results[p.match_id];
+        const pts = calcPredPts(p, res, player.group_id, p.match_id);
+        if (pts) matchPts += pts;
+      });
+
+      // 2. Tournament points
+      let turnuvaPts = 0;
+      const myBets = tbetIndex[key] || {};
+      const groupTRes = tresIndex[player.group_id] || {};
+      TURNUVA_FIELDS.forEach(function(f) {
+        if (turnuvaMatch(myBets[f.key], groupTRes[f.key])) turnuvaPts += f.pts;
+      });
+
+      // 3. Sampion points
+      let sampionPts = 0;
+      if (championTeam && player.sampion) {
+        const champNorm = normalizeTR(stripFlag(championTeam));
+        const pickNorm = normalizeTR(stripFlag(player.sampion));
+        if (champNorm === pickNorm || champNorm.includes(pickNorm) || pickNorm.includes(champNorm)) {
+          sampionPts = sampionTierPts(player.sampion);
+        }
+      }
+
+      const total = matchPts + turnuvaPts + sampionPts;
+
+      await sbPatch('players', 'name=eq.' + encodeURIComponent(player.name) + '&group_id=eq.' + player.group_id,
+        { pts: total, trend: turnuvaPts + sampionPts });
+
+      done++;
+      if (done % 3 === 0) setStatus('Hesaplanıyor... (' + done + '/' + allPlayers.length + ')');
+    }
+
+    setStatus('✓ Tamamlandı! ' + done + ' oyuncu güncellendi.');
+    await loadAll();
+    renderLeaderboard();
+  } catch (e) {
+    setStatus('HATA: ' + e.message);
+    console.error('recalcAllPoints error', e);
+  }
 }
 
 function calcPredPts(pred, res, gid, matchId) {
